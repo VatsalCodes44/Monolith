@@ -1,10 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 
-export function ChessBoard() {
+export default function games() {
   return (
     <View>
-      <Text>ChessBoard</Text>
+      <Text>games</Text>
     </View>
   )
 }

@@ -11,7 +11,9 @@ export class GameManager {
         this.users = [];
     }
     addUser(socket) {
-        this.users.push(socket);
+        if (!this.users.includes(socket)) {
+            this.users.push(socket);
+        }
         this.addHandler(socket);
     }
     removeUser(socket) {

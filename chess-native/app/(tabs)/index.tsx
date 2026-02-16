@@ -1,15 +1,23 @@
-import { FlatList, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { gameState, socketConnection } from '@/src/store/store';
+import { INIT_GAME } from '@/src/config/serverResponds';
+import { Chess } from 'chess.js';
+import { ConnectingToServer } from '@/src/components/connectingToServer';
 
 export default function index() {
   let [fontsLoaded] = useFonts({
     Orbitron_900Black,
   });
   let [sol, setSol] = useState<number>(0.1)
+  const socket = socketConnection((state) => state.socket)
+  const [initializing, setInitializing] = useState(false)
+  const setChess = gameState(s=>s.setChess)
+  
   return (
     <SafeAreaView style={styles.container}>
         <View style={styles.titleWrap}>
@@ -17,7 +25,7 @@ export default function index() {
               SeekMate
           </Text>
           <LinearGradient
-            colors={['#CE2EDF', '#53ADCF', '#19FB9B']}
+            colors={['#B048C2', '#9082DB', '#3DE3B4']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.underline}
@@ -41,7 +49,7 @@ export default function index() {
                 if (isSelected) {
                   return (
                     <LinearGradient
-                      colors={['#CE2EDF', '#53ADCF', '#24E9A9']}
+                      colors={['#B048C2', '#9082DB', '#3DE3B4']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.gradientBorder}
@@ -87,16 +95,33 @@ export default function index() {
           </View>
         </View>
         
-        <TouchableOpacity style={styles.startMatch} onPress={() => {
-          router.push("/Game")
+        <TouchableOpacity disabled={initializing} style={{
+          ...styles.startMatch,
+          opacity: initializing ? 0.5 : 1
+        }} onPress={() => {
+          // setInitializing(true)
+          // if (socket!.readyState == WebSocket.OPEN){
+          //   socket!.send(JSON.stringify({
+          //     type: INIT_GAME
+          //   }))
+          //   socket!.onmessage = (event) => {
+          //     console.log(event)
+          //     const parseMsg =JSON.parse(event.data.toString());
+          //     if (parseMsg.type == INIT_GAME) {
+                router.push("/Game");
+              //   setChess(new Chess());
+              // }
+            // }
+          // }
         }}>
           <LinearGradient
-            colors={['#CE2EDF', '#53ADCF', '#24E9A9']}
+            colors={['#B048C2', '#9082DB', '#3DE3B4']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.button}
           >
-            <Text style={{...styles.text, fontFamily: fontsLoaded ? "Orbitron_900Black": "Roboto"}}>Start Match</Text>
+            {!initializing && <Text style={{...styles.text, fontFamily: fontsLoaded ? "Orbitron_900Black": "Roboto"}}>Start Match</Text>}
+            {initializing && <ActivityIndicator color={"#ffffff"} size={32}/>}
           </LinearGradient>
         </TouchableOpacity>
     </SafeAreaView>
@@ -104,88 +129,88 @@ export default function index() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: "#191919"
-    },
+  container: {
+    flex: 1,
+    backgroundColor: "#191919"
+  },
+  
+  titleWrap: {
+    alignItems: "center",
+    marginVertical: 60,
+  },
+  
+  title: {
+    color: "#FFFFFF",
+    fontSize: 36,
+    textAlign: "center",
+    letterSpacing: 2
     
-    titleWrap: {
-      alignItems: "center",
-      marginVertical: 60,
-    },
-    
-    title: {
-      color: "#FFFFFF",
-      fontSize: 36,
-      textAlign: "center",
-      letterSpacing: 2
-      
-    },
-    
-    underline: {
-      marginTop: 10,  
-      height: 8,      
-      width: 240,     
-      borderRadius: 3,
-    },
+  },
+  
+  underline: {
+    marginTop: 10,  
+    height: 8,      
+    width: 240,     
+    borderRadius: 3,
+  },
 
-    imageView: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center"
-    },
+  imageView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center"
+  },
 
-    chessBoard: {
-      width: 460,
-      height: 460,
-    },
+  chessBoard: {
+    width: 460,
+    height: 460,
+  },
 
-     button: {
-      paddingVertical: 14,
-      paddingHorizontal: 30,
-      marginHorizontal: 50,
-      borderRadius: 100,
-      alignItems: "center",
-      justifyContent: "center",
-      boxShadow: ""
-    },
+  button: {
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    marginHorizontal: 50,
+    borderRadius: 100,
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: ""
+  },
 
-    text: {
-      color: "#ffffff",
-      fontSize: 24,
-      fontWeight: "600",
-      letterSpacing: 1,
-    },
+  text: {
+    color: "#ffffff",
+    fontSize: 24,
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
 
-    sol: {
-      justifyContent: "space-evenly",
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: 30,
-    },
+  sol: {
+    justifyContent: "space-evenly",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 30,
+  },
 
-    gradientBorder: {
-      padding: 2,
-      borderRadius: 50,
-      marginHorizontal: 6,
-    },
+  gradientBorder: {
+    padding: 2,
+    borderRadius: 50,
+    marginHorizontal: 6,
+  },
 
-    innerButton: {
-      backgroundColor: "#191919",
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: 50,
-      alignItems: "center",
-      justifyContent: "center",
-    },
+  innerButton: {
+    backgroundColor: "#191919",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 50,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-    solText: {
-      color: "#FFFFFF",
-      fontSize: 16,
-      letterSpacing: 1,
-    },
+  solText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    letterSpacing: 1,
+  },
 
-    startMatch: {
-      marginBottom: 60
-    }
+  startMatch: {
+    marginBottom: 60
+  }
 })

@@ -13,19 +13,21 @@ export class GameManager {
     }
 
     addUser(socket: WebSocket) {
-        this.users.push(socket)
+        if (!this.users.includes(socket)) {
+            this.users.push(socket);
+        }
         this.addHandler(socket)
     }
 
     removeUser(socket: WebSocket) {
-        this.users = this.users.filter(s => s!== socket);
+        this.users = this.users.filter(s => s !== socket);
         // stop the game here because the user left 
     }
 
-    private addHandler (socket:WebSocket) {
+    private addHandler(socket: WebSocket) {
         socket.on("message", (data) => {
             const message = JSON.parse(data.toString());
-            
+
             if (message.type === INIT_GAME) {
                 if (this.pendingUser) {
                     // is there is a pending user start a game
