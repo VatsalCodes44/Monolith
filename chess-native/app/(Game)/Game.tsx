@@ -8,12 +8,26 @@ import { WS_URL } from '@/src/config/config'
 import { ConnectingToServer } from '@/src/components/connectingToServer'
 import { router } from 'expo-router'
 
+export interface GameOver {
+  winner: "b" | "w" | null,
+  gameOverType: "checkmate" | "stalemate" | "draw" | null,
+  isGameOver: boolean
+}
 
 export default function Game() {
   const [socket, setSocket] = useState<WebSocket | null> (null);
   const [chess, setChess] = useState(new Chess())
   const [color, setColor] = useState<"w" | "b">("w");
   const [from, setFrom] = useState<Square | null>(null);
+  const [prevFrom, setPrevFrom] = useState<Square | null>(null);
+  const [prevTo, setPrevTo] = useState<Square | null>(null);
+  const [isCheck, setIsCheck] = useState(false)
+  const [GameOver, setGameOver] = useState<GameOver>({
+    winner: null,
+    gameOverType: null,
+    isGameOver: false
+  });
+
   useEffect(() => {
     if (!socket) {
       const ws = new WebSocket(WS_URL);
@@ -38,29 +52,35 @@ export default function Game() {
         const payload = message.payload;
         switch (message.type) {
           case INIT_GAME: 
-            console.log(payload)
             setColor(payload.color);
             setChess(new Chess(payload.board))
             break;
           case MOVE: 
-            console.log(payload.move)
-            console.log("Received board:", message.payload.board);
-            // chess.move(payload.move);
             let newChess = new Chess(payload.board)
             setChess(newChess);
+            setPrevFrom(payload.move.from);
+            setPrevTo(payload.move.to);
             break;
           
           case CHECK:
-            console.log("check");
-            console.log(payload.move)
-            console.log("Received board:", message.payload.board);
-            // chess.move(payload.move);
             let checkChess = new Chess(payload.board)
             setChess(checkChess);
+            setPrevFrom(payload.move.from);
+            setPrevTo(payload.move.to);
+            setIsCheck(true)
             break;
   
           case GAME_OVER:
             console.log("game over");
+            let gameOver = new Chess(payload.board)
+            setChess(gameOver)
+            setPrevFrom(payload.move.from);
+            setPrevTo(payload.move.to);
+            setGameOver({
+              winner: payload.winner,
+              gameOverType: payload.gameOverType,
+              isGameOver: true
+            })
             break;
         }
       }
@@ -82,7 +102,10 @@ export default function Game() {
 
   return (
     <SafeAreaView>
-      <View>
+      <View style={{
+        flexDirection: "row",
+        justifyContent: "center"
+      }}>
         <ChessBoard
           chess={chess}
           from={from} 
@@ -90,6 +113,10 @@ export default function Game() {
           socket={socket} 
           fen={chess.fen()}
           color= {color}
+          prevFrom={prevFrom}
+          prevTo={prevTo}
+          GameOver={GameOver}
+          isCheck={isCheck}
         />
       </View>
     </SafeAreaView>

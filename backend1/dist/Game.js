@@ -60,16 +60,21 @@ export class Game {
         };
         // check if the game is over
         if (this.board.isGameOver()) {
+            const gameOverType = this.board.isCheckmate() ? "checkmate" : (this.board.isStalemate() ? "stalemate" : "draw");
             this.player1.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: {
-                    winner: this.board.turn() === "w" ? "w" : "b"
+                    winner: gameOverType == "checkmate" ? this.board.turn() === "w" ? "w" : "b" : null,
+                    gameOverType,
+                    ...payload
                 }
             }));
             this.player2.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: {
-                    winner: this.board.turn() === "w" ? "b" : "w"
+                    winner: this.board.turn() === "w" ? "b" : "w",
+                    gameOverType,
+                    ...payload
                 }
             }));
             return;
