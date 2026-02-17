@@ -8,6 +8,6 @@ export declare class Game {
     makeMove(socket: WebSocket, move: {
         from: string;
         to: string;
-    }): void;
+    }, promotion: string | undefined): void;
 }
 //# sourceMappingURL=Game.d.ts.map

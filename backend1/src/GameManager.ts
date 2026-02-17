@@ -44,7 +44,7 @@ export class GameManager {
             if (message.type == MOVE) {
                 const game = this.games.find(g => g.player1 === socket || g.player2 === socket)
                 if (game) {
-                    game.makeMove(socket, message.payload);
+                    game.makeMove(socket, message["payload"], message["promotion"]);
                 }
             }
         })

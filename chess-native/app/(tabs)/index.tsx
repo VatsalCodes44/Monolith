@@ -4,24 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { gameState, socketConnection } from '@/src/store/store';
-import { INIT_GAME } from '@/src/config/serverResponds';
-import { Chess } from 'chess.js';
-import { ConnectingToServer } from '@/src/components/connectingToServer';
+import { GameBet } from '@/src/store/store';
 
 export default function index() {
-  let [fontsLoaded] = useFonts({
+  const [fontsLoaded] = useFonts({
     Orbitron_900Black,
   });
-  let [sol, setSol] = useState<number>(0.1)
-  const socket = socketConnection((state) => state.socket)
+  const {sol, setSol} = GameBet(s=> s)
   const [initializing, setInitializing] = useState(false)
-  const setChess = gameState(s=>s.setChess)
-  const setColor = gameState(s=>s.setColor)
-
-  if (!socket) {
-    return <ConnectingToServer />
-  }
   
   return (
     <SafeAreaView style={styles.container}>
@@ -105,19 +95,7 @@ export default function index() {
           opacity: initializing ? 0.5 : 1
         }} onPress={() => {
           setInitializing(true)
-          if (socket!.readyState == WebSocket.OPEN){
-            socket!.send(JSON.stringify({
-              type: INIT_GAME
-            }))
-            socket.onmessage = (event) => {
-              const parseMsg =JSON.parse(event.data.toString());
-              if (parseMsg.type == INIT_GAME) {
-                setChess(new Chess(parseMsg.payload.board));
-                setColor(parseMsg.payload.board)
-                router.push("/Game");
-              }
-            }
-          }
+          router.push("/Game");
         }}>
           <LinearGradient
             colors={['#B048C2', '#9082DB', '#3DE3B4']}

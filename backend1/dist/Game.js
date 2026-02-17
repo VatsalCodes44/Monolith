@@ -14,19 +14,19 @@ export class Game {
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
-                color: "white",
+                color: "w",
                 board: this.board.fen()
             }
         }));
         this.player2.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
-                color: "black",
+                color: "b",
                 board: this.board.fen()
             }
         }));
     }
-    makeMove(socket, move) {
+    makeMove(socket, move, promotion) {
         // validation of move using zod
         // make sure is this user move
         // is this move valid
@@ -43,9 +43,12 @@ export class Game {
             return;
         }
         try {
-            const result = this.board.move(move);
-            if (!result) {
-                return; // invalid move
+            let result;
+            if (promotion) {
+                result = this.board.move({ ...move, promotion });
+            }
+            else {
+                result = this.board.move(move);
             }
         }
         catch (e) {
@@ -60,13 +63,13 @@ export class Game {
             this.player1.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: {
-                    winner: this.board.turn() === "w" ? "black" : "white"
+                    winner: this.board.turn() === "w" ? "w" : "b"
                 }
             }));
             this.player2.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: {
-                    winner: this.board.turn() === "w" ? "black" : "white"
+                    winner: this.board.turn() === "w" ? "b" : "w"
                 }
             }));
             return;

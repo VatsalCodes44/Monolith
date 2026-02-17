@@ -10,10 +10,17 @@ type Board = ({
     type: PieceSymbol;
     color: Color;
 } | null)[][]
-
-export function ChessBoard({board, socket, fen}: {board: Board, socket: WebSocket, fen: string}) {
+      
+export function ChessBoard(
+  {chess, socket, fen, from, setFrom, color}: {
+    chess: Chess, 
+    socket: WebSocket, 
+    fen: string,
+    from: Square | null,
+    setFrom:  React.Dispatch<React.SetStateAction<Square | null>>
+    color: "w" | "b"
+  }) {
   const { width, height } = useWindowDimensions();
-  const [from, setFrom] = useState<string | undefined>(undefined)
   
   return (
     <View style={{
@@ -30,7 +37,7 @@ export function ChessBoard({board, socket, fen}: {board: Board, socket: WebSocke
       >
 
         <FlatList 
-          data={board}
+          data={chess.board()}
           keyExtractor={(_, rowIdx) => rowIdx.toString()}
           scrollEnabled={false}
           renderItem={({ item: row, index: rowIdx }) => (
@@ -38,7 +45,7 @@ export function ChessBoard({board, socket, fen}: {board: Board, socket: WebSocke
               data={row}
               keyExtractor={(_, colIdx) => `square-${rowIdx}-${colIdx}`}
               scrollEnabled={false}
-              renderItem={({ item: square, index: colIndex }) => {
+              renderItem={({ item: piece, index: colIndex }) => {
                 const isLight =
                 (rowIdx + colIndex) % 2 === 0;
 
@@ -58,77 +65,75 @@ export function ChessBoard({board, socket, fen}: {board: Board, socket: WebSocke
                         justifyContent: "center",
                         alignItems: "center",
                         maxHeight: 80,
-                        maxWidth: 80
+                        maxWidth: 80,
+                        backgroundColor: "#ffffff"
                       },
                     ]}
                     >
-<Pressable
-  onPress={() => {
-    console.log("Clicked:", square?.square, "from:", from);
-console.log("Current FEN:", fen);
+                    <Pressable
+                      onPress={() => {
+                        console.log("hi")
+                        if (!piece && !from) return;
 
-    if (!square) return;
+                        if (!from && piece) {
+                          console.log("from: ", piece.square)
+                          setFrom(piece.square);
+                          return;
+                        }
+                        console.log(rowIdx, " ", colIndex)
+                        const moveTo = String.fromCharCode('a'.charCodeAt(0)+colIndex)+(8-rowIdx) as Square;
+                        console.log("moveTo: ", moveTo)
+                        console.log("from: ", from, " ", "to: ", moveTo)
+                        console.log("hii",chess.get(moveTo)?.color, " ", color)
+                        if (chess.get(moveTo)?.color == color) {
+                          console.log("iiiii")
+                          setFrom(moveTo);
+                          return;
+                        }
+                        try {
+                          let newChess = new Chess(chess.fen())
+                          newChess.move({from: from!, to: moveTo})
+                          socket.send(JSON.stringify({
+                            type: MOVE,
+                            payload: {
+                              from: from,
+                              to: moveTo
+                            }
+                          }))
+                          setFrom(null)
+                          return;
+                        } catch {
+                          setFrom(null);
+                        }
 
-    if (!from) {
-      setFrom(square.square);
-      return;
-    }
+                      }}
+                      style={{
+                        width: (width - 2) / 8,
+                        height: (width - 2) / 8,
+                        justifyContent: "center",
+                        alignItems: "center",
+                        maxHeight: 80,
+                        maxWidth: 80
+                      }}
+                    >
 
-    const moveTo = square.square;
-
-    if (from === moveTo) {
-      setFrom(undefined);
-      return;
-    }
-
-    const game = new Chess(fen);
-
-    let isValid = false;
-
-    try {
-      game.move({ from, to: moveTo });
-      isValid = true;
-    } catch {
-      isValid = false;
-    }
-
-    if (!isValid) {
-      setFrom(undefined);
-      return;
-    }
-
-    // ✅ SEND MOVE TO SERVER
-    socket.send(
-      JSON.stringify({
-        type: MOVE,
-        payload: {
-          from,
-          to: moveTo,
-        },
-      })
-    );
-
-    setFrom(undefined);
-  }}
->
-
-                      {square && (
+                      {piece && (
                         <FontAwesome6
                           name={`chess-${
-                            square.type === "k"
+                            piece.type === "k"
                               ? "king"
-                              : square.type === "q"
+                              : piece.type === "q"
                               ? "queen"
-                              : square.type === "r"
+                              : piece.type === "r"
                               ? "rook"
-                              : square.type === "b"
+                              : piece.type === "b"
                               ? "bishop"
-                              : square.type === "n"
+                              : piece.type === "n"
                               ? "knight"
                               : "pawn"
                           }`}
                           size={width > 640 ? 70 : (width - 2) / 10}   // responsive sizing
-                          color={square.color === "b" ? "#B048C2" : "#3DE3B4"}
+                          color={piece.color === "b" ? "#B048C2" : "#3DE3B4"}
                           
                         />
                       )}
