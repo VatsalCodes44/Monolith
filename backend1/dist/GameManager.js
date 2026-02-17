@@ -23,6 +23,7 @@ export class GameManager {
     addHandler(socket) {
         socket.on("message", (data) => {
             const message = JSON.parse(data.toString());
+            console.log(message);
             if (message.type === INIT_GAME) {
                 if (this.pendingUser) {
                     // is there is a pending user start a game

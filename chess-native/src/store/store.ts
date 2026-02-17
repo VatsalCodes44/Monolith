@@ -14,12 +14,16 @@ export const socketConnection = create<Connection>((set) => ({
 
 interface Game {
     chess: Chess | null;
+    color: "black" | "white" | null;
+    setColor: (color: "black" | "white" | null) => void;
     setChess: (chess: Chess) => void;
     removeChess: () => void;
 }
 export const gameState = create<Game>((set) => ({
-    // chess: null,
-    chess: new Chess(),
+    chess: null,
+    // chess: new Chess(),
+    color: null,
+    setColor: (color: "black" | "white" | null) => set({color}),
     setChess: (chess: Chess) => set({chess}),
     removeChess: () => set({chess: null})
 }))

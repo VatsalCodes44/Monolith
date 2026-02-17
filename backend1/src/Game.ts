@@ -1,5 +1,5 @@
-import {WebSocket} from "ws";
-import {Chess} from "chess.js"
+import { WebSocket } from "ws";
+import { Chess } from "chess.js"
 import { CHECK, GAME_OVER, INIT_GAME, MOVE } from "./Messages.js";
 export class Game {
     public player1: WebSocket;
@@ -15,18 +15,20 @@ export class Game {
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
-                color: "white"
+                color: "white",
+                board: this.board.fen()
             }
         }));
         this.player2.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
-                color: "black"
+                color: "black",
+                board: this.board.fen()
             }
         }));
     }
 
-    public makeMove(socket: WebSocket, move: {from: string, to: string}) {
+    public makeMove(socket: WebSocket, move: { from: string, to: string }) {
         // validation of move using zod
         // make sure is this user move
         // is this move valid
@@ -34,8 +36,9 @@ export class Game {
         // push the move
         // check id the game is over
         // send the updated board to both the player
-        
+
         // validating only the correct user makes the move whose turn is this
+        console.log(move)
         if (this.board.turn() === "w" && socket !== this.player1) {
             return;
         }
@@ -44,18 +47,22 @@ export class Game {
             return;
         }
 
-
-
-
         try {
-            this.board.move(move)
+            const result = this.board.move(move);
+
+            if (!result) {
+                return; // invalid move
+            }
         }
         catch (e) {
-    
+
             return;
         }
 
-
+        const payload = {
+            move,
+            board: this.board.fen()
+        };
 
         // check if the game is over
         if (this.board.isGameOver()) {
@@ -74,35 +81,31 @@ export class Game {
             return;
         }
 
-        if (this.board.isCheck()){
-            if (this.board.turn() === "w") {
-                this.player1.send(JSON.stringify({
-                    type: CHECK,
-                    playload: move
-                }))
-            }
-            else {
-                this.player2.send(JSON.stringify({
-                    type: CHECK,
-                    payload: move
-                }))
-            }
+        if (this.board.isCheck()) {
+            this.player1.send(JSON.stringify({
+                type: CHECK,
+                payload
+            }));
+
+            this.player2.send(JSON.stringify({
+                type: CHECK,
+                payload
+            }));
             return;
         }
+        // Do NOT return.
+        // Then continue and send MOVE update.
 
 
-        if (this.board.turn() === "w") {
-            this.player1.send(JSON.stringify({
-                type: MOVE,
-                playload: move
-            }))
-        }
-        else {
-    
-            this.player2.send(JSON.stringify({
-                type: MOVE,
-                payload: move
-            }))
-        }
+        this.player1.send(JSON.stringify({
+            type: MOVE,
+            payload
+        }));
+
+        this.player2.send(JSON.stringify({
+            type: MOVE,
+            payload
+        }));
+
     }
 }

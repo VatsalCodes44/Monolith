@@ -3,24 +3,30 @@ import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {ChessBoard} from "@/src/components/ChessBoard"
 import { gameState, socketConnection } from '@/src/store/store'
-import { GAME_OVER, MOVE } from '@/src/config/serverResponds'
-
+import { CHECK, GAME_OVER, MOVE } from '@/src/config/serverResponds'
+import { Chess } from 'chess.js'
 export default function Game() {
   const chess = gameState(s=>s.chess)!
+  const setChess = gameState(s=>s.setChess)!
   const socket = socketConnection((s) => s.socket)!
-  const [board, setBoard] = useState(chess!.board())
 
   useEffect(() => {
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
       switch (message.type) {
         case MOVE: 
-          const move = message.payload;
-          console.log(move)
-          chess.move(move);
-          setBoard(chess.board());
+          const payload = message.payload;
+          console.log(payload.move)
+          console.log("Received board:", message.payload.board);
+          // chess.move(payload.move);
+          let newChess = new Chess(payload.board)
+          setChess(newChess);
           break;
         
+        case CHECK:
+          console.log("check");
+          break;
+
         case GAME_OVER:
           console.log("game over");
           break;
@@ -31,7 +37,7 @@ export default function Game() {
   return (
     <SafeAreaView>
       <View>
-        <ChessBoard board= {board} />
+        <ChessBoard board={chess.board()} socket={socket} fen={chess.fen()} />
       </View>
     </SafeAreaView>
   )

@@ -17,6 +17,11 @@ export default function index() {
   const socket = socketConnection((state) => state.socket)
   const [initializing, setInitializing] = useState(false)
   const setChess = gameState(s=>s.setChess)
+  const setColor = gameState(s=>s.setColor)
+
+  if (!socket) {
+    return <ConnectingToServer />
+  }
   
   return (
     <SafeAreaView style={styles.container}>
@@ -99,20 +104,20 @@ export default function index() {
           ...styles.startMatch,
           opacity: initializing ? 0.5 : 1
         }} onPress={() => {
-          // setInitializing(true)
-          // if (socket!.readyState == WebSocket.OPEN){
-          //   socket!.send(JSON.stringify({
-          //     type: INIT_GAME
-          //   }))
-          //   socket!.onmessage = (event) => {
-          //     console.log(event)
-          //     const parseMsg =JSON.parse(event.data.toString());
-          //     if (parseMsg.type == INIT_GAME) {
+          setInitializing(true)
+          if (socket!.readyState == WebSocket.OPEN){
+            socket!.send(JSON.stringify({
+              type: INIT_GAME
+            }))
+            socket.onmessage = (event) => {
+              const parseMsg =JSON.parse(event.data.toString());
+              if (parseMsg.type == INIT_GAME) {
+                setChess(new Chess(parseMsg.payload.board));
+                setColor(parseMsg.payload.board)
                 router.push("/Game");
-              //   setChess(new Chess());
-              // }
-            // }
-          // }
+              }
+            }
+          }
         }}>
           <LinearGradient
             colors={['#B048C2', '#9082DB', '#3DE3B4']}

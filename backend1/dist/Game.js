@@ -14,13 +14,15 @@ export class Game {
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
-                color: "white"
+                color: "white",
+                board: this.board.fen()
             }
         }));
         this.player2.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
-                color: "black"
+                color: "black",
+                board: this.board.fen()
             }
         }));
     }
@@ -33,6 +35,7 @@ export class Game {
         // check id the game is over
         // send the updated board to both the player
         // validating only the correct user makes the move whose turn is this
+        console.log(move);
         if (this.board.turn() === "w" && socket !== this.player1) {
             return;
         }
@@ -40,11 +43,18 @@ export class Game {
             return;
         }
         try {
-            this.board.move(move);
+            const result = this.board.move(move);
+            if (!result) {
+                return; // invalid move
+            }
         }
         catch (e) {
             return;
         }
+        const payload = {
+            move,
+            board: this.board.fen()
+        };
         // check if the game is over
         if (this.board.isGameOver()) {
             this.player1.send(JSON.stringify({
@@ -62,32 +72,26 @@ export class Game {
             return;
         }
         if (this.board.isCheck()) {
-            if (this.board.turn() === "w") {
-                this.player1.send(JSON.stringify({
-                    type: CHECK,
-                    playload: move
-                }));
-            }
-            else {
-                this.player2.send(JSON.stringify({
-                    type: CHECK,
-                    payload: move
-                }));
-            }
+            this.player1.send(JSON.stringify({
+                type: CHECK,
+                payload
+            }));
+            this.player2.send(JSON.stringify({
+                type: CHECK,
+                payload
+            }));
             return;
         }
-        if (this.board.turn() === "w") {
-            this.player1.send(JSON.stringify({
-                type: MOVE,
-                playload: move
-            }));
-        }
-        else {
-            this.player2.send(JSON.stringify({
-                type: MOVE,
-                payload: move
-            }));
-        }
+        // Do NOT return.
+        // Then continue and send MOVE update.
+        this.player1.send(JSON.stringify({
+            type: MOVE,
+            payload
+        }));
+        this.player2.send(JSON.stringify({
+            type: MOVE,
+            payload
+        }));
     }
 }
 //# sourceMappingURL=Game.js.map
