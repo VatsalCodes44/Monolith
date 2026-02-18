@@ -53,16 +53,20 @@ export function ChessBoard(
 
     const moveTo = String.fromCharCode('a'.charCodeAt(0)+colIdx)+(8-rowIdx) as Square;
 
+    if (chess.get(moveTo)?.color == color) {
+      setFrom(moveTo);
+      return;
+    }
+
     try {
-      console.log("here")
       let newChess = new Chess(chess.fen())
       let fromPiece = newChess.get(from!)
-      
+
       // checking for pawn promotion
       const isPromotion =
-      fromPiece?.type === "p" &&
-      ((fromPiece.color === "w" && moveTo[1] === "8") || 
-      (fromPiece.color === "b" && moveTo[1] === "1"));
+        fromPiece?.type === "p" &&
+        ((fromPiece.color === "w" && moveTo[1] === "8") || 
+        (fromPiece.color === "b" && moveTo[1] === "1"));
       if (isPromotion && !showPromotionOptions) {
         setShowPromotionOptions(true);
         return;
@@ -79,25 +83,17 @@ export function ChessBoard(
         },
         promotion: isPromotion ? promotionPiece : undefined
       }))
-      
+
       setFrom(null)
       setShowPromotionOptions(false)
       return;
-      
+
     } catch {
-      console.log("here")
+
       playIllegalMoveSound()
       setFrom(moveTo);
       setFrom(null);
     }
-
-    if (chess.get(moveTo)?.color == color) {
-      setFrom(moveTo);
-      return;
-    }
-    // if (chess.get(moveTo)?.color == color) {
-    //   return;
-    // }
   }
   return (
     <View>

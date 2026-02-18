@@ -1,6 +1,12 @@
 import { WebSocket } from "ws";
 import { Chess } from "chess.js"
-import { CHECK, GAME_OVER, INIT_GAME, MOVE, TIME_OUT } from "./Messages.js";
+import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
+
+interface Message {
+    from: "w" | "b",
+    message: string,
+}
+
 export class Game {
     public player1: WebSocket;
     public player2: WebSocket;
@@ -9,6 +15,7 @@ export class Game {
     private timer1: number;
     private timer2: number;
     private lastMoveTimestamp: number;
+    private messages: Message[];
     constructor(player1: WebSocket, player2: WebSocket) {
         this.player1 = player1;
         this.player2 = player2;
@@ -17,6 +24,7 @@ export class Game {
         this.board = new Chess();
         this.startTime = new Date();
         this.lastMoveTimestamp = Date.now();
+        this.messages = [];
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
@@ -31,6 +39,35 @@ export class Game {
                 board: this.board.fen()
             }
         }));
+    }
+
+    public addMessage(socket: WebSocket, message: Message) {
+        if (socket === this.player1) {
+            this.messages.push({
+                from: "w",
+                message: message.message
+            });
+            this.player2.send(JSON.stringify({
+                type: MESSAGE,
+                payload: {
+                    from: "w",
+                    message: message.message
+                }
+            }));
+        }
+        else {
+            this.messages.push({
+                from: "b",
+                message: message.message
+            });
+            this.player1.send(JSON.stringify({
+                type: MESSAGE,
+                payload: {
+                    from: "b",
+                    message: message.message
+                }
+            }));
+        }
     }
 
     public makeMove(socket: WebSocket, move: { from: string, to: string }, promotion: string | undefined) {

@@ -1,8 +1,8 @@
-import { Alert, StyleSheet, View, Text } from 'react-native'
+import { Alert, StyleSheet, View, Text, useWindowDimensions, TouchableOpacity } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {ChessBoard} from "@/src/components/ChessBoard"
-import { CHECK, GAME_OVER, INIT_GAME, MOVE, TIME_OUT } from '@/src/config/serverResponds'
+import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from '@/src/config/serverResponds'
 import { Chess, Square } from 'chess.js'
 import { WS_URL } from '@/src/config/config'
 import { ConnectingToServer } from '@/src/components/connectingToServer'
@@ -13,9 +13,8 @@ import { GameBet } from '@/src/store/store'
 import { Timer } from '@/src/components/Timer'
 import { Audio } from 'expo-av';
 import { useRef } from 'react';
-import { TextArea } from 'tamagui'
-import { LinearGradient } from 'expo-linear-gradient'
-
+import { LastMessage } from '@/src/components/LastMessage'
+import { Messages } from '@/src/components/Message'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -23,6 +22,10 @@ export interface GameOver {
   isGameOver: boolean
 }
 
+export interface Message {
+  from: "w" | "b",
+  message: string,
+};
 export default function Game() {
   const [socket, setSocket] = useState<WebSocket | null> (null);
   const [chess, setChess] = useState(new Chess())
@@ -43,7 +46,9 @@ export default function Game() {
   const checkSoundRef = useRef<Audio.Sound | null>(null);
   const illegalSoundRef = useRef<Audio.Sound | null>(null);
   const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
-
+  const [messages, setMessages] = useState<Message[]>([])
+  const [lastMessage, setLastMessage] = useState<Message>();
+  const {height, width} = useWindowDimensions()
   const [fontsLoaded] = useFonts({
     Orbitron_900Black,
   });
@@ -114,7 +119,7 @@ export default function Game() {
   
       ws.onerror = () => {
         setSocket(null);
-          router.replace("/");
+          // router.replace("/");
       };
   
       ws.onmessage = (event) => {
@@ -173,6 +178,11 @@ export default function Game() {
             })
             setTimer1(payload.timer1);
             setTimer2(payload.timer2);
+            break;
+          case MESSAGE:
+            console.log(payload)
+            setMessages(m => [...m, payload]);
+            setLastMessage(payload);
             break;
         }
       }
@@ -243,9 +253,22 @@ export default function Game() {
     return <ConnectingToServer />;
   }
 
+  function sendMessage(message:Message) {
+    if (!socket) return;
+    socket.send(JSON.stringify({
+      type: MESSAGE,
+      payload: {...message}
+    }))
+    setLastMessage(message)
+  }
 
   return (
-    <SafeAreaView style={{flex: 1}}>
+    <SafeAreaView style={{
+      flex: 1, 
+      backgroundColor: "#000000", 
+      paddingVertical: 20,
+      height
+    }}>
       <View style={styles.avatar}>
 
         <Avatar circular size="$3">
@@ -304,32 +327,8 @@ export default function Game() {
         />
       </View>
 
-      <LinearGradient
-        colors={['#B048C2', '#9082DB', '#3DE3B4']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[styles.gradient, { borderRadius: 100, marginTop: 18, height:48, maxHeight: 96 }]}>
-        <TextArea 
-          flex={1}
-          placeholderTextColor={"white"} 
-          borderWidth={0}
-          background="black"
-          marginBlock={0}
-          paddingBlock={0}
-          maxH={96}
-          height={48}
-          borderBottomEndRadius={"$12"}
-          borderBottomLeftRadius={"$12"}
-          borderBottomRightRadius={"$12"}
-          borderBottomStartRadius={"$12"}
-          borderTopEndRadius={"$12"}
-          borderTopLeftRadius={"$12"}
-          borderTopRightRadius={"$12"}
-          borderTopStartRadius={"$12"}
-          placeholder='Message anonymously'
-        />
-        
-      </LinearGradient>
+      {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
+      <Messages sendMessage={sendMessage} color={color} />
     </SafeAreaView>
   )
 }
@@ -349,5 +348,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 100,
+    overflow: "hidden",
+    marginHorizontal: 15,
+    height: 48
   }
 })

@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import { INIT_GAME, MOVE } from "./Messages.js";
+import { INIT_GAME, MESSAGE, MOVE } from "./Messages.js";
 import { Game } from "./Game.js";
 
 export class GameManager {
@@ -45,6 +45,14 @@ export class GameManager {
                 const game = this.games.find(g => g.player1 === socket || g.player2 === socket)
                 if (game) {
                     game.makeMove(socket, message["payload"], message["promotion"]);
+                }
+            }
+
+            if (message.type == MESSAGE) {
+                console.log(message)
+                const game = this.games.find(g => g.player1 === socket || g.player2 === socket)
+                if (game) {
+                    game.addMessage(socket, message.payload);
                 }
             }
         })

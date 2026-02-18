@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 import { Chess } from "chess.js";
-import { CHECK, GAME_OVER, INIT_GAME, MOVE, TIME_OUT } from "./Messages.js";
+import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
 export class Game {
     player1;
     player2;
@@ -9,6 +9,7 @@ export class Game {
     timer1;
     timer2;
     lastMoveTimestamp;
+    messages;
     constructor(player1, player2) {
         this.player1 = player1;
         this.player2 = player2;
@@ -17,6 +18,7 @@ export class Game {
         this.board = new Chess();
         this.startTime = new Date();
         this.lastMoveTimestamp = Date.now();
+        this.messages = [];
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
@@ -31,6 +33,34 @@ export class Game {
                 board: this.board.fen()
             }
         }));
+    }
+    addMessage(socket, message) {
+        if (socket === this.player1) {
+            this.messages.push({
+                from: "w",
+                message: message.message
+            });
+            this.player2.send(JSON.stringify({
+                type: MESSAGE,
+                payload: {
+                    from: "w",
+                    message: message.message
+                }
+            }));
+        }
+        else {
+            this.messages.push({
+                from: "b",
+                message: message.message
+            });
+            this.player1.send(JSON.stringify({
+                type: MESSAGE,
+                payload: {
+                    from: "b",
+                    message: message.message
+                }
+            }));
+        }
     }
     makeMove(socket, move, promotion) {
         // validation of move using zod
