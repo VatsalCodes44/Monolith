@@ -22,7 +22,9 @@ export function ChessBoard(
    prevFrom, 
    prevTo,
    GameOver,
-   isCheck
+   isCheck,
+   gameStarted,
+   playIllegalMoveSound,
   }:{
     chess: Chess, 
     socket: WebSocket, 
@@ -33,15 +35,17 @@ export function ChessBoard(
     prevFrom: Square | null,
     prevTo: Square | null,
     GameOver: GameOver,
-    isCheck: boolean
+    isCheck: boolean,
+    gameStarted: boolean,
+    playIllegalMoveSound: () => Promise<void>
   }) {
   const { width, height } = useWindowDimensions();
   const [showPromotionOptions, setShowPromotionOptions] = useState(false)
   const [promotionPiece, setPromotionPiece] = useState<"q" | "r" | "b" | "k">("q");
-  const onPress = (piece: Piece, rowIdx: number, colIdx: number) => {
-    if (GameOver.isGameOver) return;
-    if (!piece && !from) return;
 
+  const onPress = (piece: Piece, rowIdx: number, colIdx: number) => {
+    if (GameOver.isGameOver || !gameStarted) return;
+    if (!piece && !from) return;
     if (!from && piece) {
       setFrom(piece.square);
       return;
@@ -49,20 +53,16 @@ export function ChessBoard(
 
     const moveTo = String.fromCharCode('a'.charCodeAt(0)+colIdx)+(8-rowIdx) as Square;
 
-    if (chess.get(moveTo)?.color == color) {
-      setFrom(moveTo);
-      return;
-    }
-
     try {
+      console.log("here")
       let newChess = new Chess(chess.fen())
       let fromPiece = newChess.get(from!)
-
+      
       // checking for pawn promotion
       const isPromotion =
-        fromPiece?.type === "p" &&
-        ((fromPiece.color === "w" && moveTo[1] === "8") || 
-        (fromPiece.color === "b" && moveTo[1] === "1"));
+      fromPiece?.type === "p" &&
+      ((fromPiece.color === "w" && moveTo[1] === "8") || 
+      (fromPiece.color === "b" && moveTo[1] === "1"));
       if (isPromotion && !showPromotionOptions) {
         setShowPromotionOptions(true);
         return;
@@ -79,15 +79,25 @@ export function ChessBoard(
         },
         promotion: isPromotion ? promotionPiece : undefined
       }))
-
+      
       setFrom(null)
       setShowPromotionOptions(false)
       return;
-
+      
     } catch {
+      console.log("here")
+      playIllegalMoveSound()
+      setFrom(moveTo);
       setFrom(null);
     }
 
+    if (chess.get(moveTo)?.color == color) {
+      setFrom(moveTo);
+      return;
+    }
+    // if (chess.get(moveTo)?.color == color) {
+    //   return;
+    // }
   }
   return (
     <View>
@@ -102,7 +112,7 @@ export function ChessBoard(
           colors={['#B048C2', '#9082DB', '#3DE3B4']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={styles.button}
+          style={styles.gradient}
         >
 
           <FlatList 
@@ -143,8 +153,8 @@ export function ChessBoard(
                       // CHECKMATE
                       (GameOver.isGameOver &&
                         GameOver.gameOverType === "checkmate" &&
-                        piece.color === chess.turn())
-
+                        piece.color === chess.turn()) 
+                        
                       ||
 
                       // NORMAL CHECK
@@ -191,7 +201,7 @@ export function ChessBoard(
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[
-            styles.button,
+            styles.gradient,
             {
               borderRadius: 100,
               marginTop: 18
@@ -401,7 +411,7 @@ function PieceIcon ({
             : "pawn"
         }`}
         size={width > 640 ? 70 : (width - 2) / 10}   // responsive sizing
-        color={piece.color === "b" ? "#553227" : "#fbfbfb"}
+        color={piece.color === "b" ? "#75483a" : "#e5e5e5"}
         
       />}
     </View>
@@ -422,7 +432,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  button: {
+  gradient: {
     paddingVertical: 2,
     paddingHorizontal: 2,
     alignItems: "center",

@@ -36,6 +36,6 @@ interface Sol {
     setSol: (sol: number) => void,
 }
 export const GameBet= create<Sol>((set) => ({
-    sol: 0,
+    sol: .1,
     setSol: (sol: number) => set({sol})
 }))

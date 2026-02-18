@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router'
 import FontAwesome from "@expo/vector-icons/Ionicons"
 
 export default function () {
+
     return (
         <>
             <StatusBar barStyle={"default"} />

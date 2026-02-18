@@ -12,7 +12,24 @@ export default function index() {
   });
   const {sol, setSol} = GameBet(s=> s)
   const [initializing, setInitializing] = useState(false)
-  
+  const [loaded] = useFonts({
+    Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
+    InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
+  })
+
+  useEffect(() => {
+    if (loaded) {
+    }
+  }, [loaded])
+
+  useEffect(()=>{
+    setInitializing(false)
+  }, [])
+
+  if (!loaded) {
+    return null
+  }
+
   return (
     <SafeAreaView style={styles.container}>
         <View style={styles.titleWrap}>
@@ -96,6 +113,7 @@ export default function index() {
         }} onPress={() => {
           setInitializing(true)
           router.push("/Game");
+          setInitializing(false)
         }}>
           <LinearGradient
             colors={['#B048C2', '#9082DB', '#3DE3B4']}

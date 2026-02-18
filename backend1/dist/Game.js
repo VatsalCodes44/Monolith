@@ -1,16 +1,22 @@
 import { WebSocket } from "ws";
 import { Chess } from "chess.js";
-import { CHECK, GAME_OVER, INIT_GAME, MOVE } from "./Messages.js";
+import { CHECK, GAME_OVER, INIT_GAME, MOVE, TIME_OUT } from "./Messages.js";
 export class Game {
     player1;
     player2;
     board;
     startTime;
+    timer1;
+    timer2;
+    lastMoveTimestamp;
     constructor(player1, player2) {
         this.player1 = player1;
         this.player2 = player2;
+        this.timer1 = (10 * 60 * 1000) + 2000;
+        this.timer2 = (10 * 60 * 1000) + 2000;
         this.board = new Chess();
         this.startTime = new Date();
+        this.lastMoveTimestamp = Date.now();
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
@@ -35,11 +41,37 @@ export class Game {
         // check id the game is over
         // send the updated board to both the player
         // validating only the correct user makes the move whose turn is this
-        console.log(move);
+        const now = Date.now();
+        const timeSpent = now - this.lastMoveTimestamp;
         if (this.board.turn() === "w" && socket !== this.player1) {
             return;
         }
+        else {
+            this.timer1 -= timeSpent;
+        }
         if (this.board.turn() === "b" && socket !== this.player2) {
+            return;
+        }
+        else {
+            this.timer2 -= timeSpent;
+        }
+        this.lastMoveTimestamp = now;
+        if (this.timer1 <= 0 || this.timer2 <= 0) {
+            const gameOverType = "time_out";
+            this.player1.send(JSON.stringify({
+                type: TIME_OUT,
+                payload: {
+                    winner: this.timer1 <= 0 ? "w" : "b",
+                    gameOverType,
+                }
+            }));
+            this.player2.send(JSON.stringify({
+                type: TIME_OUT,
+                payload: {
+                    winner: this.timer1 <= 0 ? "w" : "b",
+                    gameOverType,
+                }
+            }));
             return;
         }
         try {
@@ -56,11 +88,18 @@ export class Game {
         }
         const payload = {
             move,
-            board: this.board.fen()
+            board: this.board.fen(),
+            timer1: this.timer1,
+            timer2: this.timer2
         };
+        console.log(payload);
         // check if the game is over
-        if (this.board.isGameOver()) {
-            const gameOverType = this.board.isCheckmate() ? "checkmate" : (this.board.isStalemate() ? "stalemate" : "draw");
+        if (this.board.isGameOver() || this.timer1 <= 0 || this.timer2 <= 0) {
+            const gameOverType = this.board.isCheckmate() ?
+                "checkmate" :
+                (this.board.isStalemate() ?
+                    "stalemate" :
+                    "draw");
             this.player1.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: {

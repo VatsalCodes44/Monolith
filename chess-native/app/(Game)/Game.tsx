@@ -1,16 +1,25 @@
-import { Alert, StyleSheet, View } from 'react-native'
+import { Alert, StyleSheet, View, Text } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {ChessBoard} from "@/src/components/ChessBoard"
-import { CHECK, GAME_OVER, INIT_GAME, MOVE } from '@/src/config/serverResponds'
+import { CHECK, GAME_OVER, INIT_GAME, MOVE, TIME_OUT } from '@/src/config/serverResponds'
 import { Chess, Square } from 'chess.js'
 import { WS_URL } from '@/src/config/config'
 import { ConnectingToServer } from '@/src/components/connectingToServer'
 import { router } from 'expo-router'
+import { Avatar, YStack } from 'tamagui'
+import { Orbitron_900Black, useFonts } from '@expo-google-fonts/orbitron'
+import { GameBet } from '@/src/store/store'
+import { Timer } from '@/src/components/Timer'
+import { Audio } from 'expo-av';
+import { useRef } from 'react';
+import { TextArea } from 'tamagui'
+import { LinearGradient } from 'expo-linear-gradient'
+
 
 export interface GameOver {
   winner: "b" | "w" | null,
-  gameOverType: "checkmate" | "stalemate" | "draw" | null,
+  gameOverType: "checkmate" | "stalemate" | "draw" | "time_out" | null,
   isGameOver: boolean
 }
 
@@ -22,11 +31,72 @@ export default function Game() {
   const [prevFrom, setPrevFrom] = useState<Square | null>(null);
   const [prevTo, setPrevTo] = useState<Square | null>(null);
   const [isCheck, setIsCheck] = useState(false)
+  const [gameStarted, setGameStarted] = useState(false);
   const [GameOver, setGameOver] = useState<GameOver>({
     winner: null,
     gameOverType: null,
     isGameOver: false
   });
+  const [timer1, setTimer1] = useState(10*60*1000)
+  const [timer2, setTimer2] = useState(10*60*1000)
+  const moveSoundRef = useRef<Audio.Sound | null>(null);
+  const checkSoundRef = useRef<Audio.Sound | null>(null);
+  const illegalSoundRef = useRef<Audio.Sound | null>(null);
+  const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
+
+  const [fontsLoaded] = useFonts({
+    Orbitron_900Black,
+  });
+  const sol = GameBet(s=> s.sol)
+
+  const playMoveSound = async () => {
+    if (!moveSoundRef.current) return;
+
+    try {
+      await moveSoundRef.current.stopAsync();
+      await moveSoundRef.current.setPositionAsync(0);
+      await moveSoundRef.current.playAsync();
+    } catch (err) {
+      console.log("Move sound error:", err);
+    }
+  };
+
+  const playCheckSound = async () => {
+    if (!checkSoundRef.current) return;
+
+    try {
+      await checkSoundRef.current.stopAsync();
+      await checkSoundRef.current.setPositionAsync(0);
+      await checkSoundRef.current.playAsync();
+    } catch (err) {
+      console.log("Check sound error:", err);
+    }
+  };
+
+  const playIllegalMoveSound = async () => {
+    if (!illegalSoundRef.current) return;
+
+    try {
+      await illegalSoundRef.current.stopAsync();
+      await illegalSoundRef.current.setPositionAsync(0);
+      await illegalSoundRef.current.playAsync();
+    } catch (err) {
+      console.log("Check sound error:", err);
+    }
+  };
+
+  const playLowOnTimeSound = async () => {
+    if (!lowOnTimeSoundRef.current) return;
+
+    try {
+      await lowOnTimeSoundRef.current.stopAsync();
+      await lowOnTimeSoundRef.current.setPositionAsync(0);
+      await lowOnTimeSoundRef.current.playAsync();
+    } catch (err) {
+      console.log("Check sound error:", err);
+    }
+  };
+
 
   useEffect(() => {
     if (!socket) {
@@ -37,9 +107,9 @@ export default function Game() {
       };
   
       ws.onclose = () => {
-          Alert.alert("Are you sure want to leave the game ?")
-          setSocket(null);
-          router.replace("/")
+          // Alert.alert("Are you sure want to leave the game ?")
+          // setSocket(null);
+          // router.replace("/")
       };
   
       ws.onerror = () => {
@@ -53,27 +123,34 @@ export default function Game() {
         switch (message.type) {
           case INIT_GAME: 
             setColor(payload.color);
-            setChess(new Chess(payload.board))
+            setChess(new Chess(payload.board));
+            setGameStarted(true);
             break;
           case MOVE: 
             let newChess = new Chess(payload.board)
             setChess(newChess);
             setPrevFrom(payload.move.from);
             setPrevTo(payload.move.to);
+            setTimer1(payload.timer1);
+            setTimer2(payload.timer2);
+            playMoveSound()
             break;
-          
+            
           case CHECK:
             let checkChess = new Chess(payload.board)
             setChess(checkChess);
             setPrevFrom(payload.move.from);
             setPrevTo(payload.move.to);
-            setIsCheck(true)
+            setTimer1(payload.timer1);
+            setTimer2(payload.timer2);
+            setIsCheck(true);
+            playCheckSound()
             break;
-  
+              
           case GAME_OVER:
             console.log("game over");
-            let gameOver = new Chess(payload.board)
-            setChess(gameOver)
+            let gameOverChess = new Chess(payload.board)
+            setChess(gameOverChess)
             setPrevFrom(payload.move.from);
             setPrevTo(payload.move.to);
             setGameOver({
@@ -81,6 +158,21 @@ export default function Game() {
               gameOverType: payload.gameOverType,
               isGameOver: true
             })
+            setTimer1(payload.timer1);
+            setTimer2(payload.timer2);
+            break;
+
+          case TIME_OUT:
+            console.log("time out");
+            setPrevFrom(payload.move.from);
+            setPrevTo(payload.move.to);
+            setGameOver({
+              winner: payload.winner,
+              gameOverType: payload.gameOverType,
+              isGameOver: true
+            })
+            setTimer1(payload.timer1);
+            setTimer2(payload.timer2);
             break;
         }
       }
@@ -95,17 +187,107 @@ export default function Game() {
 
   }, [socket]);
 
+  useEffect(() => {
+    return () => {
+      socket?.close();
+    }
+  }, [])
+
+  useEffect(() => {
+    const loadSounds = async () => {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        playThroughEarpieceAndroid: true,
+      });
+
+      const moveSound = new Audio.Sound();
+      const checkSound = new Audio.Sound();
+      const illegalSound = new Audio.Sound();
+      const lowOnTimeSound = new Audio.Sound();
+
+      await moveSound.loadAsync(
+        require('../../assets/audios/moveSound.mp3')
+      );
+
+      await checkSound.loadAsync(
+        require('../../assets/audios/checkSound.mp3')
+      );
+
+      await illegalSound.loadAsync(
+        require('../../assets/audios/illegalMoveSound.mp3')
+      );
+
+      await lowOnTimeSound.loadAsync(
+        require('../../assets/audios/lowOnTime.mp3')
+      );
+
+      moveSoundRef.current = moveSound;
+      checkSoundRef.current = checkSound;
+      illegalSoundRef.current = illegalSound;
+      lowOnTimeSoundRef.current = lowOnTimeSound;
+    };
+
+    loadSounds();
+
+    return () => {
+      moveSoundRef.current?.unloadAsync();
+      checkSoundRef.current?.unloadAsync();
+      illegalSoundRef.current?.unloadAsync();
+      lowOnTimeSoundRef.current?.unloadAsync();
+    };
+  }, []);
+
+
   if (!socket) {
     return <ConnectingToServer />;
   }
 
 
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{flex: 1}}>
+      <View style={styles.avatar}>
+
+        <Avatar circular size="$3">
+          <Avatar.Image src="http://picsum.photos/200/300" />
+          <Avatar.Fallback />
+        </Avatar>
+
+        <Text style={{
+          color: "#ffffff", 
+          fontFamily: fontsLoaded ? "Orbitron_900Black": "Roboto",
+          fontSize: 18
+        }}>
+          {0.2} Sol
+        </Text>
+
+        <Avatar circular size="$3">
+          <Avatar.Image src="http://picsum.photos/200/300" />
+          <Avatar.Fallback />
+        </Avatar>
+
+      </View>
+
+      <View style={{paddingHorizontal: 4}}>
+        <Timer 
+        color={color} 
+        fontsLoaded={fontsLoaded} 
+        timer1={timer1} 
+        timer2={timer2}
+        turn={chess.turn()}
+        gameStarted={gameStarted}
+        GameOver={GameOver}
+        setGameOver={setGameOver}
+        playLowOnTimeSound={playLowOnTimeSound}
+        />
+      </View>
+
       <View style={{
-        flexDirection: "row",
-        justifyContent: "center"
+        flex:1,
+        justifyContent: "center",
+        alignItems: "center",
       }}>
+
         <ChessBoard
           chess={chess}
           from={from} 
@@ -117,8 +299,37 @@ export default function Game() {
           prevTo={prevTo}
           GameOver={GameOver}
           isCheck={isCheck}
+          gameStarted={gameStarted}
+          playIllegalMoveSound={ playIllegalMoveSound}
         />
       </View>
+
+      <LinearGradient
+        colors={['#B048C2', '#9082DB', '#3DE3B4']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[styles.gradient, { borderRadius: 100, marginTop: 18, height:48, maxHeight: 96 }]}>
+        <TextArea 
+          flex={1}
+          placeholderTextColor={"white"} 
+          borderWidth={0}
+          background="black"
+          marginBlock={0}
+          paddingBlock={0}
+          maxH={96}
+          height={48}
+          borderBottomEndRadius={"$12"}
+          borderBottomLeftRadius={"$12"}
+          borderBottomRightRadius={"$12"}
+          borderBottomStartRadius={"$12"}
+          borderTopEndRadius={"$12"}
+          borderTopLeftRadius={"$12"}
+          borderTopRightRadius={"$12"}
+          borderTopStartRadius={"$12"}
+          placeholder='Message anonymously'
+        />
+        
+      </LinearGradient>
     </SafeAreaView>
   )
 }
@@ -127,5 +338,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#191919"
+  },
+  avatar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 4
+  },
+  gradient: {
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+    alignItems: "center",
+    justifyContent: "center",
   }
 })
