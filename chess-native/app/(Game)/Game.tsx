@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {ChessBoard} from "@/src/components/ChessBoard"
 import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from '@/src/config/serverResponds'
-import { Chess, Square } from 'chess.js'
+import { Chess, Move, Square } from 'chess.js'
 import { WS_URL } from '@/src/config/config'
 import { ConnectingToServer } from '@/src/components/connectingToServer'
 import { router } from 'expo-router'
@@ -15,6 +15,8 @@ import { Audio } from 'expo-av';
 import { useRef } from 'react';
 import { LastMessage } from '@/src/components/LastMessage'
 import { Messages } from '@/src/components/Message'
+import { MoveHistory } from '@/src/components/MoveHistory'
+import { Captured } from '@/src/components/Captured'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -48,6 +50,7 @@ export default function Game() {
   const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
   const [messages, setMessages] = useState<Message[]>([])
   const [lastMessage, setLastMessage] = useState<Message>();
+  const [moves, setMoves] = useState<Move[]>([])
   const {height, width} = useWindowDimensions()
   const [fontsLoaded] = useFonts({
     Orbitron_900Black,
@@ -133,11 +136,13 @@ export default function Game() {
             break;
           case MOVE: 
             let newChess = new Chess(payload.board)
+            console.log(payload.board)
             setChess(newChess);
             setPrevFrom(payload.move.from);
             setPrevTo(payload.move.to);
             setTimer1(payload.timer1);
             setTimer2(payload.timer2);
+            setMoves(payload.history)
             playMoveSound()
             break;
             
@@ -149,23 +154,25 @@ export default function Game() {
             setTimer1(payload.timer1);
             setTimer2(payload.timer2);
             setIsCheck(true);
+            setMoves(payload.history)
             playCheckSound()
-            break;
+          break;
               
-          case GAME_OVER:
-            console.log("game over");
-            let gameOverChess = new Chess(payload.board)
-            setChess(gameOverChess)
-            setPrevFrom(payload.move.from);
-            setPrevTo(payload.move.to);
-            setGameOver({
-              winner: payload.winner,
-              gameOverType: payload.gameOverType,
-              isGameOver: true
-            })
-            setTimer1(payload.timer1);
-            setTimer2(payload.timer2);
-            break;
+        case GAME_OVER:
+          console.log("game over");
+          let gameOverChess = new Chess(payload.board)
+          setChess(gameOverChess)
+          setPrevFrom(payload.move.from);
+          setPrevTo(payload.move.to);
+          setMoves(payload.history)
+          setGameOver({
+            winner: payload.winner,
+            gameOverType: payload.gameOverType,
+            isGameOver: true
+          })
+          setTimer1(payload.timer1);
+          setTimer2(payload.timer2);
+          break;
 
           case TIME_OUT:
             console.log("time out");
@@ -178,9 +185,9 @@ export default function Game() {
             })
             setTimer1(payload.timer1);
             setTimer2(payload.timer2);
+            setMoves(payload.history)
             break;
           case MESSAGE:
-            console.log(payload)
             setMessages(m => [...m, payload]);
             setLastMessage(payload);
             break;
@@ -267,7 +274,6 @@ export default function Game() {
       flex: 1, 
       backgroundColor: "#000000", 
       paddingVertical: 20,
-      height
     }}>
       <View style={styles.avatar}>
 
@@ -293,24 +299,35 @@ export default function Game() {
 
       <View style={{paddingHorizontal: 4}}>
         <Timer 
-        color={color} 
         fontsLoaded={fontsLoaded} 
         timer1={timer1} 
         timer2={timer2}
         turn={chess.turn()}
         gameStarted={gameStarted}
         GameOver={GameOver}
-        setGameOver={setGameOver}
         playLowOnTimeSound={playLowOnTimeSound}
+        color={color}
         />
+      </View>
+      <View style={{
+        height: 60,
+        marginVertical: 4,
+        width: "100%",
+      }}>
+        <Captured moves={moves} color={color} />
       </View>
 
       <View style={{
-        flex:1,
         justifyContent: "center",
-        alignItems: "center",
+        alignItems: "center"
       }}>
-
+        <View style={{
+          height: 60,
+          marginVertical: 4,
+          width: "100%",
+        }}>
+          <MoveHistory moves={moves} />
+        </View>
         <ChessBoard
           chess={chess}
           from={from} 
@@ -327,8 +344,16 @@ export default function Game() {
         />
       </View>
 
-      {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
-      <Messages sendMessage={sendMessage} color={color} />
+      <View style={{
+        marginHorizontal: 15,
+        gap: 10,
+        height: 60,
+        justifyContent: "flex-end",
+        flex: 1
+      }}>
+        {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
+        <Messages sendMessage={sendMessage} color={color} />
+      </View>
     </SafeAreaView>
   )
 }

@@ -6,6 +6,7 @@ export function LastMessage({lastMessage, color, width}: {lastMessage: Message, 
     const [visible, setVisible] = useState(true);
 
     useEffect(() => {
+        setVisible(true)
         const timer = setTimeout(() => {
             setVisible(false);
         }, 3000)
@@ -17,19 +18,22 @@ export function LastMessage({lastMessage, color, width}: {lastMessage: Message, 
     return (
     <View style={{
         justifyContent: color == lastMessage.from ? "flex-end" : "flex-start",
-        display: visible ? "flex" : "none",
         borderRadius: 100,
-        maxHeight: 96,
-        width: "auto",
-        flexDirection: "row"
+        flexDirection: "row",
+        alignItems: "flex-end"
     }}>
         <Text 
-        numberOfLines={5}
         ellipsizeMode="tail"
         style={{
             color: "#ffffff",
             backgroundColor: color == lastMessage.from ? '#B048C2' : '#3DE3B4',
-            maxWidth: width/1.5
+            maxWidth: width/1.5,
+            fontSize: 18,
+            paddingVertical: 2,
+            paddingHorizontal: 8,
+            borderRadius: 15,
+            overflow: "hidden",
+            display: visible ? "flex" : "none",
         }}>
             {lastMessage.message}
         </Text>

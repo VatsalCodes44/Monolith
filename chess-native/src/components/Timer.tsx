@@ -1,69 +1,91 @@
 import { GameOver } from "@/app/(Game)/Game";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-export function Timer({timer1,
-    timer2, 
-    color, 
-    turn, 
-    fontsLoaded, 
+export function Timer({
+    timer1,
+    timer2,
+    turn,
+    fontsLoaded,
     gameStarted,
     GameOver,
-    setGameOver,
-    playLowOnTimeSound
+    playLowOnTimeSound,
+    color
 }: {
     timer1: number,
     timer2: number,
-    color: "w" | "b",
     turn: "w" | "b",
-    fontsLoaded: boolean, 
+    fontsLoaded: boolean,
     gameStarted: boolean,
     GameOver: GameOver,
-    setGameOver: React.Dispatch<React.SetStateAction<GameOver>>,
-    playLowOnTimeSound: () => Promise<void>
+    playLowOnTimeSound: () => Promise<void>,
+    color: "w" | "b"
 }) {
+
     const [t1, setT1] = useState(timer1)
     const [t2, setT2] = useState(timer2)
-    // Timer countdown
+    
+    const timer1Ref = useRef(timer1)
+    const timer2Ref = useRef(timer2)
+    const lastUpdateRef = useRef<number>(Date.now())
+    const hasPlayedLowTimeSoundRef = useRef<boolean>(false)
+
     useEffect(() => {
-        if (GameOver.isGameOver || !gameStarted) return;
-        if (t1 <= 0 || t2 <= 0) {
-            setGameOver({
-                gameOverType: "time_out",
-                isGameOver: true,
-                winner: t1 <= 0 ? color : (color == "b" ? "w" : "b")
-            })
-        }
-        if (t1 <= 30 || t1 <= 10) {
-            playLowOnTimeSound()
-            setGameOver({
-                gameOverType: "time_out",
-                isGameOver: true,
-                winner: t1 <= 0 ? color : (color == "b" ? "w" : "b")
-            })
-        }
+        timer1Ref.current = timer1
+        timer2Ref.current = timer2
+        setT1(timer1)
+        setT2(timer2)
+        lastUpdateRef.current = Date.now()
         
-        let interval = setInterval(() => {
-            if (color === turn) {
-                setT1(t => t - 1000)
-            } else {
-                setT2(t => t - 1000)
-            }
-        }, 1000)
-
-        return () => {
-            clearInterval(interval);
+        if (timer1 > 30_000 && timer2 > 30_000) {
+            hasPlayedLowTimeSoundRef.current = false
         }
-    }, [color, turn, gameStarted, GameOver.isGameOver, t1, t2])
-    
-    
+    }, [timer1, timer2])
 
-    
+    useEffect(() => {
+        if (!gameStarted || GameOver.isGameOver) return
+
+        lastUpdateRef.current = Date.now()
+
+        const interval = setInterval(() => {
+            const now = Date.now()
+            const elapsed = now - lastUpdateRef.current
+            
+            if (turn === "w") {
+                const actualTime = timer1Ref.current - elapsed
+                setT1(Math.max(actualTime, 0))
+            } else {
+                const actualTime = timer2Ref.current - elapsed
+                setT2(Math.max(actualTime, 0))
+            }
+        }, 100)
+
+        return () => clearInterval(interval)
+
+    }, [turn, gameStarted, GameOver.isGameOver])
+
+    useEffect(() => {
+        if (hasPlayedLowTimeSoundRef.current) return
+
+        const currentTimer = turn === "w" ? t1 : t2
+        
+        if (currentTimer <= 30_000 && currentTimer > 0) {
+            playLowOnTimeSound()
+            hasPlayedLowTimeSoundRef.current = true
+        }
+    }, [t1, t2, turn])
+
+    // ========== ADDED: Determine which timer goes on which side ==========
+    // Current player's timer always on the right
+    const leftTimer = color === "w" ? t2 : t1;
+    const rightTimer = color === "w" ? t1 : t2;
+    const isLeftLowTime = color === "w" ? t2 < 30_000 : t1 < 30_000;
+    const isRightLowTime = color === "w" ? t1 < 30_000 : t2 < 30_000;
 
     return (
         <View style={styles.container}>
-            {RenderTimer(t2, t2 < 30 * 1000, fontsLoaded)}
-            {RenderTimer(t1, t1 < 30 * 1000, fontsLoaded)}
+            {RenderTimer(leftTimer, isLeftLowTime, fontsLoaded)}
+            {RenderTimer(rightTimer, isRightLowTime, fontsLoaded)}
         </View>
     )
 }

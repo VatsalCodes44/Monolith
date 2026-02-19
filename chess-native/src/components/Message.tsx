@@ -1,7 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { memo, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
-import { TextArea } from 'tamagui'
+import { Input } from 'tamagui'
 import FontAwesome5 from '@expo/vector-icons/Ionicons'
 import { Message } from '@/app/(Game)/Game'
 
@@ -32,13 +32,12 @@ export const Messages = memo(({
             <View style={{
                 backgroundColor: "#000000",
                 width: "100%",
-                height: "100%",
                 borderRadius: 100,
                 flexDirection: "row",
                 alignItems: "stretch",
                 justifyContent: "space-between",
             }}>
-                <TextArea
+                <Input
                     value={message}
                     bg="black"
                     borderWidth={0}
@@ -54,6 +53,7 @@ export const Messages = memo(({
                     flex={1}
                     multiline={false}
                     onChangeText={setMessage}
+                    submitBehavior='blurAndSubmit'
                 />
                 <TouchableOpacity 
                     style={{ height: "100%" }}
@@ -83,7 +83,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         borderRadius: 100,
         overflow: "hidden",
-        marginHorizontal: 15,
         height: 48
     }
 })
