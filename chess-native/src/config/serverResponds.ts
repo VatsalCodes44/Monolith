@@ -4,3 +4,4 @@ export const GAME_OVER = "game_over";
 export const TIME_OUT = "time_out";
 export const CHECK = "check";
 export const MESSAGE = "message";
+export const RE_JOIN_GAME = "re_join_game";

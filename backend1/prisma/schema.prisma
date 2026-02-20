@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Player {
+  publicKey     String      @id
+  lamports      BigInt
+  gameAsPlayer1 Game[]      @relation("Player1")
+  gameAsPlayer2 Game[]      @relation("Player2")
+  nfts          PlayerNft[]
+}
+
+// player 1 is always white
+model Game {
+  id               String     @id @default(uuid())
+  player1PublicKey String
+  player2PublicKey String
+  fen              String
+  winner           String?
+  status           GameStatus
+  network          Network
+  lamports         BigInt
+  createdAt        DateTime   @default(now())
+  player1          Player     @relation("Player1", fields: [player1PublicKey], references: [publicKey])
+  player2          Player     @relation("Player2", fields: [player2PublicKey], references: [publicKey])
+}
+
+enum Network {
+  MAINNET
+  DEVNET
+}
+
+enum GameStatus {
+  IN_PROGRESS
+  WHITE_WON
+  BLACK_WON
+  DRAW
+  CHECKMATE
+  STALEMATE
+}
+
+enum Color {
+  w
+  b
+}
+
+model PlayerNft {
+  id        String   @id @default(uuid())
+  publicKey String
+  mintedNft String
+  createdAt DateTime @default(now())
+  player    Player   @relation(fields: [publicKey], references: [publicKey])
+}

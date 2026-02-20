@@ -1,29 +1,36 @@
 import { WebSocket } from "ws";
 import { Chess } from "chess.js"
 import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
-
-interface Message {
-    from: "w" | "b",
-    message: string,
-}
+import { Message } from "./types/type.js";
 
 export class Game {
-    public player1: WebSocket;
-    public player2: WebSocket;
+    public player1: WebSocket | null;
+    public player2: WebSocket | null;
+    public player1Pubkey: string;
+    public player2Pubkey: string;
     private board: Chess;
     private startTime: Date;
     private timer1: number;
     private timer2: number;
     private lastMoveTimestamp: number;
     private messages: Message[];
-    constructor(player1: WebSocket, player2: WebSocket) {
+    public gameId: string;
+    public network: "MAINNET" | "DEVNET";
+    public sol: "0.01" | "0.05" | "0.1";
+
+    constructor(player1: WebSocket, player2: WebSocket, player1Pubkey: string, player2Pubkey: string, network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1", gameId: string) {
         this.player1 = player1;
         this.player2 = player2;
+        this.player1Pubkey = player1Pubkey;
+        this.player2Pubkey = player2Pubkey;
+        this.network = network;
+        this.sol = sol;
         this.timer1 = (10 * 60 * 1000);
         this.timer2 = (10 * 60 * 1000);
         this.board = new Chess();
         this.startTime = new Date();
         this.lastMoveTimestamp = Date.now();
+        this.gameId = gameId
         this.messages = [];
 
         this.player1.send(JSON.stringify({
@@ -53,7 +60,7 @@ export class Game {
                 from: "w",
                 message: message.message
             });
-            this.player2.send(JSON.stringify({
+            this.player2?.send(JSON.stringify({
                 type: MESSAGE,
                 payload: {
                     from: "w",
@@ -66,7 +73,7 @@ export class Game {
                 from: "b",
                 message: message.message
             });
-            this.player1.send(JSON.stringify({
+            this.player1?.send(JSON.stringify({
                 type: MESSAGE,
                 payload: {
                     from: "b",
@@ -77,16 +84,8 @@ export class Game {
     }
 
     public makeMove(socket: WebSocket, move: { from: string, to: string }, promotion: string | undefined) {
-        // validation of move using zod
-        // make sure is this user move
-        // is this move valid
-        // update the board
-        // push the move
-        // check id the game is over
-        // send the updated board to both the player
 
         // validating only the correct user makes the move whose turn is this
-
         if (this.board.turn() === "w" && socket !== this.player1) {
             return;
         }
@@ -122,12 +121,12 @@ export class Game {
                 }
             };
 
-            this.player1.send(JSON.stringify({
+            this.player1?.send(JSON.stringify({
                 type: TIME_OUT,
                 payload
             }));
 
-            this.player2.send(JSON.stringify({
+            this.player2?.send(JSON.stringify({
                 type: TIME_OUT,
                 payload
             }));
@@ -185,12 +184,12 @@ export class Game {
                 ...payload
             };
 
-            this.player1.send(JSON.stringify({
+            this.player1?.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: finalPayload
             }));
 
-            this.player2.send(JSON.stringify({
+            this.player2?.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: finalPayload
             }));
@@ -214,12 +213,12 @@ export class Game {
         // }
 
 
-        this.player1.send(JSON.stringify({
+        this.player1?.send(JSON.stringify({
             type: MOVE,
             payload
         }));
 
-        this.player2.send(JSON.stringify({
+        this.player2?.send(JSON.stringify({
             type: MOVE,
             payload
         }));
