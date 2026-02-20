@@ -47,7 +47,72 @@ export class GameManager {
 
     removeUser(socket: WebSocket) {
         this.users = this.users.filter(s => s !== socket);
-        // stop the game here because the user left 
+        let foundedSocket = false;
+
+        this._0_01SolDevnetGame = this._0_01SolDevnetGame.filter(g => {
+            if (g.player1 !== socket && g.player2 !== socket) {
+                return true;
+            }
+            else {
+                foundedSocket = true;
+                return false;
+            }
+        });
+        if (foundedSocket) return;
+
+        this._0_05SolDevnetGame = this._0_05SolDevnetGame.filter(g => {
+            if (g.player1 !== socket && g.player2 !== socket) {
+                return true;
+            }
+            else {
+                foundedSocket = true;
+                return false;
+            }
+        });
+        if (foundedSocket) return;
+
+        this._0_1SolDevnetGame = this._0_1SolDevnetGame.filter(g => {
+            if (g.player1 !== socket && g.player2 !== socket) {
+                return true;
+            }
+            else {
+                foundedSocket = true;
+                return false;
+            }
+        });
+        if (foundedSocket) return;
+
+        this._0_01SolGame = this._0_01SolGame.filter(g => {
+            if (g.player1 !== socket && g.player2 !== socket) {
+                return true;
+            }
+            else {
+                foundedSocket = true;
+                return false;
+            }
+        });
+        if (foundedSocket) return;
+
+        this._0_05SolGame = this._0_05SolGame.filter(g => {
+            if (g.player1 !== socket && g.player2 !== socket) {
+                return true;
+            }
+            else {
+                foundedSocket = true;
+                return false;
+            }
+        });
+        if (foundedSocket) return;
+
+        this._0_1SolGame = this._0_1SolGame.filter(g => {
+            if (g.player1 !== socket && g.player2 !== socket) {
+                return true;
+            }
+            else {
+                foundedSocket = true;
+                return false;
+            }
+        });
     }
 
     private addHandler(socket: WebSocket) {
