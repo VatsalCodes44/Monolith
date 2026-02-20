@@ -5,7 +5,7 @@ export const ShowMessages = ({
     isOpen,
     onClose,
     children,
-    width
+    width,
 }:{
     isOpen: boolean,
     onClose: () => void,
@@ -32,29 +32,48 @@ export const ShowMessages = ({
 
     return (
         <Modal 
-            visible={isOpen} 
-            transparent
-            animationType="fade"
-            onRequestClose={handleClose}
+        visible={isOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={handleClose}
         >
-            <Pressable 
-                style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
-                onPress={handleClose}
+        <View style={{ flex: 1 }}>
+            
+            {/* BACKDROP */}
+            <Pressable
+            style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+            }}
+            onPress={handleClose}
+            />
+
+            {/* CONTENT */}
+            <View
+            style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+            }}
+            pointerEvents="box-none"
             >
-                <View 
-                    onStartShouldSetResponder={() => true}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    style={{ 
-                        backgroundColor: '#1a1a1a', 
-                        borderRadius: 12,
-                        padding: 20,
-                        maxHeight: 500,
-                        width: width || '90%'
-                    }}
-                >
-                    {children}
-                </View>
-            </Pressable>
+            <View
+                style={{
+                backgroundColor: '#1a1a1a',
+                borderRadius: 12,
+                padding: 20,
+                maxHeight: 500,
+                width: width || '90%',
+                }}
+            >
+                {children}
+            </View>
+            </View>
+        </View>
         </Modal>
     );
 };

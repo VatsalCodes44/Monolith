@@ -99,7 +99,9 @@ export class Game {
                 timer1: this.timer1,
                 timer2: this.timer2,
                 history: this.board.history({ verbose: true }),
-                move: null
+                move: {
+                    ...move
+                }
             };
             this.player1.send(JSON.stringify({
                 type: TIME_OUT,
@@ -162,17 +164,18 @@ export class Game {
             }));
             return;
         }
-        if (this.board.isCheck()) {
-            this.player1.send(JSON.stringify({
-                type: CHECK,
-                payload
-            }));
-            this.player2.send(JSON.stringify({
-                type: CHECK,
-                payload
-            }));
-            return;
-        }
+        // normal case we can check it on client side
+        // if (this.board.isCheck()) {
+        //     this.player1.send(JSON.stringify({
+        //         type: CHECK,
+        //         payload
+        //     }));
+        //     this.player2.send(JSON.stringify({
+        //         type: CHECK,
+        //         payload
+        //     }));
+        //     return;
+        // }
         this.player1.send(JSON.stringify({
             type: MOVE,
             payload

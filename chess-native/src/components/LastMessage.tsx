@@ -20,13 +20,15 @@ export function LastMessage({lastMessage, color, width}: {lastMessage: Message, 
         justifyContent: color == lastMessage.from ? "flex-end" : "flex-start",
         borderRadius: 100,
         flexDirection: "row",
-        alignItems: "flex-end"
+        alignItems: "flex-end",
+        flex:1,
+        marginTop: 4
     }}>
         <Text 
         ellipsizeMode="tail"
         style={{
             color: "#ffffff",
-            backgroundColor: color == lastMessage.from ? '#B048C2' : '#3DE3B4',
+            backgroundColor: color == lastMessage.from ? '#3DE3B4' : '#B048C2',
             maxWidth: width/1.5,
             fontSize: 18,
             paddingVertical: 2,

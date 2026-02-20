@@ -6,7 +6,7 @@ import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from '@/src/conf
 import { Chess, Move, Square } from 'chess.js'
 import { WS_URL } from '@/src/config/config'
 import { ConnectingToServer } from '@/src/components/connectingToServer'
-import { router } from 'expo-router'
+import { router, useNavigation } from 'expo-router'
 import { Avatar, YStack } from 'tamagui'
 import { Orbitron_900Black, useFonts } from '@expo-google-fonts/orbitron'
 import { GameBet } from '@/src/store/store'
@@ -14,10 +14,11 @@ import { Timer } from '@/src/components/Timer'
 import { Audio } from 'expo-av';
 import { useRef } from 'react';
 import { LastMessage } from '@/src/components/LastMessage'
-import { Messages } from '@/src/components/Message'
+import { SendMessage } from '@/src/components/SendMessage'
 import { MoveHistory } from '@/src/components/MoveHistory'
 import { Captured } from '@/src/components/Captured'
 import { ShowMessages } from '@/src/components/ShowMessages'
+import { usePreventRemove } from '@react-navigation/native'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -57,7 +58,8 @@ export default function Game() {
   const [fontsLoaded] = useFonts({
     Orbitron_900Black,
   });
-  const sol = GameBet(s=> s.sol)
+  const navigation = useNavigation();
+  const {sol, setSol} = GameBet(s=> s)
 
   const playMoveSound = async () => {
     if (!moveSoundRef.current) return;
@@ -124,7 +126,7 @@ export default function Game() {
   
       ws.onerror = () => {
         setSocket(null);
-          // router.replace("/");
+        // router.replace("/");
       };
   
       ws.onmessage = (event) => {
@@ -148,33 +150,33 @@ export default function Game() {
             playMoveSound()
             break;
             
-          case CHECK:
-            let checkChess = new Chess(payload.board)
-            setChess(checkChess);
+          // case CHECK:
+          //   let checkChess = new Chess(payload.board)
+          //   setChess(checkChess);
+          //   setPrevFrom(payload.move.from);
+          //   setPrevTo(payload.move.to);
+          //   setTimer1(payload.timer1);
+          //   setTimer2(payload.timer2);
+          //   setIsCheck(true);
+          //   setMoves(payload.history)
+          //   playCheckSound()
+          // break;
+              
+          case GAME_OVER:
+            console.log("game over");
+            let gameOverChess = new Chess(payload.board)
+            setChess(gameOverChess)
             setPrevFrom(payload.move.from);
             setPrevTo(payload.move.to);
+            setMoves(payload.history)
+            setGameOver({
+              winner: payload.winner,
+              gameOverType: payload.gameOverType,
+              isGameOver: true
+            })
             setTimer1(payload.timer1);
             setTimer2(payload.timer2);
-            setIsCheck(true);
-            setMoves(payload.history)
-            playCheckSound()
-          break;
-              
-        case GAME_OVER:
-          console.log("game over");
-          let gameOverChess = new Chess(payload.board)
-          setChess(gameOverChess)
-          setPrevFrom(payload.move.from);
-          setPrevTo(payload.move.to);
-          setMoves(payload.history)
-          setGameOver({
-            winner: payload.winner,
-            gameOverType: payload.gameOverType,
-            isGameOver: true
-          })
-          setTimer1(payload.timer1);
-          setTimer2(payload.timer2);
-          break;
+            break;
 
           case TIME_OUT:
             console.log("time out");
@@ -191,7 +193,7 @@ export default function Game() {
             break;
           case MESSAGE:
             setMessages(m => [...m, payload]);
-            setLastMessage(payload);
+            if (!showMessages) setLastMessage(payload);
             break;
         }
       }
@@ -257,6 +259,21 @@ export default function Game() {
     };
   }, []);
 
+  usePreventRemove(!GameOver.isGameOver, ({ data }) => {
+    
+      Alert.alert(
+        'Are you sure you want to leave the game?',
+        'Please be aware that leaving now will result in the loss of all SOL you have staked in this game.',
+        [
+          { text: "cancel", style: 'cancel', onPress: () => {} },
+          {
+            text: 'Leave',
+            style: 'destructive',
+            onPress: () => navigation.dispatch(data.action),
+          },
+        ]
+      );
+  });
 
   if (!socket) {
     return <ConnectingToServer />;
@@ -286,31 +303,40 @@ export default function Game() {
     }} >
       {
         messages.length > 0 ?
-        <ScrollView>
-          {messages.map((item, index) => (
-            <View
-              key={index}
-              style={{
-                width: "100%",
-                flexDirection: "row",
-                justifyContent: color == item.from ? "flex-end" : "flex-start",
-                marginVertical: 8
-              }}
-            >
-              <Text style={{ 
-                color: "#ffffff",
-                backgroundColor: color == item.from ? "#B048C2" : "#3DE3B4",
-                paddingVertical: 2,
-                paddingHorizontal: 8,
-                borderRadius: 8,
-                fontSize: 18
-              }}>
-                {item.message}
-              </Text>
-            </View>
-          ))}
-        </ScrollView> :
-        <Text style={{color: "#ffffff", fontSize: 25, textAlign: "center"}}>
+        <View style={{ height: 450, gap: 15 }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 10 }}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
+            {messages.map((item, index) => (
+              <View
+                key={index}
+                style={{
+                  width: "100%",
+                  flexDirection: "row",
+                  justifyContent: color == item.from ? "flex-end" : "flex-start",
+                  marginVertical: 8
+                }}
+              >
+                <Text style={{ 
+                  color: "#ffffff",
+                  backgroundColor: color == item.from ? "#3DE3B4" : "#B048C2",
+                  paddingVertical: 2,
+                  paddingHorizontal: 8,
+                  borderRadius: 8,
+                  fontSize: 18,
+                  maxWidth:"80%"
+                }}>
+                  {item.message}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+          <SendMessage sendMessage={sendMessage} setMessages={setMessages} color={color} setShowMessages={setShowMessages} showMenuIcon={false} />
+        </View> :
+        <Text style={{color: "#ffffff", fontSize: 25, textAlign: "center", opacity: .3}}>
           No messages 
         </Text>
       }
@@ -381,7 +407,8 @@ export default function Game() {
           GameOver={GameOver}
           isCheck={isCheck}
           gameStarted={gameStarted}
-          playIllegalMoveSound={ playIllegalMoveSound}
+          playIllegalMoveSound={playIllegalMoveSound}
+          playCheckSound={playCheckSound}
         />
       </View>
 
@@ -393,7 +420,7 @@ export default function Game() {
         flex: 1
       }}>
         {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
-        <Messages sendMessage={sendMessage} color={color} setShowMessages={setShowMessages} />
+        <SendMessage sendMessage={sendMessage} setMessages={setMessages} color={color} setShowMessages={setShowMessages} showMenuIcon={true} />
       </View>
     </SafeAreaView>
   )

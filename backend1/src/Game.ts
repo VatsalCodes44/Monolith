@@ -117,7 +117,9 @@ export class Game {
                 timer1: this.timer1,
                 timer2: this.timer2,
                 history: this.board.history({ verbose: true }),
-                move: null
+                move: {
+                    ...move
+                }
             };
 
             this.player1.send(JSON.stringify({
@@ -197,18 +199,19 @@ export class Game {
         }
 
 
-        if (this.board.isCheck()) {
-            this.player1.send(JSON.stringify({
-                type: CHECK,
-                payload
-            }));
+        // normal case we can check it on client side
+        // if (this.board.isCheck()) {
+        //     this.player1.send(JSON.stringify({
+        //         type: CHECK,
+        //         payload
+        //     }));
 
-            this.player2.send(JSON.stringify({
-                type: CHECK,
-                payload
-            }));
-            return;
-        }
+        //     this.player2.send(JSON.stringify({
+        //         type: CHECK,
+        //         payload
+        //     }));
+        //     return;
+        // }
 
 
         this.player1.send(JSON.stringify({

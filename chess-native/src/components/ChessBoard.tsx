@@ -25,6 +25,7 @@ export function ChessBoard(
    isCheck,
    gameStarted,
    playIllegalMoveSound,
+   playCheckSound
   }:{
     chess: Chess, 
     socket: WebSocket, 
@@ -37,7 +38,8 @@ export function ChessBoard(
     GameOver: GameOver,
     isCheck: boolean,
     gameStarted: boolean,
-    playIllegalMoveSound: () => Promise<void>
+    playIllegalMoveSound: () => Promise<void>,
+    playCheckSound: () => Promise<void>
   }) {
   const { width, height } = useWindowDimensions();
   const [showPromotionOptions, setShowPromotionOptions] = useState(false)
@@ -128,7 +130,7 @@ export function ChessBoard(
           transform: [{rotate: color == "b" ? "180deg" : "0deg"}]
         }}>
           <LinearGradient
-            colors={['#B048C2', '#9082DB', '#3DE3B4']}
+            colors={color == "w" ? ["#B048C2", "#9082DB", "#3DE3B4"] : ["#3DE3B4", "#9082DB", "#B048C2"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradient}
@@ -183,6 +185,7 @@ export function ChessBoard(
                       );
 
                     if (isKingInDanger) {
+                      playCheckSound();
                       return (
                         <Check
                           width={width}
@@ -507,7 +510,7 @@ function Block({
 
     return isLight ? (
       <LinearGradient
-        colors={["#B048C2", "#9082DB", "#3DE3B4"]}
+        colors={color == "w" ? ["#B048C2", "#9082DB", "#3DE3B4"] : ["#3DE3B4", "#9082DB", "#B048C2"]}
         locations={[0, 0.5, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

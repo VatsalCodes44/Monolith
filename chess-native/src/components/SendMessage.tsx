@@ -5,14 +5,18 @@ import { Input } from 'tamagui'
 import FontAwesome5 from '@expo/vector-icons/Ionicons'
 import { Message } from '@/app/(Game)/Game'
 
-export const Messages = memo(({
+export const SendMessage = memo(({
     sendMessage,
     color,
-    setShowMessages
+    setShowMessages,
+    showMenuIcon,
+    setMessages
 }: {
     sendMessage(message: Message): void,
     color: "w" | "b",
-    setShowMessages: React.Dispatch<React.SetStateAction<boolean>>
+    setShowMessages: React.Dispatch<React.SetStateAction<boolean>>,
+    showMenuIcon: boolean,
+    setMessages: React.Dispatch<React.SetStateAction<Message[]>>
 }) => {
     const [message, setMessage] = useState<string>("")
     
@@ -22,6 +26,7 @@ export const Messages = memo(({
             from: color,
             message
         });
+        setMessages(p=>[...p, {from: color, message}])
         setMessage("");
     }
     
@@ -56,8 +61,9 @@ export const Messages = memo(({
                     multiline={false}
                     onChangeText={setMessage}
                     submitBehavior='blurAndSubmit'
+                    marginRight={showMenuIcon ? 0 : 15}
                 />
-                <TouchableOpacity 
+                {showMenuIcon && <TouchableOpacity 
                     style={{ height: "100%" }}
                     onPress={() => {
                         setShowMessages(true)
@@ -72,7 +78,7 @@ export const Messages = memo(({
                     }}>
                         <FontAwesome5 name="menu-sharp" color="#3DE3B4" size={28} />
                     </View>
-                </TouchableOpacity>
+                </TouchableOpacity>}
             </View>
         </LinearGradient>
     )
