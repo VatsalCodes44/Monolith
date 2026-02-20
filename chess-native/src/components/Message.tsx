@@ -7,10 +7,12 @@ import { Message } from '@/app/(Game)/Game'
 
 export const Messages = memo(({
     sendMessage,
-    color
+    color,
+    setShowMessages
 }: {
     sendMessage(message: Message): void,
-    color: "w" | "b"
+    color: "w" | "b",
+    setShowMessages: React.Dispatch<React.SetStateAction<boolean>>
 }) => {
     const [message, setMessage] = useState<string>("")
     
@@ -57,17 +59,18 @@ export const Messages = memo(({
                 />
                 <TouchableOpacity 
                     style={{ height: "100%" }}
-                    onPress={handleSend}
+                    onPress={() => {
+                        setShowMessages(true)
+                    }}
                 >
                     <View style={{
-                        backgroundColor: "#3DE3B4",
                         borderTopRightRadius: 100,
                         borderBottomRightRadius: 100,
                         justifyContent: "center",
                         paddingHorizontal: 12,
                         height: "100%"
                     }}>
-                        <FontAwesome5 name="send" size={18} />
+                        <FontAwesome5 name="menu-sharp" color="#3DE3B4" size={28} />
                     </View>
                 </TouchableOpacity>
             </View>

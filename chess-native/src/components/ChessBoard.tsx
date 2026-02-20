@@ -2,11 +2,9 @@ import { FlatList, StyleSheet, Text, View, useWindowDimensions, ImageBackground,
 import React, { useState } from 'react'
 import { Chess, Color, PieceSymbol, Square } from 'chess.js';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FontAwesome5 } from '@expo/vector-icons';
 import { MOVE } from '../config/serverResponds';
 import { GameOver } from '@/app/(Game)/Game';
 import { Piece } from './Piece';
-import {ShowMessages} from './ShowMessages';
 
 type Piece = ({
     square: Square;
@@ -121,7 +119,6 @@ export function ChessBoard(
 
   return (
     <View>
-      <ShowMessages />
       <View style={{ position: 'relative' }}>
         <View style={{
           width: boardSize, 

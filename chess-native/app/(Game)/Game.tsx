@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, View, Text, useWindowDimensions, TouchableOpacity } from 'react-native'
+import { Alert, StyleSheet, View, Text, useWindowDimensions, TouchableOpacity, FlatList, ScrollView } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {ChessBoard} from "@/src/components/ChessBoard"
@@ -17,6 +17,7 @@ import { LastMessage } from '@/src/components/LastMessage'
 import { Messages } from '@/src/components/Message'
 import { MoveHistory } from '@/src/components/MoveHistory'
 import { Captured } from '@/src/components/Captured'
+import { ShowMessages } from '@/src/components/ShowMessages'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -52,6 +53,7 @@ export default function Game() {
   const [lastMessage, setLastMessage] = useState<Message>();
   const [moves, setMoves] = useState<Move[]>([])
   const {height, width} = useWindowDimensions()
+  const [showMessages, setShowMessages] = useState(false)
   const [fontsLoaded] = useFonts({
     Orbitron_900Black,
   });
@@ -275,6 +277,45 @@ export default function Game() {
       backgroundColor: "#000000", 
       paddingVertical: 20,
     }}>
+
+    <ShowMessages
+     width= {width * 0.95}
+     isOpen={showMessages} 
+     onClose={() => {
+      setShowMessages(false);
+    }} >
+      {
+        messages.length > 0 ?
+        <ScrollView>
+          {messages.map((item, index) => (
+            <View
+              key={index}
+              style={{
+                width: "100%",
+                flexDirection: "row",
+                justifyContent: color == item.from ? "flex-end" : "flex-start",
+                marginVertical: 8
+              }}
+            >
+              <Text style={{ 
+                color: "#ffffff",
+                backgroundColor: color == item.from ? "#B048C2" : "#3DE3B4",
+                paddingVertical: 2,
+                paddingHorizontal: 8,
+                borderRadius: 8,
+                fontSize: 18
+              }}>
+                {item.message}
+              </Text>
+            </View>
+          ))}
+        </ScrollView> :
+        <Text style={{color: "#ffffff", fontSize: 25, textAlign: "center"}}>
+          No messages 
+        </Text>
+      }
+    </ShowMessages>
+
       <View style={styles.avatar}>
 
         <Avatar circular size="$3">
@@ -352,7 +393,7 @@ export default function Game() {
         flex: 1
       }}>
         {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
-        <Messages sendMessage={sendMessage} color={color} />
+        <Messages sendMessage={sendMessage} color={color} setShowMessages={setShowMessages} />
       </View>
     </SafeAreaView>
   )

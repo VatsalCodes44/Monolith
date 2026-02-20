@@ -6,10 +6,15 @@ import { TamaguiProvider } from 'tamagui'
 import { tamaguiConfig } from '../tamagui.config'
 
 
+import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import '@/global.css';
+
 export default function () {
     const colorScheme = useColorScheme()
 
     return (
+        
+    <GluestackUIProvider mode="dark">
         <>
         <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme!}>
             <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -17,6 +22,8 @@ export default function () {
             </ThemeProvider>
         </TamaguiProvider>
         </>
+    </GluestackUIProvider>
+  
     )
 }
 
