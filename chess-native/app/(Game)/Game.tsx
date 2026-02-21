@@ -7,7 +7,6 @@ import { Chess, Move, Square } from 'chess.js'
 import { WS_URL } from '@/src/config/config'
 import { ConnectingToServer } from '@/src/components/connectingToServer'
 import { router, useNavigation } from 'expo-router'
-import { Avatar, YStack } from 'tamagui'
 import { Orbitron_900Black, useFonts } from '@expo-google-fonts/orbitron'
 import { GameBet } from '@/src/stores/store'
 import { Timer } from '@/src/components/Timer'
@@ -341,28 +340,6 @@ export default function Game() {
         </Text>
       }
     </ShowMessages>
-
-      <View style={styles.avatar}>
-
-        <Avatar circular size="$3">
-          <Avatar.Image src="http://picsum.photos/200/300" />
-          <Avatar.Fallback />
-        </Avatar>
-
-        <Text style={{
-          color: "#ffffff", 
-          fontFamily: fontsLoaded ? "Orbitron_900Black": "Roboto",
-          fontSize: 18
-        }}>
-          {0.2} Sol
-        </Text>
-
-        <Avatar circular size="$3">
-          <Avatar.Image src="http://picsum.photos/200/300" />
-          <Avatar.Fallback />
-        </Avatar>
-
-      </View>
 
       <View style={{paddingHorizontal: 4}}>
         <Timer 

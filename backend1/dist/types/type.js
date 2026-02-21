@@ -1,11 +1,5 @@
-import { INIT_GAME, RE_JOIN_GAME, MOVE, MESSAGE } from "../Messages.js"
-import z from "zod"
-export interface Message {
-    from: "w" | "b",
-    message: string,
-}
-
-
+import { INIT_GAME, RE_JOIN_GAME, MOVE, MESSAGE } from "../Messages.js";
+import z from "zod";
 export const INIT_GAME_TYPE = z.object({
     type: z.literal(INIT_GAME),
     payload: z.object({
@@ -13,8 +7,7 @@ export const INIT_GAME_TYPE = z.object({
         network: z.enum(["MAINNET", "DEVNET"]),
         sol: z.enum(["0.01", "0.05", "0.1"])
     })
-})
-
+});
 export const Re_JOIN_GAME_TYPE = z.object({
     type: z.literal(RE_JOIN_GAME),
     payload: z.object({
@@ -24,8 +17,7 @@ export const Re_JOIN_GAME_TYPE = z.object({
         network: z.enum(["MAINNET", "DEVNET"]),
         sol: z.enum(["0.01", "0.05", "0.1"])
     })
-})
-
+});
 export const MOVE_TYPE = z.object({
     type: z.literal(MOVE),
     payload: z.object({
@@ -36,8 +28,7 @@ export const MOVE_TYPE = z.object({
         sol: z.enum(["0.01", "0.05", "0.1"])
     }),
     promotion: z.string().optional()
-})
-
+});
 export const MESSAGE_TYPE = z.object({
     type: z.literal(MESSAGE),
     payload: z.object({
@@ -47,4 +38,4 @@ export const MESSAGE_TYPE = z.object({
         sol: z.enum(["0.01", "0.05", "0.1"]),
         gameId: z.string()
     })
-})
+});

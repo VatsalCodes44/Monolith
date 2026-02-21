@@ -11,7 +11,7 @@ import {
   LAMPORTS_PER_SOL,
   clusterApiUrl,
 } from "@solana/web3.js";
-import { publicKeyStore, useRpc } from "../stores/wallet-store";
+import { useWalletStore } from "../stores/wallet-store";
 import { Account } from "@solana-mobile/mobile-wallet-adapter-protocol";
 
 const APP_IDENTITY = {
@@ -25,9 +25,9 @@ export function useWallet() {
   const [connecting, setConnecting] = useState(false);
   const [sending, setSending] = useState(false);
   const [signing, setSigning] = useState(false);
-  const isDevnet = useRpc((s) => s.isDevnet);
-  const {publicKey, setPublicKey} = publicKeyStore(s=>s);
-
+  const isDevnet = useWalletStore(s => s.isDevnet);
+  const publicKey = useWalletStore(s => s.publicKey);
+  const setPublicKey = useWalletStore(s => s.setPublicKey)
   const cluster = isDevnet ? "devnet" : "mainnet-beta";
   const connection = new Connection(clusterApiUrl(cluster), "confirmed");
 
@@ -50,7 +50,7 @@ export function useWallet() {
       const pubkey = new PublicKey(
         Buffer.from(authResult.accounts[0].address, "base64")
       );
-      setPublicKey(pubkey);
+      setPublicKey(pubkey.toBase58());
       setAccounts(authResult.accounts);
       return pubkey;
     } catch (error: any) {
@@ -74,7 +74,7 @@ export function useWallet() {
   // ============================================
   const getBalance = useCallback(async () => {
     if (!publicKey) return 0;
-    const balance = await connection.getBalance(publicKey);
+    const balance = await connection.getBalance(new PublicKey(publicKey));
     return balance / LAMPORTS_PER_SOL;
   }, [publicKey, connection]);
 
@@ -91,7 +91,7 @@ export function useWallet() {
         const toPublicKey = new PublicKey(toAddress);
         const transaction = new Transaction().add(
           SystemProgram.transfer({
-            fromPubkey: publicKey,
+            fromPubkey: new PublicKey(publicKey),
             toPubkey: toPublicKey,
             lamports: Math.round(amountSOL * LAMPORTS_PER_SOL),
           })
@@ -100,7 +100,7 @@ export function useWallet() {
         // Step 2: Get recent blockhash (needed for transaction)
         const { blockhash } = await connection.getLatestBlockhash();
         transaction.recentBlockhash = blockhash;
-        transaction.feePayer = publicKey;
+        transaction.feePayer = new PublicKey(publicKey);
 
         // Step 3: Send to Phantom for signing + submission
         const txSignature = await transact(
@@ -160,6 +160,7 @@ export function useWallet() {
   );
 
   return {
+    isDevnet,
     publicKey,
     connected: !!publicKey,
     connecting,

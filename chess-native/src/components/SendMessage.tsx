@@ -1,7 +1,6 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, View, TextInput} from 'react-native'
 import React, { memo, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Input } from 'tamagui'
 import FontAwesome5 from '@expo/vector-icons/Ionicons'
 import { Message } from '@/app/(Game)/Game'
 
@@ -44,24 +43,27 @@ export const SendMessage = memo(({
                 alignItems: "stretch",
                 justifyContent: "space-between",
             }}>
-                <Input
+                <TextInput
                     value={message}
-                    bg="black"
-                    borderWidth={0}
                     placeholder='Send message'
-                    placeholderTextColor='$purple12'
-                    borderBottomLeftRadius="$12"
-                    borderBottomStartRadius="$12"
-                    borderTopLeftRadius="$12"
-                    borderTopStartRadius="$12"
-                    color="$purple11"
+                    placeholderTextColor='#cf96d8'
                     returnKeyType='send'
                     onSubmitEditing={handleSend}
-                    flex={1}
                     multiline={false}
                     onChangeText={setMessage}
                     submitBehavior='blurAndSubmit'
-                    marginRight={showMenuIcon ? 0 : 15}
+
+                    style={{
+                        backgroundColor: "#000",
+                        borderWidth: 0,
+                        borderTopLeftRadius: 50,
+                        borderBottomLeftRadius: 50,
+                        borderBottomStartRadius: 50,
+                        borderTopStartRadius: 50,
+                        color: "#B048C2",
+                        flex: 1,
+                        marginRight: showMenuIcon ? 0 : 15,
+                    }}
                 />
                 {showMenuIcon && <TouchableOpacity 
                     style={{ height: "100%" }}

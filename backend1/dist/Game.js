@@ -1,23 +1,32 @@
-import { WebSocket } from "ws";
 import { Chess } from "chess.js";
-import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
+import { GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
 export class Game {
     player1;
     player2;
+    player1Pubkey;
+    player2Pubkey;
     board;
     startTime;
     timer1;
     timer2;
     lastMoveTimestamp;
     messages;
-    constructor(player1, player2) {
+    gameId;
+    network;
+    sol;
+    constructor(player1, player2, player1Pubkey, player2Pubkey, network, sol, gameId) {
         this.player1 = player1;
         this.player2 = player2;
+        this.player1Pubkey = player1Pubkey;
+        this.player2Pubkey = player2Pubkey;
+        this.network = network;
+        this.sol = sol;
         this.timer1 = (10 * 60 * 1000);
         this.timer2 = (10 * 60 * 1000);
         this.board = new Chess();
         this.startTime = new Date();
         this.lastMoveTimestamp = Date.now();
+        this.gameId = gameId;
         this.messages = [];
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
@@ -44,7 +53,7 @@ export class Game {
                 from: "w",
                 message: message.message
             });
-            this.player2.send(JSON.stringify({
+            this.player2?.send(JSON.stringify({
                 type: MESSAGE,
                 payload: {
                     from: "w",
@@ -57,7 +66,7 @@ export class Game {
                 from: "b",
                 message: message.message
             });
-            this.player1.send(JSON.stringify({
+            this.player1?.send(JSON.stringify({
                 type: MESSAGE,
                 payload: {
                     from: "b",
@@ -67,13 +76,6 @@ export class Game {
         }
     }
     makeMove(socket, move, promotion) {
-        // validation of move using zod
-        // make sure is this user move
-        // is this move valid
-        // update the board
-        // push the move
-        // check id the game is over
-        // send the updated board to both the player
         // validating only the correct user makes the move whose turn is this
         if (this.board.turn() === "w" && socket !== this.player1) {
             return;
@@ -103,11 +105,11 @@ export class Game {
                     ...move
                 }
             };
-            this.player1.send(JSON.stringify({
+            this.player1?.send(JSON.stringify({
                 type: TIME_OUT,
                 payload
             }));
-            this.player2.send(JSON.stringify({
+            this.player2?.send(JSON.stringify({
                 type: TIME_OUT,
                 payload
             }));
@@ -154,11 +156,11 @@ export class Game {
                 gameOverType,
                 ...payload
             };
-            this.player1.send(JSON.stringify({
+            this.player1?.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: finalPayload
             }));
-            this.player2.send(JSON.stringify({
+            this.player2?.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: finalPayload
             }));
@@ -176,14 +178,13 @@ export class Game {
         //     }));
         //     return;
         // }
-        this.player1.send(JSON.stringify({
+        this.player1?.send(JSON.stringify({
             type: MOVE,
             payload
         }));
-        this.player2.send(JSON.stringify({
+        this.player2?.send(JSON.stringify({
             type: MOVE,
             payload
         }));
     }
 }
-//# sourceMappingURL=Game.js.map
