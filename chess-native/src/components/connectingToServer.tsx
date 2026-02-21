@@ -3,7 +3,7 @@ import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Orbitron_900Black, useFonts } from '@expo-google-fonts/orbitron';
 
-export function ConnectingToServer() {
+export function ConnectingToServer({message}: {message: string}) {
     let [fontsLoaded] = useFonts({
         Orbitron_900Black,
     });
@@ -20,7 +20,7 @@ export function ConnectingToServer() {
                 textAlign: "center",
                 fontSize: 22
                 }}>
-                Connecting to server
+                    {message}
                 </Text>
             </View>
         </SafeAreaView>

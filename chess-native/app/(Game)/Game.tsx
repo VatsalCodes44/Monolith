@@ -9,7 +9,7 @@ import { ConnectingToServer } from '@/src/components/connectingToServer'
 import { router, useNavigation } from 'expo-router'
 import { Avatar, YStack } from 'tamagui'
 import { Orbitron_900Black, useFonts } from '@expo-google-fonts/orbitron'
-import { GameBet } from '@/src/store/store'
+import { GameBet } from '@/src/stores/store'
 import { Timer } from '@/src/components/Timer'
 import { Audio } from 'expo-av';
 import { useRef } from 'react';
@@ -276,7 +276,7 @@ export default function Game() {
   });
 
   if (!socket) {
-    return <ConnectingToServer />;
+    return <ConnectingToServer message='Connecting to the server' />;
   }
 
   function sendMessage(message:Message) {

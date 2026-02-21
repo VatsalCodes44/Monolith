@@ -4,18 +4,22 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { GameBet } from '@/src/store/store';
+import { GameBet } from '@/src/stores/store';
+import { useWallet } from '@/src/hooks/useWallet';
+import { ConnectingToServer } from '@/src/components/connectingToServer';
 
 export default function index() {
-  const [fontsLoaded] = useFonts({
-    Orbitron_900Black,
-  });
   const {sol, setSol} = GameBet(s=> s)
   const [initializing, setInitializing] = useState(false)
   const [loaded] = useFonts({
     Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
     InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
   })
+  const [fontsLoaded] = useFonts({
+    Orbitron_900Black,
+  });
+
+  const {connected, connect, publicKey} = useWallet()
 
   useEffect(() => {
     if (loaded) {
@@ -26,9 +30,15 @@ export default function index() {
     setInitializing(false)
   }, [])
 
-  if (!loaded) {
-    return null
-  }
+  // useEffect(() => {
+  //   if (!connected) {
+  //     connect()
+  //   }
+  // }, [connected, connect, publicKey])
+ 
+  // if (!publicKey) {
+  //   return <ConnectingToServer message='Connecting Wallet' />
+  // }
 
   return (
     <SafeAreaView style={styles.container}>
