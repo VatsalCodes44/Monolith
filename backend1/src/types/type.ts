@@ -45,11 +45,11 @@ export const MESSAGE_TYPE = z.object({
     type: z.literal(MESSAGE),
     payload: z.object({
         from: z.enum(["w", "b"]),
+        message: z.string(),
         publicKey: z.string(),
         signature: z.string(),
-        message: z.string(),
+        gameId: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"]),
-        gameId: z.string()
+        sol: z.enum(["0.01", "0.05", "0.1"])
     })
 })

@@ -20,7 +20,7 @@ import { ShowMessages } from '@/src/components/ShowMessages'
 import { usePreventRemove } from '@react-navigation/native'
 import { signedPubkey } from '@/src/stores/gameStore'
 import { useWalletStore } from '@/src/stores/wallet-store'
-import { INIT_GAME_TYPE_PAYLOAD_TS, INIT_GAME_TYPE_TS } from '@/src/config/serverInputs'
+import { INIT_GAME_TYPE_PAYLOAD_TS, INIT_GAME_TYPE_TS, MESSAGE_TYPE_TS } from '@/src/config/serverInputs'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -46,22 +46,23 @@ export default function Game() {
     gameOverType: null,
     isGameOver: false
   });
-  const [timer1, setTimer1] = useState(10*60*1000)
-  const [timer2, setTimer2] = useState(10*60*1000)
+  const [timer1, setTimer1] = useState(10*60*1000);
+  const [timer2, setTimer2] = useState(10*60*1000);
   const moveSoundRef = useRef<Audio.Sound | null>(null);
   const checkSoundRef = useRef<Audio.Sound | null>(null);
   const illegalSoundRef = useRef<Audio.Sound | null>(null);
   const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>([]);
   const [lastMessage, setLastMessage] = useState<Message>();
-  const [moves, setMoves] = useState<Move[]>([])
-  const {height, width} = useWindowDimensions()
-  const [showMessages, setShowMessages] = useState(false)
+  const [moves, setMoves] = useState<Move[]>([]);
+  const {height, width} = useWindowDimensions();
+  const [showMessages, setShowMessages] = useState(false);
+  const [gameId, setGameId] = useState<string | null>(null);
   const [fontsLoaded] = useFonts({
     Orbitron_900Black,
   });
   const navigation = useNavigation();
-  const setSol = GameBet(s=> s.sol);
+  const setSol = GameBet(s=> s.setSol);
   const sol = GameBet(s => s.sol);
   const signature = signedPubkey(s => s.signature);
   const setSignature = signedPubkey(s => s.setSignature);
@@ -145,7 +146,9 @@ export default function Game() {
             setChess(new Chess(initPayload.board));
             setGameStarted(true);
             setTimer1(initPayload.timer1);
-            setTimer2(initPayload.timer2)
+            setTimer2(initPayload.timer2);
+            setGameId(initPayload.gameId);
+            setSol(initPayload.sol);
             break;
           case MOVE: 
           const move_response_payload = payload as MOVE_RESPONSE_PAYLOAD;
@@ -202,6 +205,7 @@ export default function Game() {
             setTimer2(timeOutPayload.timer2);
             setMoves(timeOutPayload.history)
             break;
+
           case MESSAGE:
             const messagePayload = payload as message_payload;
             setMessages(m => [...m, messagePayload]);
@@ -221,7 +225,8 @@ export default function Game() {
         }
       }
       socket.send(JSON.stringify({
-        
+        type: INIT_GAME,
+        payload
       }))
     }
 
@@ -301,14 +306,16 @@ export default function Game() {
     return <ConnectingToServer message='Connecting to the server' />;
   }
 
-  function sendMessage(message:Message) {
+  function sendMessage(message: MESSAGE_TYPE_TS) {
     if (!socket) return;
-    socket.send(JSON.stringify({
-      type: MESSAGE,
-      payload: {...message}
-    }))
-    setLastMessage(message)
+    socket.send(JSON.stringify(message))
+    setLastMessage({
+      from: message.payload.from,
+      message: message.payload.message
+    })
   }
+
+  if (!publicKey || !signature || !sol) return null;
 
   return (
     <SafeAreaView style={{
@@ -356,7 +363,18 @@ export default function Game() {
               </View>
             ))}
           </ScrollView>
-          <SendMessage sendMessage={sendMessage} setMessages={setMessages} color={color} setShowMessages={setShowMessages} showMenuIcon={false} />
+          <SendMessage 
+          sendMessage={sendMessage} 
+          setMessages={setMessages} 
+          color={color} 
+          setShowMessages={setShowMessages} 
+          showMenuIcon={false}
+          publicKey={publicKey}
+          signature={signature}         
+          gameId={gameId}
+          isDevnet={isDevnet}
+          sol={sol}
+          />
         </View> :
         <Text style={{color: "#ffffff", fontSize: 25, textAlign: "center", opacity: .3}}>
           No messages 
@@ -409,6 +427,11 @@ export default function Game() {
           gameStarted={gameStarted}
           playIllegalMoveSound={playIllegalMoveSound}
           playCheckSound={playCheckSound}
+          publicKey={publicKey}
+          signature= {signature}
+          gameId={gameId}
+          network={isDevnet ? "DEVNET" : "MAINNET"}
+          sol={sol}
         />
       </View>
 
@@ -420,7 +443,18 @@ export default function Game() {
         flex: 1
       }}>
         {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
-        <SendMessage sendMessage={sendMessage} setMessages={setMessages} color={color} setShowMessages={setShowMessages} showMenuIcon={true} />
+        <SendMessage 
+        sendMessage={sendMessage} 
+        setMessages={setMessages} 
+        color={color} 
+        setShowMessages={setShowMessages} 
+        showMenuIcon={true}
+        gameId={gameId}
+        publicKey={publicKey}
+        signature={signature}
+        isDevnet={isDevnet}
+        sol={sol}
+        />
       </View>
     </SafeAreaView>
   )

@@ -35,20 +35,22 @@ const MOVE_TYPE = z.object({
     promotion: z.string().optional()
 })
 
-const MESSAGE_TYPE = z.object({
+export const MESSAGE_TYPE = z.object({
     type: z.literal(MESSAGE),
     payload: z.object({
         from: z.enum(["w", "b"]),
         message: z.string(),
+        publicKey: z.string(),
+        signature: z.string(),
+        gameId: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"]),
-        gameId: z.string()
+        sol: z.enum(["0.01", "0.05", "0.1"])
     })
 })
 
 
 export type INIT_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
 export type INIT_GAME_TYPE_PAYLOAD_TS = z.infer<typeof INIT_GAME_TYPE>["payload"];
-export type Re_JOIN_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
-export type MOVE_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
-export type MESSAGE_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
+export type Re_JOIN_GAME_TYPE_TS = z.infer<typeof RE_JOIN_GAME>;
+export type MOVE_TYPE_TS = z.infer<typeof MOVE_TYPE>;
+export type MESSAGE_TYPE_TS = z.infer<typeof MESSAGE_TYPE>;

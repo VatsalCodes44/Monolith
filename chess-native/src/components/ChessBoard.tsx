@@ -25,7 +25,12 @@ export function ChessBoard(
    isCheck,
    gameStarted,
    playIllegalMoveSound,
-   playCheckSound
+   playCheckSound,
+   publicKey,
+   signature,
+   network,
+   sol,
+   gameId
   }:{
     chess: Chess, 
     socket: WebSocket, 
@@ -39,7 +44,12 @@ export function ChessBoard(
     isCheck: boolean,
     gameStarted: boolean,
     playIllegalMoveSound: () => Promise<void>,
-    playCheckSound: () => Promise<void>
+    playCheckSound: () => Promise<void>,
+    publicKey: string,
+    signature: string,
+    network: "MAINNET"| "DEVNET",
+    sol: "0.01" | "0.05" | "0.1",
+    gameId: string | null,
   }) {
   const { width, height } = useWindowDimensions();
   const [showPromotionOptions, setShowPromotionOptions] = useState(false)
@@ -47,7 +57,7 @@ export function ChessBoard(
   const [pendingPromotionMove, setPendingPromotionMove] = useState<{from: Square, to: Square} | null>(null);
    const boardSize = Math.min(width, 642);
   const onPress = (piece: Piece, rowIdx: number, colIdx: number) => {
-    if (GameOver.isGameOver || !gameStarted) return;
+    if (GameOver.isGameOver || !gameStarted || !gameId) return;
     if (!piece && !from) return;
     if (!from && piece) {
       setFrom(piece.square);
@@ -82,8 +92,13 @@ export function ChessBoard(
       socket.send(JSON.stringify({
         type: MOVE,
         payload: {
+          publicKey,
+          signature,
           from: from,
-          to: moveTo
+          to: moveTo,
+          sol,
+          network,
+          gameId
         },
         promotion: isPromotion ? promotionPiece : undefined
       }))

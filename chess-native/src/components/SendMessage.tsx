@@ -3,27 +3,47 @@ import React, { memo, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import FontAwesome5 from '@expo/vector-icons/Ionicons'
 import { Message } from '@/app/(Game)/Game'
+import { MESSAGE_TYPE_TS } from '../config/serverInputs'
+import { MESSAGE } from '../config/serverResponds'
 
 export const SendMessage = memo(({
     sendMessage,
     color,
     setShowMessages,
     showMenuIcon,
-    setMessages
+    setMessages,
+    publicKey,
+    signature,
+    gameId,
+    sol,
+    isDevnet
 }: {
-    sendMessage(message: Message): void,
+    sendMessage(message: MESSAGE_TYPE_TS): void,
     color: "w" | "b",
     setShowMessages: React.Dispatch<React.SetStateAction<boolean>>,
     showMenuIcon: boolean,
-    setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+    setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+    publicKey: string,
+    signature: string,
+    gameId: string | null,
+    sol: "0.01" | "0.05" | "0.1",
+    isDevnet: boolean
 }) => {
     const [message, setMessage] = useState<string>("")
     
     const handleSend = () => {
-        if (!message.trim()) return;
+        if (!message.trim() || !gameId) return;
         sendMessage({
-            from: color,
-            message
+            type: MESSAGE,
+            payload: {
+                from: color,
+                message,
+                publicKey,
+                signature,
+                gameId, 
+                sol,
+                network: isDevnet ? "DEVNET" : "MAINNET"
+            }
         });
         setMessages(p=>[...p, {from: color, message}])
         setMessage("");

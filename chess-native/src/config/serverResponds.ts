@@ -12,7 +12,10 @@ export type INIT_GAME_RESPONSE_PAYLOAD = {
     color : "b" | "w",
     board: string,
     timer1: number,
-    timer2: number
+    timer2: number,
+    gameId: string,
+    network: "MAINNET" | "DEVNET",
+    sol: "0.01" | "0.05" | "0.1"
 }
 
 export type MOVE_RESPONSE_PAYLOAD = {

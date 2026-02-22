@@ -39,7 +39,10 @@ export class Game {
                 color: "w",
                 board: this.board.fen(),
                 timer1: this.timer1,
-                timer2: this.timer2
+                timer2: this.timer2,
+                gameId,
+                network,
+                sol,
             }
         }));
 
@@ -49,7 +52,10 @@ export class Game {
                 color: "b",
                 board: this.board.fen(),
                 timer1: this.timer1,
-                timer2: this.timer2
+                timer2: this.timer2,
+                gameId,
+                network,
+                sol,
             }
         }));
     }
