@@ -230,4 +230,13 @@ export class Game {
         }));
 
     }
+
+    public handleDisconnect(socket: WebSocket) {
+        if (this.player1 === socket) {
+            this.player1 = null;
+        }
+        if (this.player2 === socket) {
+            this.player2 = null;
+        }
+    }
 }

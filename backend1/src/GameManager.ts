@@ -7,35 +7,31 @@ import bs58 from "bs58";
 import nacl from "tweetnacl";
 
 export class GameManager {
-    private _0_01SolGame: Game[];
-    private _0_05SolGame: Game[];
-    private _0_1SolGame: Game[];
-    private _0_01SolDevnetGame: Game[];
-    private _0_05SolDevnetGame: Game[];
-    private _0_1SolDevnetGame: Game[];
-
-    private pendingUser0_01Sol: { socket: WebSocket, publicKey: string } | null;
-    private pendingUser0_05Sol: { socket: WebSocket, publicKey: string } | null;
-    private pendingUser0_1Sol: { socket: WebSocket, publicKey: string } | null;
-    private pendingUser0_01SolDevnet: { socket: WebSocket, publicKey: string } | null;
-    private pendingUser0_05SolDevnet: { socket: WebSocket, publicKey: string } | null;
-    private pendingUser0_1SolDevnet: { socket: WebSocket, publicKey: string } | null;
 
     private users: WebSocket[];
 
+    private games: Map<string, Map<string, Game>>;
+    private pendingUsers: Map<string, { socket: WebSocket, publicKey: string } | null>;
+
     constructor() {
-        this._0_01SolGame = []
-        this._0_05SolGame = []
-        this._0_1SolGame = []
-        this._0_01SolDevnetGame = []
-        this._0_05SolDevnetGame = []
-        this._0_1SolDevnetGame = []
-        this.pendingUser0_01Sol = null;
-        this.pendingUser0_05Sol = null;
-        this.pendingUser0_1Sol = null;
-        this.pendingUser0_01SolDevnet = null;
-        this.pendingUser0_05SolDevnet = null;
-        this.pendingUser0_1SolDevnet = null;
+        this.games = new Map([
+            ['MAINNET-0.01', new Map<string, Game>()],
+            ['MAINNET-0.05', new Map<string, Game>()],
+            ['MAINNET-0.1', new Map<string, Game>()],
+            ['DEVNET-0.01', new Map<string, Game>()],
+            ['DEVNET-0.05', new Map<string, Game>()],
+            ['DEVNET-0.1', new Map<string, Game>()]
+        ]);
+
+        this.pendingUsers = new Map([
+            ['MAINNET-0.01', null],
+            ['MAINNET-0.05', null],
+            ['MAINNET-0.1', null],
+            ['DEVNET-0.01', null],
+            ['DEVNET-0.05', null],
+            ['DEVNET-0.1', null]
+        ]);
+
         this.users = [];
     }
 
@@ -48,108 +44,22 @@ export class GameManager {
 
     removeUser(socket: WebSocket) {
         this.users = this.users.filter(s => s !== socket);
-        let foundedSocket = false;
 
-        if (this.pendingUser0_01Sol?.socket == socket) {
-            this.pendingUser0_01Sol = null;
-            foundedSocket = true;
-            return;
+        for (const [key, pending] of this.pendingUsers) {
+            if (pending?.socket === socket) {
+                this.pendingUsers.set(key, null);
+                return;
+            }
         }
 
-        if (this.pendingUser0_05Sol?.socket == socket) {
-            this.pendingUser0_05Sol = null;
-            foundedSocket = true;
-            return;
+        for (const gamesMap of this.games.values()) {
+            for (const game of gamesMap.values()) {
+                if (game.player1 === socket || game.player2 === socket) {
+                    game.handleDisconnect(socket);
+                    return;
+                }
+            }
         }
-
-        if (this.pendingUser0_1Sol?.socket == socket) {
-            this.pendingUser0_1Sol = null;
-            foundedSocket = true;
-            return;
-        }
-
-        if (this.pendingUser0_01SolDevnet?.socket == socket) {
-            this.pendingUser0_01SolDevnet = null;
-            foundedSocket = true;
-            return;
-        }
-
-        if (this.pendingUser0_05SolDevnet?.socket == socket) {
-            this.pendingUser0_05SolDevnet = null;
-            foundedSocket = true;
-            return;
-        }
-
-        if (this.pendingUser0_1SolDevnet?.socket == socket) {
-            this.pendingUser0_1SolDevnet = null;
-            foundedSocket = true;
-            return;
-        }
-
-        this._0_01SolDevnetGame = this._0_01SolDevnetGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
-        if (foundedSocket) return;
-
-        this._0_05SolDevnetGame = this._0_05SolDevnetGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
-        if (foundedSocket) return;
-
-        this._0_1SolDevnetGame = this._0_1SolDevnetGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
-        if (foundedSocket) return;
-
-        this._0_01SolGame = this._0_01SolGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
-        if (foundedSocket) return;
-
-        this._0_05SolGame = this._0_05SolGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
-        if (foundedSocket) return;
-
-        this._0_1SolGame = this._0_1SolGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
     }
 
     private addHandler(socket: WebSocket) {
@@ -164,14 +74,15 @@ export class GameManager {
                 }
                 const { payload } = result.data;
                 const { network, sol, publicKey } = payload;
-                const pendingUser = this.pendingUserExist(network, sol);
+                const pendingUser = this.pendingUsers.get(`${network}-${sol}`);
                 const verify = this.verifySignature(publicKey, payload.signature, publicKey);
                 if (!verify) return;
                 if (pendingUser) {
                     await this.addGame(pendingUser.socket, socket, pendingUser.publicKey, publicKey, network, sol);
+                    this.pendingUsers.set(`${network}-${sol}`, null);
                 }
                 else {
-                    this.addPendingUser(network, sol, socket, publicKey);
+                    this.pendingUsers.set(`${network}-${sol}`, { socket, publicKey });
                 }
             }
 
@@ -183,7 +94,7 @@ export class GameManager {
                 const { payload, promotion } = result.data;
                 const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
                 if (!verify) return;
-                this.makeMove(socket, payload.gameId, payload.from, payload.to, payload.network, payload.sol, promotion);
+                this.games.get(`${payload.network}-${payload.sol}`)?.get(payload.gameId)?.makeMove(socket, { from: payload.from, to: payload.to }, promotion);
             }
 
             if (message.type == MESSAGE) {
@@ -194,60 +105,9 @@ export class GameManager {
                 const { payload } = result.data;
                 const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
                 if (!verify) return;
-                this.sendMessage(socket, payload.gameId, { message: payload.message, from: payload.from }, payload.network, payload.sol)
+                this.games.get(`${payload.network}-${payload.sol}`)?.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
             }
         })
-    }
-
-    private pendingUserExist(network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1") {
-        if (network === "MAINNET") {
-            if (sol === "0.01" && this.pendingUser0_01Sol) {
-                return this.pendingUser0_01Sol;
-            }
-            else if (sol === "0.05" && this.pendingUser0_05Sol) {
-                return this.pendingUser0_05Sol;
-            }
-            else if (sol === "0.1" && this.pendingUser0_1Sol) {
-                return this.pendingUser0_1Sol;
-            }
-        }
-        else {
-            if (sol === "0.01" && this.pendingUser0_01SolDevnet) {
-                return this.pendingUser0_01SolDevnet;
-            }
-            else if (sol === "0.05" && this.pendingUser0_05SolDevnet) {
-                return this.pendingUser0_05SolDevnet;
-            }
-            else if (sol === "0.1" && this.pendingUser0_1SolDevnet) {
-                return this.pendingUser0_1SolDevnet;
-            }
-        }
-        return undefined;
-    }
-
-    private addPendingUser(network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1", socket: WebSocket, publicKey: string) {
-        if (network === "MAINNET") {
-            if (sol === "0.01") {
-                this.pendingUser0_01Sol = { socket, publicKey };
-            }
-            else if (sol === "0.05") {
-                this.pendingUser0_05Sol = { socket, publicKey };
-            }
-            else {
-                this.pendingUser0_1Sol = { socket, publicKey };
-            }
-        }
-        else {
-            if (sol === "0.01") {
-                this.pendingUser0_01SolDevnet = { socket, publicKey };
-            }
-            else if (sol === "0.05") {
-                this.pendingUser0_05SolDevnet = { socket, publicKey };
-            }
-            else {
-                this.pendingUser0_1SolDevnet = { socket, publicKey };
-            }
-        }
     }
 
     private async addGame(player1: WebSocket, player2: WebSocket, player1PublicKey: string, player2PublicKey: string, network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1") {
@@ -264,78 +124,7 @@ export class GameManager {
                 id: true
             }
         })
-        if (network === "MAINNET") {
-            if (sol === "0.01") {
-                this._0_01SolGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-            else if (sol === "0.05") {
-                this._0_05SolGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-            else {
-                this._0_1SolGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-        }
-        else {
-            if (sol === "0.01") {
-                this._0_01SolDevnetGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-            else if (sol === "0.05") {
-                this._0_05SolDevnetGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-            else {
-                this._0_1SolDevnetGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-        }
-    }
-
-    private makeMove(socket: WebSocket, gameId: string, from: string, to: string, network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1", promotion: string | undefined) {
-        if (network === "MAINNET") {
-            if (sol === "0.01") {
-                this._0_01SolGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-            else if (sol === "0.05") {
-                this._0_05SolGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-            else {
-                this._0_1SolGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-        }
-        else {
-            if (sol === "0.01") {
-                this._0_01SolDevnetGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-            else if (sol === "0.05") {
-                this._0_05SolDevnetGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-            else {
-                this._0_1SolDevnetGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-        }
-    }
-
-    private sendMessage(socket: WebSocket, gameId: string, message: Message, network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1") {
-        if (network === "MAINNET") {
-            if (sol === "0.01") {
-                this._0_01SolGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-            else if (sol === "0.05") {
-                this._0_05SolGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-            else {
-                this._0_1SolGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-        }
-        else {
-            if (sol === "0.01") {
-                this._0_01SolDevnetGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-            else if (sol === "0.05") {
-                this._0_05SolDevnetGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-            else {
-                this._0_1SolDevnetGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-        }
+        this.games.get(`${network}-${sol}`)?.set(game.id, new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id))
     }
 
     private verifySignature(
@@ -345,10 +134,8 @@ export class GameManager {
     ) {
         const messageBytes = new TextEncoder().encode(message);
 
-        // ✅ Public key is base58 (correct)
         const publicKeyBytes = bs58.decode(publicKey);
 
-        // ✅ Signature is base64 (correct for Solana signMessages)
         const signatureBytes = Buffer.from(signature, "base64");
 
         return nacl.sign.detached.verify(
