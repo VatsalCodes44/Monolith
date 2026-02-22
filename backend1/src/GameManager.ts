@@ -181,6 +181,8 @@ export class GameManager {
                     return;
                 }
                 const { payload, promotion } = result.data;
+                const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
+                if (!verify) return;
                 this.makeMove(socket, payload.gameId, payload.from, payload.to, payload.network, payload.sol, promotion);
             }
 
@@ -190,6 +192,8 @@ export class GameManager {
                     return;
                 }
                 const { payload } = result.data;
+                const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
+                if (!verify) return;
                 this.sendMessage(socket, payload.gameId, { message: payload.message, from: payload.from }, payload.network, payload.sol)
             }
         })

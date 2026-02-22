@@ -2,7 +2,7 @@ import { Alert, StyleSheet, View, Text, useWindowDimensions, TouchableOpacity, F
 import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {ChessBoard} from "@/src/components/ChessBoard"
-import { CHECK, GAME_OVER, INIT_GAME, INIT_GAME_PAYLOAD, MESSAGE, MOVE, TIME_OUT } from '@/src/config/serverResponds'
+import { CHECK, GAME_OVER, GAME_OVER_RESPONSE_PAYLOAD, GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD, INIT_GAME, INIT_GAME_RESPONSE_PAYLOAD, MESSAGE, message_payload, MOVE, MOVE_RESPONSE_PAYLOAD, TIME_OUT } from '@/src/config/serverResponds'
 import { Chess, Move, Square } from 'chess.js'
 import { WS_URL } from '@/src/config/config'
 import { ConnectingToServer } from '@/src/components/connectingToServer'
@@ -140,7 +140,7 @@ export default function Game() {
         const payload = message.payload;
         switch (message.type) {
           case INIT_GAME: 
-            const initPayload = payload as INIT_GAME_PAYLOAD;
+            const initPayload = payload as INIT_GAME_RESPONSE_PAYLOAD;
             setColor(initPayload.color);
             setChess(new Chess(initPayload.board));
             setGameStarted(true);
@@ -148,14 +148,14 @@ export default function Game() {
             setTimer2(initPayload.timer2)
             break;
           case MOVE: 
-            let newChess = new Chess(payload.board)
-            console.log(payload.board)
+          const move_response_payload = payload as MOVE_RESPONSE_PAYLOAD;
+          let newChess = new Chess(move_response_payload.board)
             setChess(newChess);
-            setPrevFrom(payload.move.from);
-            setPrevTo(payload.move.to);
-            setTimer1(payload.timer1);
-            setTimer2(payload.timer2);
-            setMoves(payload.history)
+            setPrevFrom(move_response_payload.move.from);
+            setPrevTo(move_response_payload.move.to);
+            setTimer1(move_response_payload.timer1);
+            setTimer2(move_response_payload.timer2);
+            setMoves(move_response_payload.history)
             playMoveSound()
             break;
             
@@ -173,36 +173,39 @@ export default function Game() {
               
           case GAME_OVER:
             console.log("game over");
-            let gameOverChess = new Chess(payload.board)
+            const gameOverPayload = payload as GAME_OVER_RESPONSE_PAYLOAD;
+            let gameOverChess = new Chess(gameOverPayload.board)
             setChess(gameOverChess)
-            setPrevFrom(payload.move.from);
-            setPrevTo(payload.move.to);
-            setMoves(payload.history)
+            setPrevFrom(gameOverPayload.move.from);
+            setPrevTo(gameOverPayload.move.to);
+            setMoves(gameOverPayload.history)
             setGameOver({
-              winner: payload.winner,
-              gameOverType: payload.gameOverType,
+              winner: gameOverPayload.winner,
+              gameOverType: gameOverPayload.gameOverType,
               isGameOver: true
             })
-            setTimer1(payload.timer1);
-            setTimer2(payload.timer2);
+            setTimer1(gameOverPayload.timer1);
+            setTimer2(gameOverPayload.timer2);
             break;
 
           case TIME_OUT:
             console.log("time out");
-            setPrevFrom(payload.move.from);
-            setPrevTo(payload.move.to);
+            const timeOutPayload = payload as GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD;
+            setPrevFrom(timeOutPayload.move.from);
+            setPrevTo(timeOutPayload.move.to);
             setGameOver({
-              winner: payload.winner,
-              gameOverType: payload.gameOverType,
+              winner: timeOutPayload.winner,
+              gameOverType: timeOutPayload.gameOverType,
               isGameOver: true
             })
-            setTimer1(payload.timer1);
-            setTimer2(payload.timer2);
-            setMoves(payload.history)
+            setTimer1(timeOutPayload.timer1);
+            setTimer2(timeOutPayload.timer2);
+            setMoves(timeOutPayload.history)
             break;
           case MESSAGE:
-            setMessages(m => [...m, payload]);
-            if (!showMessages) setLastMessage(payload);
+            const messagePayload = payload as message_payload;
+            setMessages(m => [...m, messagePayload]);
+            if (!showMessages) setLastMessage(messagePayload);
             break;
         }
       }
