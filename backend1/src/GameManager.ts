@@ -3,7 +3,8 @@ import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE } from "./Messages.js";
 import { Game } from "./Game.js";
 import { INIT_GAME_TYPE, Message, MESSAGE_TYPE, MOVE_TYPE } from "./types/type.js";
 import { prisma } from "./lib/prisma.js"
-import { Chess } from "chess.js";
+import bs58 from "bs58";
+import nacl from "tweetnacl";
 
 export class GameManager {
     private _0_01SolGame: Game[];
@@ -48,6 +49,42 @@ export class GameManager {
     removeUser(socket: WebSocket) {
         this.users = this.users.filter(s => s !== socket);
         let foundedSocket = false;
+
+        if (this.pendingUser0_01Sol?.socket == socket) {
+            this.pendingUser0_01Sol = null;
+            foundedSocket = true;
+            return;
+        }
+
+        if (this.pendingUser0_05Sol?.socket == socket) {
+            this.pendingUser0_05Sol = null;
+            foundedSocket = true;
+            return;
+        }
+
+        if (this.pendingUser0_1Sol?.socket == socket) {
+            this.pendingUser0_1Sol = null;
+            foundedSocket = true;
+            return;
+        }
+
+        if (this.pendingUser0_01SolDevnet?.socket == socket) {
+            this.pendingUser0_01SolDevnet = null;
+            foundedSocket = true;
+            return;
+        }
+
+        if (this.pendingUser0_05SolDevnet?.socket == socket) {
+            this.pendingUser0_05SolDevnet = null;
+            foundedSocket = true;
+            return;
+        }
+
+        if (this.pendingUser0_1SolDevnet?.socket == socket) {
+            this.pendingUser0_1SolDevnet = null;
+            foundedSocket = true;
+            return;
+        }
 
         this._0_01SolDevnetGame = this._0_01SolDevnetGame.filter(g => {
             if (g.player1 !== socket && g.player2 !== socket) {
@@ -128,6 +165,8 @@ export class GameManager {
                 const { payload } = result.data;
                 const { network, sol, publicKey } = payload;
                 const pendingUser = this.pendingUserExist(network, sol);
+                const verify = this.verifySignature(publicKey, payload.signature, publicKey);
+                if (!verify) return;
                 if (pendingUser) {
                     await this.addGame(pendingUser.socket, socket, pendingUser.publicKey, publicKey, network, sol);
                 }
@@ -293,6 +332,26 @@ export class GameManager {
                 this._0_1SolDevnetGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
             }
         }
+    }
+
+    private verifySignature(
+        publicKey: string,
+        signature: string,
+        message: string
+    ) {
+        const messageBytes = new TextEncoder().encode(message);
+
+        // ✅ Public key is base58 (correct)
+        const publicKeyBytes = bs58.decode(publicKey);
+
+        // ✅ Signature is base64 (correct for Solana signMessages)
+        const signatureBytes = Buffer.from(signature, "base64");
+
+        return nacl.sign.detached.verify(
+            messageBytes,
+            signatureBytes,
+            publicKeyBytes
+        );
     }
 }
 

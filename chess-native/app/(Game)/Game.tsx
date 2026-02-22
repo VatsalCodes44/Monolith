@@ -2,13 +2,13 @@ import { Alert, StyleSheet, View, Text, useWindowDimensions, TouchableOpacity, F
 import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {ChessBoard} from "@/src/components/ChessBoard"
-import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from '@/src/config/serverResponds'
+import { CHECK, GAME_OVER, INIT_GAME, INIT_GAME_PAYLOAD, MESSAGE, MOVE, TIME_OUT } from '@/src/config/serverResponds'
 import { Chess, Move, Square } from 'chess.js'
 import { WS_URL } from '@/src/config/config'
 import { ConnectingToServer } from '@/src/components/connectingToServer'
 import { router, useNavigation } from 'expo-router'
 import { Orbitron_900Black, useFonts } from '@expo-google-fonts/orbitron'
-import { GameBet } from '@/src/stores/store'
+import { GameBet } from '@/src/stores/gameBet'
 import { Timer } from '@/src/components/Timer'
 import { Audio } from 'expo-av';
 import { useRef } from 'react';
@@ -18,6 +18,9 @@ import { MoveHistory } from '@/src/components/MoveHistory'
 import { Captured } from '@/src/components/Captured'
 import { ShowMessages } from '@/src/components/ShowMessages'
 import { usePreventRemove } from '@react-navigation/native'
+import { signedPubkey } from '@/src/stores/gameStore'
+import { useWalletStore } from '@/src/stores/wallet-store'
+import { INIT_GAME_TYPE_PAYLOAD_TS, INIT_GAME_TYPE_TS } from '@/src/config/serverInputs'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -58,8 +61,12 @@ export default function Game() {
     Orbitron_900Black,
   });
   const navigation = useNavigation();
-  const {sol, setSol} = GameBet(s=> s)
-
+  const setSol = GameBet(s=> s.sol);
+  const sol = GameBet(s => s.sol);
+  const signature = signedPubkey(s => s.signature);
+  const setSignature = signedPubkey(s => s.setSignature);
+  const publicKey = useWalletStore(s => s.publicKey);
+  const isDevnet = useWalletStore(s => s.isDevnet)
   const playMoveSound = async () => {
     if (!moveSoundRef.current) return;
 
@@ -114,7 +121,7 @@ export default function Game() {
       const ws = new WebSocket(WS_URL);
   
       ws.onopen = () => {
-          setSocket(ws);
+        setSocket(ws);
       };
   
       ws.onclose = () => {
@@ -133,9 +140,12 @@ export default function Game() {
         const payload = message.payload;
         switch (message.type) {
           case INIT_GAME: 
-            setColor(payload.color);
-            setChess(new Chess(payload.board));
+            const initPayload = payload as INIT_GAME_PAYLOAD;
+            setColor(initPayload.color);
+            setChess(new Chess(initPayload.board));
             setGameStarted(true);
+            setTimer1(initPayload.timer1);
+            setTimer2(initPayload.timer2)
             break;
           case MOVE: 
             let newChess = new Chess(payload.board)
@@ -197,8 +207,18 @@ export default function Game() {
         }
       }
     } else {
+      if (!publicKey || !signature || !sol) return;
+      const payload: INIT_GAME_TYPE_TS = {
+        type: INIT_GAME,
+        payload: {
+          publicKey,
+          signature,
+          network: isDevnet ? "DEVNET" : "MAINNET",
+          sol: sol
+        }
+      }
       socket.send(JSON.stringify({
-        type: INIT_GAME
+        
       }))
     }
 

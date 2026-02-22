@@ -128,6 +128,7 @@ export function useWallet() {
     },
     [publicKey, connection, cluster]
   );
+  
   const signMessage = useCallback(
     async (message: string) => {
       if (!publicKey) throw new Error("Wallet not connected");
@@ -143,11 +144,11 @@ export function useWallet() {
             });
 
             const signatures = await wallet.signMessages({
-              addresses: [publicKey.toString()],
+              addresses: [publicKey],
               payloads: [new TextEncoder().encode(message)]
             });
 
-            return signatures[0];
+            return signatures[0].toBase64();
           }
         );
 
@@ -156,7 +157,7 @@ export function useWallet() {
         setSigning(false);
       }
     },
-    [publicKey]
+    [publicKey, cluster]
   );
 
   return {

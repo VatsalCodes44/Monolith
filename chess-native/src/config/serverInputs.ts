@@ -1,14 +1,16 @@
 import {z} from "zod"
 import { INIT_GAME, CHECK, GAME_OVER, MESSAGE, MOVE, TIME_OUT, RE_JOIN_GAME } from "./serverResponds"
 
-const INIT_GAME_TYPE = z.object({
+export const INIT_GAME_TYPE = z.object({
     type: z.literal(INIT_GAME),
     payload: z.object({
         publicKey: z.string(),
+        signature: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
         sol: z.enum(["0.01", "0.05", "0.1"])
     })
 })
+
 
 const Re_JOIN_GAME_TYPE = z.object({
     type: z.literal(RE_JOIN_GAME),
@@ -45,7 +47,8 @@ const MESSAGE_TYPE = z.object({
 })
 
 
-type INIT_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
-type Re_JOIN_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
-type MOVE_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
-type MESSAGE_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
+export type INIT_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
+export type INIT_GAME_TYPE_PAYLOAD_TS = z.infer<typeof INIT_GAME_TYPE>["payload"];
+export type Re_JOIN_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
+export type MOVE_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
+export type MESSAGE_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;

@@ -10,6 +10,7 @@ export const INIT_GAME_TYPE = z.object({
     type: z.literal(INIT_GAME),
     payload: z.object({
         publicKey: z.string(),
+        signature: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
         sol: z.enum(["0.01", "0.05", "0.1"])
     })

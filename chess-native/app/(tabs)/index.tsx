@@ -4,39 +4,40 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { GameBet } from '@/src/stores/store';
+import { GameBet } from '@/src/stores/gameBet';
 import { WP } from '@/src/components/pieces/wP';
 import { WN } from '@/src/components/pieces/wN';
 import { WK } from '@/src/components/pieces/wK';
 import { useWalletStore } from '@/src/stores/wallet-store';
 import { useWallet } from '@/src/hooks/useWallet';
 import { Ionicons } from '@expo/vector-icons';
+import { signedPubkey } from '@/src/stores/gameStore';
 
 export default function index() {
-  const [initializing, setInitializing] = useState(false)
   const [fontsLoaded] = useFonts({
     Orbitron_900Black,
   });
 
   const wallet = useWallet();
   const setIsDevnet = useWalletStore(s => s.setIsDevnet)
-  const {sol, setSol} = GameBet(s=> s)
-
+  const setSol = GameBet(s => s.setSol)
+  const pubKeySignature = signedPubkey(s => s.signature);
+  const setPubKeySignature = signedPubkey(s => s.setSignature);
   const stakeOptions = [
     { 
-      amount: 0.001, 
+      amount: 0.01, 
       piece: <WP height={56} width={56}/>, 
       label: "PAWN",
       subtitle: "Entry Arena"
     },
     { 
-      amount: 0.005, 
+      amount: 0.05, 
       piece: <WN height={56} width={56}/>, 
       label: "KNIGHT",
       subtitle: "Tactical Play"
     },
     { 
-      amount: 0.01, 
+      amount: 0.1, 
       piece: <WK height={56} width={56}/>, 
       label: "KING",
       subtitle: "High Stakes"
@@ -112,12 +113,14 @@ export default function index() {
               key={index}
               style={styles.stakeCard}
               activeOpacity={0.9}
-              onPress={() => {
-                if (!wallet.publicKey) return
-                setSol(option.amount)
-                setInitializing(true)
+              onPress={async () => {
+                if (!wallet.publicKey) return;
+                if (!signedPubkey) {
+                  const signature = await wallet.signMessage(wallet.publicKey)
+                  setPubKeySignature(signature);
+                }
+                setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
                 router.push("/Game");
-                setInitializing(false)
               }}
             >
               {/* Gradient Border Effect */}
@@ -157,12 +160,14 @@ export default function index() {
                   {/* CTA Button */}
                   <TouchableOpacity 
                     style={styles.enterButton}
-                    onPress={() => {
+                    onPress={async () => {
                       if(!wallet.publicKey) return;
-                      setSol(option.amount)
-                      setInitializing(true)
+                      if (!signedPubkey) {
+                        const signature = await wallet.signMessage(wallet.publicKey)
+                        setPubKeySignature(signature);
+                      }
+                      setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
                       router.push("/Game");
-                      setInitializing(false)
                     }}
                   >
                     <LinearGradient
@@ -239,14 +244,18 @@ export default function index() {
             >
               <View style={styles.walletButtonInner}>
                 {wallet.publicKey ? 
-                (<View>
+                (<View style={{
+                  flexDirection: "row",
+                  justifyContent: "center",
+                  gap: 10
+                }}>
                   <Text style={[
                     styles.walletButtonText,
                     { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
                   ]}>
                     {`${wallet.publicKey.slice(0,4)}...${wallet.publicKey.slice(-4)}`}
                   </Text>
-                  <Ionicons name='exit'/>
+                  <Ionicons name='exit-outline' size={28} color="#fff" />
                 </View>) : 
                 (<Text style={[
                   styles.walletButtonText,
@@ -511,5 +520,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     letterSpacing: 2,
+    textAlignVertical: "center"
   },
 })

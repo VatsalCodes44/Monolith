@@ -5,3 +5,10 @@ export const TIME_OUT = "time_out";
 export const CHECK = "check";
 export const MESSAGE = "message";
 export const RE_JOIN_GAME = "re_join_game";
+
+export type INIT_GAME_PAYLOAD = {
+    color : "b" | "w",
+    board: string,
+    timer1: number,
+    timer2: number
+}
