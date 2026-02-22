@@ -13,6 +13,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.1",
+    "@solana/web3.js": "^1.98.4",
     "@types/express": "^5.0.6",
     "@types/ws": "^8.18.1",
     "bs58": "^6.0.0",

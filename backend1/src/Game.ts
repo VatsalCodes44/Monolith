@@ -2,7 +2,8 @@ import { WebSocket } from "ws";
 import { Chess } from "chess.js"
 import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
 import { Message } from "./types/type.js";
-
+import { prisma } from "./lib/prisma.js"
+import { LAMPORTS_PER_SOL } from "@solana/web3.js"
 export class Game {
     public player1: WebSocket | null;
     public player2: WebSocket | null;
@@ -89,7 +90,7 @@ export class Game {
         }
     }
 
-    public makeMove(socket: WebSocket, move: { from: string, to: string }, promotion: string | undefined) {
+    public async makeMove(socket: WebSocket, move: { from: string, to: string }, promotion: string | undefined) {
 
         // validating only the correct user makes the move whose turn is this
         if (this.board.turn() === "w" && socket !== this.player1) {
@@ -137,6 +138,12 @@ export class Game {
                 payload
             }));
 
+            try {
+                await this.settlePaymentAndGameEnd("TIME_OUT", winner, this.gameId);
+            }
+            catch (err) {
+                console.log(err);
+            }
             return;
         }
 
@@ -166,21 +173,21 @@ export class Game {
         // check if the game is over
         if (this.board.isGameOver()) {
 
-            let gameOverType: "checkmate" | "stalemate" | "draw";
+            let gameOverType: "CHECKMATE" | "STALEMATE" | "DRAW";
 
             if (this.board.isCheckmate()) {
-                gameOverType = "checkmate";
+                gameOverType = "CHECKMATE";
             }
             else if (this.board.isStalemate()) {
-                gameOverType = "stalemate";
+                gameOverType = "STALEMATE";
             }
             else {
-                gameOverType = "draw";
+                gameOverType = "DRAW";
             }
 
             let winner: "w" | "b" | null = null;
 
-            if (gameOverType === "checkmate") {
+            if (gameOverType === "CHECKMATE") {
                 winner = this.board.turn() === "w" ? "b" : "w";
             }
 
@@ -200,6 +207,12 @@ export class Game {
                 payload: finalPayload
             }));
 
+            try {
+                await this.settlePaymentAndGameEnd(gameOverType, winner, this.gameId);
+            }
+            catch (err) {
+                console.log(err);
+            }
             return;
         }
 
@@ -238,5 +251,151 @@ export class Game {
         if (this.player2 === socket) {
             this.player2 = null;
         }
+    }
+
+    private async settlePaymentAndGameEnd(gameOverType: "CHECKMATE" | "STALEMATE" | "DRAW" | "TIME_OUT", winner: "w" | "b" | null, gameId: string) {
+        const maxTries = 3;
+        let retries = 0;
+        while (retries < maxTries) {
+            try {
+                if (gameOverType != "DRAW" && winner != null) {
+                    await prisma.$transaction(async (tx) => {
+
+                        const result = await tx.game.updateMany({
+                            where: {
+                                id: gameId,
+                                status: "IN_PROGRESS"
+                            },
+                            data: {
+                                status: gameOverType,
+                                fen: this.board.fen(),
+                                timer1: this.timer1,
+                                timer2: this.timer2,
+                                winner,
+                                history: JSON.stringify(this.board.history({ verbose: true })),
+                            }
+                        })
+
+                        if (result.count == 0) {
+                            throw new Error("Game not found or already settled");
+                        }
+
+                        // stake by each player
+                        const stake = this.sol == "0.01" ?
+                            10_000_000 :
+                            (this.sol == "0.05" ?
+                                50_000_000 :
+                                100_000_000
+                            );
+
+                        const totalStake = stake * 2;
+                        const winnerGain = totalStake;
+                        const feeFromWinnerGain = (winnerGain * 5) / 100
+                        const payout = winnerGain - feeFromWinnerGain
+
+                        if (winner == "w") {
+                            await tx.player.update({
+                                where: {
+                                    publicKey: this.player1Pubkey
+                                },
+                                data: {
+                                    lamports: {
+                                        increment: payout
+                                    }
+                                }
+                            })
+                        }
+                        else {
+
+                            await tx.player.update({
+                                where: {
+                                    publicKey: this.player2Pubkey
+                                },
+                                data: {
+                                    lamports: {
+                                        increment: payout
+                                    }
+                                }
+                            })
+                        }
+
+                    }, {
+                        maxWait: 10000,
+                        timeout: 10000,
+                        isolationLevel: "Serializable"
+                    });
+
+                    break
+                }
+                else {
+                    await prisma.$transaction(async (tx) => {
+                        const result = await tx.game.updateMany({
+                            where: {
+                                id: gameId,
+                                status: "IN_PROGRESS"
+                            },
+                            data: {
+                                status: gameOverType,
+                                fen: this.board.fen(),
+                                timer1: this.timer1,
+                                timer2: this.timer2,
+                                winner,
+                                history: JSON.stringify(this.board.history({ verbose: true })),
+                            }
+                        })
+
+                        if (result.count == 0) {
+                            throw new Error("Game not found or already settled");
+                        }
+
+                        // stake by each player
+                        const stake = this.sol === "0.01"
+                            ? 10_000_000
+                            : this.sol === "0.05"
+                                ? 50_000_000
+                                : 100_000_000
+
+                        // for each player game fees is 5%
+                        const gameFees = (stake * 5) / 100
+
+                        const refund = stake - gameFees
+
+                        await tx.player.update({
+                            where: {
+                                publicKey: this.player1Pubkey
+                            },
+                            data: {
+                                lamports: {
+                                    increment: refund
+                                }
+                            }
+                        })
+
+                        await tx.player.update({
+                            where: {
+                                publicKey: this.player2Pubkey
+                            },
+                            data: {
+                                lamports: {
+                                    increment: refund
+                                }
+                            }
+                        })
+                    }, {
+                        maxWait: 10000,
+                        timeout: 10000,
+                        isolationLevel: "Serializable"
+                    })
+                }
+
+                break;
+            }
+            catch (err) {
+                console.log(err);
+                retries++;
+            }
+        }
+
+        if (maxTries == retries) throw new Error("Failed to settle game after multiple retries");
     }
 }

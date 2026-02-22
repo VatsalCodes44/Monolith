@@ -64,67 +64,139 @@ export class GameManager {
 
     private addHandler(socket: WebSocket) {
         socket.on("message", async (data) => {
-            const message = JSON.parse(data.toString());
-            console.log(message)
+            try {
+                const message = JSON.parse(data.toString());
+                console.log(message)
+                if (message.type === INIT_GAME) {
+                    const result = INIT_GAME_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload } = result.data;
+                    const { network, sol, publicKey } = payload;
 
-            if (message.type === INIT_GAME) {
-                const result = INIT_GAME_TYPE.safeParse(message);
-                if (!result.success) {
-                    return;
-                }
-                const { payload } = result.data;
-                const { network, sol, publicKey } = payload;
-                const pendingUser = this.pendingUsers.get(`${network}-${sol}`);
-                const verify = this.verifySignature(publicKey, payload.signature, publicKey);
-                if (!verify) return;
-                if (pendingUser) {
-                    await this.addGame(pendingUser.socket, socket, pendingUser.publicKey, publicKey, network, sol);
-                    this.pendingUsers.set(`${network}-${sol}`, null);
-                }
-                else {
-                    this.pendingUsers.set(`${network}-${sol}`, { socket, publicKey });
-                }
-            }
+                    // check if user is eligible
+                    const eligible = await this.isEligible(publicKey, sol);
+                    if (!eligible) throw new Error("Insufficient balance");
 
-            if (message.type == MOVE) {
-                const result = MOVE_TYPE.safeParse(message);
-                if (!result.success) {
-                    return;
-                }
-                const { payload, promotion } = result.data;
-                const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
-                if (!verify) return;
-                this.games.get(`${payload.network}-${payload.sol}`)?.get(payload.gameId)?.makeMove(socket, { from: payload.from, to: payload.to }, promotion);
-            }
+                    const verify = this.verifySignature(publicKey, payload.signature, publicKey);
+                    if (!verify) return;
 
-            if (message.type == MESSAGE) {
-                const result = MESSAGE_TYPE.safeParse(message);
-                if (!result.success) {
-                    return;
+                    const pendingUser = this.pendingUsers.get(`${network}-${sol}`);
+                    if (pendingUser) {
+                        await this.addGame(pendingUser.socket, socket, pendingUser.publicKey, publicKey, network, sol);
+                        this.pendingUsers.set(`${network}-${sol}`, null);
+                    }
+                    else {
+                        this.pendingUsers.set(`${network}-${sol}`, { socket, publicKey });
+                    }
                 }
-                const { payload } = result.data;
-                const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
-                if (!verify) return;
-                this.games.get(`${payload.network}-${payload.sol}`)?.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
+
+                if (message.type == MOVE) {
+                    const result = MOVE_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload, promotion } = result.data;
+                    const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
+                    if (!verify) return;
+                    this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.makeMove(socket, { from: payload.from, to: payload.to }, promotion);
+                }
+
+                if (message.type == MESSAGE) {
+                    const result = MESSAGE_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload } = result.data;
+                    const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
+                    if (!verify) return;
+                    this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
+                }
+            } catch (error) {
+                console.error("Error handling WebSocket message:", error);
             }
         })
     }
 
     private async addGame(player1: WebSocket, player2: WebSocket, player1PublicKey: string, player2PublicKey: string, network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1") {
-        const game = await prisma.game.create({
-            data: {
-                player1PublicKey,
-                player2PublicKey,
-                network,
-                lamports: sol === "0.01" ? 10000000 : sol === "0.05" ? 50000000 : 100000000,
-                fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                status: "IN_PROGRESS",
-            },
-            select: {
-                id: true
+        let gameId = null;
+        let maxTries = 3;
+        let retries = 0
+        while (maxTries > retries) {
+            try {
+                const tx = await prisma.$transaction(async (tx) => {
+                    const stake: bigint =
+                        sol === "0.01"
+                            ? 10_000_000n
+                            : sol === "0.05"
+                                ? 50_000_000n
+                                : 100_000_000n;
+
+                    const game = await tx.game.create({
+                        data: {
+                            player1PublicKey,
+                            player2PublicKey,
+                            network,
+                            lamports: sol === "0.01" ? 10000000 : sol === "0.05" ? 50000000 : 100000000,
+                            fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                            status: "IN_PROGRESS",
+                        },
+                        select: {
+                            id: true
+                        }
+                    })
+
+                    const result1 = await tx.player.updateMany({
+                        where: {
+                            publicKey: player1PublicKey,
+                            lamports: {
+                                gte: stake
+                            }
+                        },
+                        data: {
+                            lamports: {
+                                decrement: stake
+                            }
+                        }
+                    })
+                    if (result1.count == 0) throw new Error("failed to deduct stake from player1")
+
+                    const result2 = await tx.player.updateMany({
+                        where: {
+                            publicKey: player2PublicKey,
+                            lamports: {
+                                gte: stake
+                            }
+                        },
+                        data: {
+                            lamports: {
+                                decrement: stake
+                            }
+                        }
+                    })
+                    if (result2.count == 0) throw new Error("failed to deduct stake from player2")
+
+                    return game
+
+                }, {
+                    isolationLevel: "Serializable",
+                    maxWait: 10000,
+                    timeout: 10000,
+                })
+
+                gameId = tx.id;
+                break;
             }
-        })
-        this.games.get(`${network}-${sol}`)?.set(game.id, new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id))
+            catch (err) {
+                console.error("Database error creating game:", err);
+                retries++;
+            }
+        }
+        if (!gameId) {
+            throw new Error("Failed to create game");
+        }
+        this.games.get(this.getGameKey(network, sol))?.set(gameId, new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, gameId))
     }
 
     private verifySignature(
@@ -143,6 +215,34 @@ export class GameManager {
             signatureBytes,
             publicKeyBytes
         );
+    }
+
+    private getGameKey(network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1"): string {
+        return `${network}-${sol}`;
+    }
+
+    private async isEligible(
+        publicKey: string,
+        sol: "0.01" | "0.05" | "0.1"
+    ) {
+        const stake: bigint =
+            sol === "0.01"
+                ? 10_000_000n
+                : sol === "0.05"
+                    ? 50_000_000n
+                    : 100_000_000n;
+
+        const result = await prisma.player.findUnique({
+            where: {
+                publicKey,
+            },
+            select: {
+                lamports: true
+            }
+        })
+
+        if (!result || result.lamports < stake) return false;
+        return true;
     }
 }
 

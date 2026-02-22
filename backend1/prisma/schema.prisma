@@ -26,9 +26,12 @@ model Game {
   player1PublicKey String
   player2PublicKey String
   fen              String
-  winner           String?
+  winner           Color?
   status           GameStatus
   network          Network
+  timer1           BigInt     @default(600000)
+  timer2           BigInt     @default(600000)
+  history          String?
   lamports         BigInt
   createdAt        DateTime   @default(now())
   player1          Player     @relation("Player1", fields: [player1PublicKey], references: [publicKey])
@@ -42,11 +45,10 @@ enum Network {
 
 enum GameStatus {
   IN_PROGRESS
-  WHITE_WON
-  BLACK_WON
   DRAW
   CHECKMATE
   STALEMATE
+  TIME_OUT
 }
 
 enum Color {
