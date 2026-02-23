@@ -1,6 +1,6 @@
 import { FlatList, StyleSheet, Text, View, useWindowDimensions, ImageBackground, Pressable, Touchable, ViewStyle  } from 'react-native'
-import React, { useState } from 'react'
-import { Chess, Color, PieceSymbol, Square } from 'chess.js';
+import React, { useEffect, useState } from 'react'
+import { Chess, Color, Move, PieceSymbol, Square } from 'chess.js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MOVE } from '../config/serverResponds';
 import { GameOver } from '@/app/(Game)/Game';
@@ -55,9 +55,26 @@ export function ChessBoard(
   const [showPromotionOptions, setShowPromotionOptions] = useState(false)
   const [promotionPiece, setPromotionPiece] = useState<"q" | "r" | "b" | "k">("q");
   const [pendingPromotionMove, setPendingPromotionMove] = useState<{from: Square, to: Square} | null>(null);
-   const boardSize = Math.min(width, 642);
+  const [possibleMoves, setPossibleMoves] = useState<string[] | null> (null);
+  const boardSize = Math.min(width, 642);
+
+  useEffect(() => {
+    if (from) {
+      const moves = chess.moves({
+        square: from,
+        verbose: true
+      });
+
+      const moveSquares = moves.map(move => move.to);
+      setPossibleMoves(moveSquares);
+    } else {
+      setPossibleMoves(null);
+    }
+  }, [from]);
+
   const onPress = (piece: Piece, rowIdx: number, colIdx: number) => {
     if (GameOver.isGameOver || !gameStarted || !gameId) return;
+    if (chess.turn() != color) return;
     if (!piece && !from) return;
     if (!from && piece) {
       setFrom(piece.square);
@@ -212,7 +229,6 @@ export function ChessBoard(
                         />
                       );
                     }
-
                     return (
                       <Block color={color}
                       rowIdx={rowIdx}
@@ -220,7 +236,8 @@ export function ChessBoard(
                       isLight={isLight}
                       onPress={onPress}
                       piece={piece} 
-                      width={width} 
+                      width={width}
+                      moves={possibleMoves}
                       />
                     );
                   }}
@@ -487,6 +504,7 @@ function Block({
   colIdx,
   color,
   isLight,
+  moves
 }: {
   width: number;
   onPress: (piece: Piece, rowIdx: number, colIdx: number) => void;
@@ -495,9 +513,13 @@ function Block({
   colIdx: number;
   color: "b" | "w";
   isLight: boolean;
+  moves: string[] | null
 }) {
   const squareSize = Math.min(width, 640) / 8;
   const pieceSize = squareSize * 0.95;
+  const squareName =  String.fromCharCode("a".charCodeAt(0) + colIdx) +
+  (8 - rowIdx);
+  const isPossibleMove = moves?.includes(squareName);
 
   const squareProps = isLight
     ? {
@@ -548,6 +570,20 @@ function Block({
           {piece && (
             <Piece piece={piece} width={pieceSize} color={color} />
           )}
+
+          {isPossibleMove && (
+            <View
+              style={{
+                position: "absolute",
+                width: squareSize * 0.35,
+                height: squareSize * 0.35,
+                borderRadius: (squareSize * 0.35) / 2,
+                backgroundColor: isLight
+                  ? "rgba(0,0,0,0.25)"
+                  : "rgba(255,255,255,0.25)"
+              }}
+            />
+          )}
         </Pressable>
       </LinearGradient>
     ) : (
@@ -571,6 +607,20 @@ function Block({
         >
           {piece && (
             <Piece piece={piece} width={pieceSize} color={color} />
+          )}
+
+          {isPossibleMove && (
+            <View
+              style={{
+                position: "absolute",
+                width: squareSize * 0.35,
+                height: squareSize * 0.35,
+                borderRadius: (squareSize * 0.35) / 2,
+                backgroundColor: isLight
+                  ? "rgba(0,0,0,0.25)"
+                  : "rgba(255,255,255,0.25)"
+              }}
+            />
           )}
         </Pressable>
       </View>

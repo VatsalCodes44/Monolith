@@ -1,5 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,8 +10,8 @@ import { WN } from '@/src/components/pieces/wN';
 import { WK } from '@/src/components/pieces/wK';
 import { useWalletStore } from '@/src/stores/wallet-store';
 import { useWallet } from '@/src/hooks/useWallet';
-import { Ionicons } from '@expo/vector-icons';
 import { signedPubkey } from '@/src/stores/gameStore';
+import { WalletConnect } from '@/src/components/WalletConnect';
 
 export default function index() {
   const [fontsLoaded] = useFonts({
@@ -45,229 +45,201 @@ export default function index() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.heroSection}>
-          {/* Network and Balance Status Bar */}
-          <View style={styles.statusBar}>
-            <TouchableOpacity onPress={() => {
-              if (!wallet.publicKey) return;
-              setIsDevnet(!wallet.isDevnet)
-            }}>
-              <View style={styles.statusItem}>
-                <View style={[
-                  styles.statusDot,
-                  {
-                    backgroundColor: wallet.publicKey ? (wallet.isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
-                  }
-                ]} />
-                <Text style={[
-                  styles.statusText,
-                  {
-                    color: wallet.publicKey ? (wallet.isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
-                  }
-                ]}>
-                  {wallet.publicKey ? (wallet.isDevnet ? "DEVNET" : "MAINNET") : "WALLET NOT CONNECTED"}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <View style={styles.balanceBadge}>
-              <Text style={[
-                styles.balanceText,
-                { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-              ]}>
-                ◎ 0.0000
-              </Text>
-            </View>
-          </View>
-
-          <Text style={[
-            styles.appTitle,
-            { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-          ]}>
-            CHESS on CHAIN
-          </Text>
-          
-          <LinearGradient
-            colors={['#B048C2', '#9082DB', '#3DE3B4']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.accentLine}
-          />
-          
-          <Text style={styles.tagline}>
-            Instant Deposit. Instant Withdraw.
-          </Text>
-          
-          <Text style={styles.microText}>
-            Secured by Solana • Instant Finality
-          </Text>
-        </View>
-
-        <View style={styles.stakeSection}>
-          {stakeOptions.map((option, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.stakeCard}
-              activeOpacity={0.9}
-              onPress={async () => {
-                if (!wallet.publicKey) return;
-                if (!signedPubkey) {
-                  const signature = await wallet.signMessage(wallet.publicKey)
-                  setPubKeySignature(signature);
-                }
-                setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
-                router.push("/Game");
-              }}
-            >
-              {/* Gradient Border Effect */}
-              <LinearGradient
-                colors={['#B048C2', '#9082DB', '#3DE3B4']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.cardBorderGradient}
-              >
-                <View style={styles.cardInner}>
-                  {/* Chess Piece */}
-                  <View style={styles.pieceSection}>
-                    <View style={styles.pieceCircle}>
-                      {option.piece}
-                    </View>
-                    <Text style={[
-                      styles.pieceLabel,
-                      { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                    ]}>
-                      {option.label}
-                    </Text>
-                  </View>
-
-                  {/* Stake Info */}
-                  <View style={styles.stakeInfo}>
-                    <Text style={[
-                      styles.stakeAmount,
-                      { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                    ]}>
-                      {option.amount} SOL
-                    </Text>
-                    <Text style={styles.stakeSubtitle}>
-                      {option.subtitle}
-                    </Text>
-                  </View>
-
-                  {/* CTA Button */}
-                  <TouchableOpacity 
-                    style={styles.enterButton}
-                    onPress={async () => {
-                      if(!wallet.publicKey) return;
-                      if (!signedPubkey) {
-                        const signature = await wallet.signMessage(wallet.publicKey)
-                        setPubKeySignature(signature);
-                      }
-                      setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
-                      router.push("/Game");
-                    }}
-                  >
-                    <LinearGradient
-                      colors={['#B048C2', '#9082DB', '#3DE3B4']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.enterButtonGradient}
-                    >
-                      <Text style={[
-                        styles.enterButtonText,
-                        { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                      ]}>
-                        ENTER ARENA
-                      </Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* ACTION SECTION */}
-        <View style={styles.actionSection}>
-          {/* Dual Buttons */}
-          <View style={styles.dualButtonRow}>
-            <TouchableOpacity 
-              style={styles.dualButton}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={['#B048C2', '#9082DB', '#3DE3B4']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.dualButtonGradient}
-              >
-                <Text style={[
-                  styles.dualButtonText,
-                  { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                ]}>
-                  DEPLOY CUSTOM
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.dualButton}
-              activeOpacity={0.85}
-            >
-              <View style={styles.solidButton}>
-                <Text style={[
-                  styles.dualButtonText,
-                  { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                ]}>
-                  JOIN OPEN ARENA
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Wallet Button */}
-          <TouchableOpacity 
-            style={styles.walletButtonContainer}
-            activeOpacity={0.85}
-            onPress={() => {
-              !wallet.publicKey ? wallet.connect() : wallet.disconnect()
-            }}
+    <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
           >
+            
+          <View style={styles.heroSection}>
+            {/* Network and Balance Status Bar */}
+            <View style={styles.statusBar}>
+              <TouchableOpacity style={{
+                padding: 6
+              }} onPress={() => {
+                if (!wallet.publicKey) return;
+                setIsDevnet(!wallet.isDevnet)
+              }}>
+                <View style={styles.statusItem}>
+                  <View style={[
+                    styles.statusDot,
+                    {
+                      backgroundColor: wallet.publicKey ? (wallet.isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
+                    }
+                  ]} />
+                  <Text style={[
+                    styles.statusText,
+                    {
+                      color: wallet.publicKey ? (wallet.isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
+                    }
+                  ]}>
+                    {wallet.publicKey ? (wallet.isDevnet ? "DEVNET" : "MAINNET") : "WALLET NOT CONNECTED"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <View style={styles.balanceBadge}>
+                <Text style={[
+                  styles.balanceText,
+                  { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                ]}>
+                  ◎ 0.0000
+                </Text>
+              </View>
+            </View>
+
+            <Text style={[
+              styles.appTitle,
+              { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+            ]}>
+              CHESS on CHAIN
+            </Text>
+            
             <LinearGradient
               colors={['#B048C2', '#9082DB', '#3DE3B4']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.walletButtonGradient}
-            >
-              <View style={styles.walletButtonInner}>
-                {wallet.publicKey ? 
-                (<View style={{
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  gap: 10
-                }}>
+              style={styles.accentLine}
+            />
+            
+            <Text style={styles.tagline}>
+              Instant Deposit. Instant Withdraw.
+            </Text>
+            
+            {/* <Text style={styles.microText}>
+              Secured by Solana • Instant Finality
+            </Text> */}
+          </View>
+
+          <View style={styles.stakeSection}>
+            {stakeOptions.map((option, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.stakeCard}
+                activeOpacity={0.9}
+                onPress={async () => {
+                  if (!wallet.publicKey) return;
+                  if (!signedPubkey) {
+                    const signature = await wallet.signMessage(wallet.publicKey)
+                    setPubKeySignature(signature);
+                  }
+                  setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
+                  router.push("/Game");
+                }}
+              >
+                {/* Gradient Border Effect */}
+                <LinearGradient
+                  colors={['#B048C2', '#9082DB', '#3DE3B4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardBorderGradient}
+                >
+                  <View style={styles.cardInner}>
+                    {/* Chess Piece */}
+                    <View style={styles.pieceSection}>
+                      <View style={styles.pieceCircle}>
+                        {option.piece}
+                      </View>
+                      <Text style={[
+                        styles.pieceLabel,
+                        { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </View>
+
+                    {/* Stake Info */}
+                    <View style={styles.stakeInfo}>
+                      <Text style={[
+                        styles.stakeAmount,
+                        { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                      ]}>
+                        {option.amount} SOL
+                      </Text>
+                      <Text style={styles.stakeSubtitle}>
+                        {option.subtitle}
+                      </Text>
+                    </View>
+
+                    {/* CTA Button */}
+                    <TouchableOpacity 
+                      style={styles.enterButton}
+                      onPress={async () => {
+                        if(!wallet.publicKey) return;
+                        if (!signedPubkey) {
+                          const signature = await wallet.signMessage(wallet.publicKey)
+                          setPubKeySignature(signature);
+                        }
+                        setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
+                        router.push("/Game");
+                      }}
+                    >
+                      <LinearGradient
+                        colors={['#B048C2', '#9082DB', '#3DE3B4']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.enterButtonGradient}
+                      >
+                        <Text style={[
+                          styles.enterButtonText,
+                          { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                        ]}>
+                          ENTER ARENA
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* ACTION SECTION */}
+          <View style={styles.actionSection}>
+            {/* Dual Buttons */}
+            <View style={styles.dualButtonRow}>
+              <TouchableOpacity 
+                style={styles.dualButton}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={['#B048C2', '#9082DB', '#3DE3B4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.dualButtonGradient}
+                >
                   <Text style={[
-                    styles.walletButtonText,
+                    styles.dualButtonText,
                     { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
                   ]}>
-                    {`${wallet.publicKey.slice(0,4)}...${wallet.publicKey.slice(-4)}`}
+                    DEPLOY CUSTOM
                   </Text>
-                  <Ionicons name='exit-outline' size={28} color="#fff" />
-                </View>) : 
-                (<Text style={[
-                  styles.walletButtonText,
-                  { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                ]}>
-                  CONNECT SOLANA WALLET
-                </Text>)}
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.dualButton}
+                activeOpacity={0.85}
+              >
+                <View style={styles.solidButton}>
+                  <Text style={[
+                    styles.dualButtonText,
+                    { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                  ]}>
+                    JOIN OPEN ARENA
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Wallet Button */}
+            <WalletConnect
+              wallet={wallet}
+              fontsLoaded={fontsLoaded}
+            />
+          </View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   )
 }
@@ -285,8 +257,8 @@ const styles = StyleSheet.create({
   // ===== HERO SECTION =====
   heroSection: {
     alignItems: "center",
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingTop: 8,
+    paddingBottom: 16,
     paddingHorizontal: 24,
   },
 
@@ -297,7 +269,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     paddingHorizontal: 4,
-    marginBottom: 32,
+    marginBottom: 16,
   },
 
   statusItem: {
@@ -355,7 +327,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.5,
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 2,
     lineHeight: 22,
   },
   
@@ -371,7 +343,7 @@ const styles = StyleSheet.create({
   stakeSection: {
     paddingHorizontal: 20,
     gap: 16,
-    marginBottom: 32,
+    marginBottom: 16,
   },
   
   stakeCard: {
@@ -461,7 +433,7 @@ const styles = StyleSheet.create({
   // ===== ACTION SECTION =====
   actionSection: {
     paddingHorizontal: 20,
-    gap: 12,
+    gap: 16,
   },
   
   dualButtonRow: {
@@ -497,29 +469,5 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   
-  walletButtonContainer: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    height: 58,
-  },
-  
-  walletButtonGradient: {
-    flex: 1,
-    padding: 2,
-  },
-  
-  walletButtonInner: {
-    flex: 1,
-    backgroundColor: '#0D0D0F',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  walletButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    letterSpacing: 2,
-    textAlignVertical: "center"
-  },
+
 })

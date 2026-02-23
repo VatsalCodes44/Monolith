@@ -20,7 +20,21 @@ const APP_IDENTITY = {
   icon: "favicon.ico",
 };
 
-export function useWallet() {
+export interface Wallet {
+  isDevnet: boolean;
+  publicKey: string | null;
+  connected: boolean;
+  connecting: boolean;
+  sending: boolean;
+  connect: () => Promise<PublicKey>;
+  disconnect: () => void;
+  getBalance: () => Promise<number>;
+  sendSOL: (toAddress: string, amountSOL: number) => Promise<string>;
+  connection: Connection;
+  signMessage: (message: string) => Promise<string>;
+}
+
+export function useWallet(): Wallet {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [connecting, setConnecting] = useState(false);
   const [sending, setSending] = useState(false);
