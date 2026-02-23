@@ -13,11 +13,13 @@ datasource db {
 }
 
 model Player {
-  publicKey     String      @id
-  lamports      BigInt
-  gameAsPlayer1 Game[]      @relation("Player1")
-  gameAsPlayer2 Game[]      @relation("Player2")
-  nfts          PlayerNft[]
+  publicKey       String      @id
+  devnetLamports  BigInt      @default(0)
+  mainnetLamports BigInt      @default(0)
+  skr             BigInt      @default(0)
+  gameAsPlayer1   Game[]      @relation("Player1")
+  gameAsPlayer2   Game[]      @relation("Player2")
+  nfts            PlayerNft[]
 }
 
 // player 1 is always white
@@ -60,6 +62,7 @@ model PlayerNft {
   id        String   @id @default(uuid())
   publicKey String
   mintedNft String
+  network   Network
   createdAt DateTime @default(now())
   player    Player   @relation(fields: [publicKey], references: [publicKey])
 }

@@ -5,3 +5,4 @@ export const TIME_OUT = "time_out";
 export const CHECK = "check";
 export const MESSAGE = "message";
 export const RE_JOIN_GAME = "re_join_game";
+export const INSUFFICIENT_FUNDS = "Insufficient Funds";

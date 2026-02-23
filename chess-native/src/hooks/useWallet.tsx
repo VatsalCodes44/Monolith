@@ -142,7 +142,7 @@ export function useWallet(): Wallet {
     },
     [publicKey, connection, cluster]
   );
-  
+
   const signMessage = useCallback(
     async (message: string) => {
       if (!publicKey) throw new Error("Wallet not connected");
@@ -162,7 +162,7 @@ export function useWallet(): Wallet {
               payloads: [new TextEncoder().encode(message)]
             });
 
-            return signatures[0].toBase64();
+            return Buffer.from(signatures[0]).toString("base64");
           }
         );
 

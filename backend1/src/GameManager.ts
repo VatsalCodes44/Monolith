@@ -58,7 +58,7 @@ export class GameManager {
                     const { network, sol, publicKey } = payload;
 
                     // check if user is eligible
-                    const eligible = await this.isEligible(publicKey, sol);
+                    const eligible = await this.isEligible(publicKey, sol, network);
                     if (!eligible) throw new Error("Insufficient balance");
 
                     const verify = this.verifySignature(publicKey, payload.signature, publicKey);
@@ -133,14 +133,10 @@ export class GameManager {
                     const result1 = await tx.player.updateMany({
                         where: {
                             publicKey: player1PublicKey,
-                            lamports: {
-                                gte: stake
-                            }
+                            ...(network === "MAINNET" ? { mainnetLamports: { gte: stake } } : { devnetLamports: { gte: stake } })
                         },
                         data: {
-                            lamports: {
-                                decrement: stake
-                            }
+                            ...(network === "MAINNET" ? { mainnetLamports: { decrement: stake } } : { devnetLamports: { decrement: stake } })
                         }
                     })
                     if (result1.count == 0) {
@@ -150,14 +146,10 @@ export class GameManager {
                     const result2 = await tx.player.updateMany({
                         where: {
                             publicKey: player2PublicKey,
-                            lamports: {
-                                gte: stake
-                            }
+                            ...(network === "MAINNET" ? { mainnetLamports: { gte: stake } } : { devnetLamports: { gte: stake } })
                         },
                         data: {
-                            lamports: {
-                                decrement: stake
-                            }
+                            ...(network === "MAINNET" ? { mainnetLamports: { decrement: stake } } : { devnetLamports: { decrement: stake } })
                         }
                     })
                     if (result2.count == 0) {
@@ -225,7 +217,8 @@ export class GameManager {
 
     private async isEligible(
         publicKey: string,
-        sol: "0.01" | "0.05" | "0.1"
+        sol: "0.01" | "0.05" | "0.1",
+        network: "MAINNET" | "DEVNET"
     ) {
         const stake: bigint =
             sol === "0.01"
@@ -239,12 +232,13 @@ export class GameManager {
                 publicKey,
             },
             select: {
-                lamports: true
+                mainnetLamports: true,
+                devnetLamports: true
             }
         })
 
-        if (!result || result.lamports < stake) return false;
-        return true;
+        if (!result) return false;
+        return network === "MAINNET" ? result.mainnetLamports >= stake : result.devnetLamports >= stake;
     }
 
     removeUser(socket: WebSocket) {

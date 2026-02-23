@@ -220,7 +220,7 @@ export class Game {
         let retries = 0;
         while (retries < maxTries) {
             try {
-                if (gameOverType != "DRAW" && winner != null) {
+                if (gameOverType != "DRAW" && winner != null && gameOverType != "STALEMATE") {
                     await prisma.$transaction(async (tx) => {
 
                         const result = await tx.game.updateMany({
@@ -261,9 +261,7 @@ export class Game {
                                     publicKey: this.player1Pubkey
                                 },
                                 data: {
-                                    lamports: {
-                                        increment: payout
-                                    }
+                                    ...(this.network === "MAINNET" ? { mainnetLamports: { increment: payout } } : { devnetLamports: { increment: payout } })
                                 }
                             })
                         }
@@ -274,9 +272,7 @@ export class Game {
                                     publicKey: this.player2Pubkey
                                 },
                                 data: {
-                                    lamports: {
-                                        increment: payout
-                                    }
+                                    ...(this.network === "MAINNET" ? { mainnetLamports: { increment: payout } } : { devnetLamports: { increment: payout } })
                                 }
                             })
                         }
@@ -329,9 +325,7 @@ export class Game {
                                 publicKey: this.player1Pubkey
                             },
                             data: {
-                                lamports: {
-                                    increment: refund
-                                }
+                                ...(this.network === "MAINNET" ? { mainnetLamports: { increment: refund } } : { devnetLamports: { increment: refund } })
                             }
                         })
 
@@ -340,9 +334,7 @@ export class Game {
                                 publicKey: this.player2Pubkey
                             },
                             data: {
-                                lamports: {
-                                    increment: refund
-                                }
+                                ...(this.network === "MAINNET" ? { mainnetLamports: { increment: refund } } : { devnetLamports: { increment: refund } })
                             }
                         })
                     }, {

@@ -4,23 +4,25 @@ import {
   View,
   TouchableOpacity,
   TextInput,
-  ScrollView
 } from 'react-native'
 import React, { useState } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
+
 import { useWallet } from '@/src/hooks/useWallet'
 import { useWalletStore } from '@/src/stores/wallet-store'
 import { GradientCard } from '@/src/components/GradientCard'
-import { GradientButton } from '@/src/components/GradientButton'
-
-export const CONTROL_HEIGHT = 56
+import { TopContainer } from '@/src/components/TopContainer'
+import { HeroSection } from '@/src/components/HeroSection'
+import { SegmentToggle } from '@/src/components/SegmentToggle'
 
 export default function Profile() {
   const [fontsLoaded] = useFonts({ Orbitron_900Black })
+
   const wallet = useWallet()
-  const isDevnet = useWalletStore(s => s.isDevnet)
+  const setIsDevnet = useWalletStore(s => s.setIsDevnet)
+
+  const displayFont = fontsLoaded ? "Orbitron_900Black" : "System"
 
   const [asset, setAsset] = useState<"SOL" | "SEEKER">("SOL")
   const [mode, setMode] = useState<"DEPOSIT" | "WITHDRAW">("DEPOSIT")
@@ -30,265 +32,187 @@ export default function Profile() {
   const seekerBalance = 120
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+    <TopContainer>
+
+      <HeroSection
+        wallet={wallet}
+        lamports={solBalance}
+        fontsLoaded={fontsLoaded}
+        onPress={() => {
+          if (!wallet.publicKey) return
+          setIsDevnet(!wallet.isDevnet)
+        }}
+        title="TREASURY"
+      />
+
+      {/* WALLET CARD */}
+      <GradientCard>
+        <Text style={styles.label}>CONNECTED WALLET</Text>
+        <Text style={styles.pubKey}>
+          {wallet.publicKey
+            ? `${wallet.publicKey.slice(0, 6)}...${wallet.publicKey.slice(-6)}`
+            : "Wallet Not Connected"}
+        </Text>
+      </GradientCard>
+
+      {/* BALANCE */}
+      <LinearGradient
+        colors={['rgba(176,72,194,0.08)', 'rgba(61,227,180,0.05)']}
+        style={styles.balanceContainer}
+      >
+        <Text style={styles.balanceLabel}>{asset} BALANCE</Text>
+        <Text style={[styles.balanceBig, { fontFamily: displayFont }]}>
+          {asset === "SOL"
+            ? `${solBalance.toFixed(4)} sol`
+            : `${seekerBalance} skr`}
+        </Text>
+      </LinearGradient>
+
+      {/* SEGMENT TOGGLES */}
+      <SegmentToggle
+        options={["SOL", "SEEKER"]}
+        selected={asset}
+        onChange={setAsset}
+      />
+
+      <SegmentToggle
+        options={["DEPOSIT", "WITHDRAW"]}
+        selected={mode}
+        onChange={setMode}
+      />
+
+      {/* ACTION CARD */}
+      <GradientCard>
+        <Text style={styles.label}>{mode} {asset}</Text>
+
+        <TextInput
+          placeholder="0.00"
+          placeholderTextColor="#6B7280"
+          keyboardType="numeric"
+          value={amount}
+          onChangeText={setAmount}
+          style={styles.input}
+        />
+
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.actionButtonWrapper}
+          onPress={() => { }}
         >
-
-          {/* HEADER */}
-          <View style={styles.hero}>
-            <Text style={[
-              styles.title,
-              { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-            ]}>
-              TREASURY
-            </Text>
-
-            <LinearGradient
-              colors={['#B048C2', '#9082DB', '#3DE3B4']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.line}
-            />
-          </View>
-
-          {/* RPC MODE */}
-          <View style={styles.rpcContainer}>
-            <View style={[
-              styles.rpcDot,
-              { backgroundColor: isDevnet ? "#3DE3B4" : "#B048C2" }
-            ]} />
-            <Text style={styles.rpcText}>
-              {isDevnet ? "DEVNET RPC" : "MAINNET RPC"}
-            </Text>
-          </View>
-
-          {/* WALLET CARD */}
-          <GradientCard>
-            <Text style={styles.label}>CONNECTED WALLET</Text>
-            <Text style={styles.pubKey}>
-              {wallet.publicKey
-                ? `${wallet.publicKey.slice(0,6)}...${wallet.publicKey.slice(-6)}`
-                : "Wallet Not Connected"}
-            </Text>
-          </GradientCard>
-
-          {/* BALANCE */}
-          <View style={styles.balanceHero}>
-            <Text style={styles.balanceLabel}>{asset} BALANCE</Text>
-            <Text style={[
-              styles.balanceBig,
-              { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-            ]}>
-              {asset === "SOL"
-                ? `◎ ${solBalance.toFixed(4)}`
-                : `${seekerBalance}`}
-            </Text>
-          </View>
-
-          {/* TOGGLES */}
-          <SegmentToggle
-            options={["SOL", "SEEKER"]}
-            selected={asset}
-            onChange={setAsset}
-          />
-
-          <SegmentToggle
-            options={["DEPOSIT", "WITHDRAW"]}
-            selected={mode}
-            onChange={setMode}
-          />
-
-          {/* ACTION CARD */}
-          <GradientCard>
-            <Text style={styles.label}>{mode} {asset}</Text>
-
-            <TextInput
-              placeholder="0.00"
-              placeholderTextColor="#6B7280"
-              keyboardType="numeric"
-              value={amount}
-              onChangeText={setAmount}
-              style={styles.input}
-            />
-
-            <View style={{ marginTop: 20 }}>
-              <GradientButton text={`${mode} ${asset}`} onPress={() => {}} />
-            </View>
-          </GradientCard>
-
-        </ScrollView>
-      </View>
-    </SafeAreaView>
-  )
-}
-
-function SegmentToggle({
-  options,
-  selected,
-  onChange
-}: {
-  options: string[],
-  selected: string,
-  onChange: (value: any) => void
-}) {
-  return (
-    <View style={styles.segmentContainer}>
-      {options.map(option => {
-        const active = selected === option
-        return (
-          <TouchableOpacity
-            key={option}
-            style={{ flex: 1 }}
-            onPress={() => onChange(option)}
-            activeOpacity={0.9}
+          <LinearGradient
+            colors={['#B048C2', '#9082DB', '#3DE3B4']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.actionButton}
           >
-            {active ? (
-              <LinearGradient
-                colors={['#B048C2', '#9082DB', '#3DE3B4']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.segmentActive}
-              >
-                <Text style={styles.segmentTextActive}>{option}</Text>
-              </LinearGradient>
-            ) : (
-              <View style={styles.segmentInactive}>
-                <Text style={styles.segmentTextInactive}>{option}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        )
-      })}
-    </View>
+            <Text
+              allowFontScaling={false}
+              style={[styles.actionButtonText, {
+                fontFamily: displayFont,
+                color: "#fff"
+              }]}
+            >
+              {mode} {asset}
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
+      </GradientCard>
+
+    </TopContainer>
   )
 }
 
-/* ================== STYLES ================== */
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0D0D0F",
-    paddingHorizontal: 22,
-  },
-
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 40,
-  },
-
-  hero: {
-    alignItems: "center",
-    paddingVertical: 32,
-  },
-
-  title: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    letterSpacing: 4,
-  },
-
-  line: {
-    height: 3,
-    width: 120,
-    borderRadius: 3,
-    marginTop: 14,
-  },
-
-  rpcContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    alignSelf: "center",
-    marginBottom: 28,
-  },
-
-  rpcDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-
-  rpcText: {
-    color: "#9CA3AF",
-    fontSize: 12,
-    letterSpacing: 1.5,
-  },
 
   label: {
-    color: '#6B7280',
+    color: '#8B8F97',
     fontSize: 11,
-    letterSpacing: 1.8,
+    letterSpacing: 2.2,
     marginBottom: 12,
+    textTransform: 'uppercase',
   },
 
   pubKey: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
+    letterSpacing: 0.5,
   },
 
-  balanceHero: {
-    alignItems: "center",
-    marginBottom: 30,
+  /* ===== BALANCE ===== */
+
+  balanceContainer: {
+    marginBottom: 20,
+    borderRadius: 20,
+    backgroundColor: '#121217',
+    paddingVertical: 16,
+    alignItems: 'center',
   },
 
   balanceLabel: {
     color: '#6B7280',
-    fontSize: 12,
+    fontSize: 11,
     letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
   },
 
   balanceBig: {
-    color: "#FFFFFF",
     fontSize: 36,
-    marginTop: 10,
+    color: "#fff"
   },
 
-  segmentContainer: {
-    flexDirection: "row",
-    backgroundColor: "#1A1A1F",
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: "#2A2A30"
+  balanceAmount: {
+    color: '#fff',
+    fontSize: 40,
+    letterSpacing: 1,
   },
 
-  segmentActive: {
-    height: CONTROL_HEIGHT,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  /* ===== INPUT ===== */
 
-  segmentInactive: {
-    height: CONTROL_HEIGHT,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  segmentTextActive: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    letterSpacing: 2,
-  },
-
-  segmentTextInactive: {
-    color: "#6B7280",
-    fontSize: 12,
-    letterSpacing: 2,
+  inputWrapper: {
+    marginBottom: 22,
+    position: 'relative',
   },
 
   input: {
-    height: CONTROL_HEIGHT,
-    backgroundColor: '#1F1F24',
+    backgroundColor: '#18181F',
     borderRadius: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    paddingRight: 60,
     color: '#FFFFFF',
-    fontSize: 18,
-    borderWidth: 1,
-    borderColor: '#2A2A30',
+    fontSize: 20,
+  },
+
+  inputSymbol: {
+    position: 'absolute',
+    right: 18,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    color: '#8B8F97',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+
+  /* ===== BUTTON ===== */
+
+  actionButtonWrapper: {
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+
+  actionButton: {
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
 })

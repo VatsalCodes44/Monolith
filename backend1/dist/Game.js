@@ -7,7 +7,6 @@ export class Game {
     player1Pubkey;
     player2Pubkey;
     board;
-    startTime;
     timer1;
     timer2;
     lastMoveTimestamp;
@@ -15,6 +14,8 @@ export class Game {
     gameId;
     network;
     sol;
+    ispaymentSettling = false;
+    gameEnded = false;
     constructor(player1, player2, player1Pubkey, player2Pubkey, network, sol, gameId) {
         this.player1 = player1;
         this.player2 = player2;
@@ -25,7 +26,6 @@ export class Game {
         this.timer1 = (10 * 60 * 1000);
         this.timer2 = (10 * 60 * 1000);
         this.board = new Chess();
-        this.startTime = new Date();
         this.lastMoveTimestamp = Date.now();
         this.gameId = gameId;
         this.messages = [];
@@ -83,6 +83,8 @@ export class Game {
         }
     }
     async makeMove(socket, move, promotion) {
+        if (this.gameEnded)
+            return;
         // validating only the correct user makes the move whose turn is this
         if (this.board.turn() === "w" && socket !== this.player1) {
             return;
@@ -90,44 +92,8 @@ export class Game {
         if (this.board.turn() === "b" && socket !== this.player2) {
             return;
         }
-        const now = Date.now();
-        const timeSpent = now - this.lastMoveTimestamp;
-        if (this.board.turn() === "w") {
-            this.timer1 -= timeSpent;
-        }
-        else {
-            this.timer2 -= timeSpent;
-        }
-        this.lastMoveTimestamp = now;
-        if (this.timer1 <= 0 || this.timer2 <= 0) {
-            const winner = this.timer1 <= 0 ? "b" : "w";
-            const payload = {
-                winner,
-                gameOverType: "time_out",
-                board: this.board.fen(),
-                timer1: this.timer1,
-                timer2: this.timer2,
-                history: this.board.history({ verbose: true }),
-                move: {
-                    ...move
-                }
-            };
-            this.player1?.send(JSON.stringify({
-                type: TIME_OUT,
-                payload
-            }));
-            this.player2?.send(JSON.stringify({
-                type: TIME_OUT,
-                payload
-            }));
-            try {
-                await this.settlePaymentAndGameEnd("TIME_OUT", winner, this.gameId);
-            }
-            catch (err) {
-                console.log(err);
-            }
+        if (await this.updateTimerAndCheckTimeout())
             return;
-        }
         try {
             let result;
             if (promotion) {
@@ -177,8 +143,13 @@ export class Game {
                 type: GAME_OVER,
                 payload: finalPayload
             }));
+            this.gameEnded = true;
             try {
-                await this.settlePaymentAndGameEnd(gameOverType, winner, this.gameId);
+                if (!this.ispaymentSettling) {
+                    this.ispaymentSettling = true;
+                    await this.settlePaymentAndGameEnd(gameOverType, winner, this.gameId);
+                    // this.ispaymentSettling = false; // game is already over do not reset this
+                }
             }
             catch (err) {
                 console.log(err);
@@ -219,7 +190,7 @@ export class Game {
         let retries = 0;
         while (retries < maxTries) {
             try {
-                if (gameOverType != "DRAW" && winner != null) {
+                if (gameOverType != "DRAW" && winner != null && gameOverType != "STALEMATE") {
                     await prisma.$transaction(async (tx) => {
                         const result = await tx.game.updateMany({
                             where: {
@@ -254,9 +225,7 @@ export class Game {
                                     publicKey: this.player1Pubkey
                                 },
                                 data: {
-                                    lamports: {
-                                        increment: payout
-                                    }
+                                    ...(this.network === "MAINNET" ? { mainnetLamports: { increment: payout } } : { devnetLamports: { increment: payout } })
                                 }
                             });
                         }
@@ -266,9 +235,7 @@ export class Game {
                                     publicKey: this.player2Pubkey
                                 },
                                 data: {
-                                    lamports: {
-                                        increment: payout
-                                    }
+                                    ...(this.network === "MAINNET" ? { mainnetLamports: { increment: payout } } : { devnetLamports: { increment: payout } })
                                 }
                             });
                         }
@@ -284,7 +251,9 @@ export class Game {
                         const result = await tx.game.updateMany({
                             where: {
                                 id: gameId,
-                                status: "IN_PROGRESS"
+                                status: {
+                                    in: ["IN_PROGRESS"]
+                                }
                             },
                             data: {
                                 status: gameOverType,
@@ -312,9 +281,7 @@ export class Game {
                                 publicKey: this.player1Pubkey
                             },
                             data: {
-                                lamports: {
-                                    increment: refund
-                                }
+                                ...(this.network === "MAINNET" ? { mainnetLamports: { increment: refund } } : { devnetLamports: { increment: refund } })
                             }
                         });
                         await tx.player.update({
@@ -322,9 +289,7 @@ export class Game {
                                 publicKey: this.player2Pubkey
                             },
                             data: {
-                                lamports: {
-                                    increment: refund
-                                }
+                                ...(this.network === "MAINNET" ? { mainnetLamports: { increment: refund } } : { devnetLamports: { increment: refund } })
                             }
                         });
                     }, {
@@ -342,5 +307,44 @@ export class Game {
         }
         if (maxTries == retries)
             throw new Error("Failed to settle game after multiple retries");
+    }
+    async updateTimerAndCheckTimeout() {
+        if (this.gameEnded)
+            return true;
+        const now = Date.now();
+        const timeSpent = now - this.lastMoveTimestamp;
+        if (this.board.turn() === "w") {
+            this.timer1 -= timeSpent;
+        }
+        else {
+            this.timer2 -= timeSpent;
+        }
+        this.lastMoveTimestamp = now;
+        if (this.timer1 <= 0 || this.timer2 <= 0) {
+            await this.handleTimeout();
+            return true; // game ended
+        }
+        return false;
+    }
+    async handleTimeout() {
+        if (this.gameEnded)
+            return;
+        if (this.ispaymentSettling)
+            return;
+        this.gameEnded = true;
+        const winner = this.timer1 <= 0 ? "b" : "w";
+        const payload = {
+            winner,
+            gameOverType: "TIME_OUT",
+            board: this.board.fen(),
+            timer1: this.timer1,
+            timer2: this.timer2,
+            history: this.board.history({ verbose: true }),
+        };
+        this.player1?.send(JSON.stringify({ type: TIME_OUT, payload }));
+        this.player2?.send(JSON.stringify({ type: TIME_OUT, payload }));
+        this.ispaymentSettling = true;
+        await this.settlePaymentAndGameEnd("TIME_OUT", winner, this.gameId);
+        // this.ispaymentSettling = false; // not resetting because the game ended
     }
 }
