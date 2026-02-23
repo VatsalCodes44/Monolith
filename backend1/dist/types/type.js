@@ -4,6 +4,7 @@ export const INIT_GAME_TYPE = z.object({
     type: z.literal(INIT_GAME),
     payload: z.object({
         publicKey: z.string(),
+        signature: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
         sol: z.enum(["0.01", "0.05", "0.1"])
     })
@@ -21,7 +22,9 @@ export const Re_JOIN_GAME_TYPE = z.object({
 export const MOVE_TYPE = z.object({
     type: z.literal(MOVE),
     payload: z.object({
+        publicKey: z.string(),
         gameId: z.string(),
+        signature: z.string(),
         from: z.string(),
         to: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
@@ -34,8 +37,10 @@ export const MESSAGE_TYPE = z.object({
     payload: z.object({
         from: z.enum(["w", "b"]),
         message: z.string(),
+        publicKey: z.string(),
+        signature: z.string(),
+        gameId: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"]),
-        gameId: z.string()
+        sol: z.enum(["0.01", "0.05", "0.1"])
     })
 });

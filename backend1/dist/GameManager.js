@@ -2,33 +2,29 @@ import { INIT_GAME, MESSAGE, MOVE } from "./Messages.js";
 import { Game } from "./Game.js";
 import { INIT_GAME_TYPE, MESSAGE_TYPE, MOVE_TYPE } from "./types/type.js";
 import { prisma } from "./lib/prisma.js";
+import bs58 from "bs58";
+import nacl from "tweetnacl";
 export class GameManager {
-    _0_01SolGame;
-    _0_05SolGame;
-    _0_1SolGame;
-    _0_01SolDevnetGame;
-    _0_05SolDevnetGame;
-    _0_1SolDevnetGame;
-    pendingUser0_01Sol;
-    pendingUser0_05Sol;
-    pendingUser0_1Sol;
-    pendingUser0_01SolDevnet;
-    pendingUser0_05SolDevnet;
-    pendingUser0_1SolDevnet;
     users;
+    games;
+    pendingUsers;
     constructor() {
-        this._0_01SolGame = [];
-        this._0_05SolGame = [];
-        this._0_1SolGame = [];
-        this._0_01SolDevnetGame = [];
-        this._0_05SolDevnetGame = [];
-        this._0_1SolDevnetGame = [];
-        this.pendingUser0_01Sol = null;
-        this.pendingUser0_05Sol = null;
-        this.pendingUser0_1Sol = null;
-        this.pendingUser0_01SolDevnet = null;
-        this.pendingUser0_05SolDevnet = null;
-        this.pendingUser0_1SolDevnet = null;
+        this.games = new Map([
+            ['MAINNET-0.01', new Map()],
+            ['MAINNET-0.05', new Map()],
+            ['MAINNET-0.1', new Map()],
+            ['DEVNET-0.01', new Map()],
+            ['DEVNET-0.05', new Map()],
+            ['DEVNET-0.1', new Map()]
+        ]);
+        this.pendingUsers = new Map([
+            ['MAINNET-0.01', null],
+            ['MAINNET-0.05', null],
+            ['MAINNET-0.1', null],
+            ['DEVNET-0.01', null],
+            ['DEVNET-0.05', null],
+            ['DEVNET-0.1', null]
+        ]);
         this.users = [];
     }
     addUser(socket) {
@@ -39,241 +35,176 @@ export class GameManager {
     }
     removeUser(socket) {
         this.users = this.users.filter(s => s !== socket);
-        let foundedSocket = false;
-        this._0_01SolDevnetGame = this._0_01SolDevnetGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
+        for (const [key, pending] of this.pendingUsers) {
+            if (pending?.socket === socket) {
+                this.pendingUsers.set(key, null);
+                return;
             }
-            else {
-                foundedSocket = true;
-                return false;
+        }
+        for (const gamesMap of this.games.values()) {
+            for (const game of gamesMap.values()) {
+                if (game.player1 === socket || game.player2 === socket) {
+                    game.handleDisconnect(socket);
+                    return;
+                }
             }
-        });
-        if (foundedSocket)
-            return;
-        this._0_05SolDevnetGame = this._0_05SolDevnetGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
-        if (foundedSocket)
-            return;
-        this._0_1SolDevnetGame = this._0_1SolDevnetGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
-        if (foundedSocket)
-            return;
-        this._0_01SolGame = this._0_01SolGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
-        if (foundedSocket)
-            return;
-        this._0_05SolGame = this._0_05SolGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
-        if (foundedSocket)
-            return;
-        this._0_1SolGame = this._0_1SolGame.filter(g => {
-            if (g.player1 !== socket && g.player2 !== socket) {
-                return true;
-            }
-            else {
-                foundedSocket = true;
-                return false;
-            }
-        });
+        }
     }
     addHandler(socket) {
         socket.on("message", async (data) => {
-            const message = JSON.parse(data.toString());
-            console.log(message);
-            if (message.type === INIT_GAME) {
-                const result = INIT_GAME_TYPE.safeParse(message);
-                if (!result.success) {
-                    return;
+            try {
+                const message = JSON.parse(data.toString());
+                console.log(message);
+                if (message.type === INIT_GAME) {
+                    const result = INIT_GAME_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload } = result.data;
+                    const { network, sol, publicKey } = payload;
+                    // check if user is eligible
+                    const eligible = await this.isEligible(publicKey, sol);
+                    if (!eligible)
+                        throw new Error("Insufficient balance");
+                    const verify = this.verifySignature(publicKey, payload.signature, publicKey);
+                    if (!verify)
+                        return;
+                    const pendingUser = this.pendingUsers.get(`${network}-${sol}`);
+                    if (pendingUser) {
+                        await this.addGame(pendingUser.socket, socket, pendingUser.publicKey, publicKey, network, sol);
+                        this.pendingUsers.set(`${network}-${sol}`, null);
+                    }
+                    else {
+                        this.pendingUsers.set(`${network}-${sol}`, { socket, publicKey });
+                    }
                 }
-                const { payload } = result.data;
-                const { network, sol, publicKey } = payload;
-                const pendingUser = this.pendingUserExist(network, sol);
-                if (pendingUser) {
-                    await this.addGame(pendingUser.socket, socket, pendingUser.publicKey, publicKey, network, sol);
+                if (message.type == MOVE) {
+                    const result = MOVE_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload, promotion } = result.data;
+                    const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
+                    if (!verify)
+                        return;
+                    this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.makeMove(socket, { from: payload.from, to: payload.to }, promotion);
                 }
-                else {
-                    this.addPendingUser(network, sol, socket, publicKey);
+                if (message.type == MESSAGE) {
+                    const result = MESSAGE_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload } = result.data;
+                    const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
+                    if (!verify)
+                        return;
+                    this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
                 }
             }
-            if (message.type == MOVE) {
-                const result = MOVE_TYPE.safeParse(message);
-                if (!result.success) {
-                    return;
-                }
-                const { payload, promotion } = result.data;
-                this.makeMove(socket, payload.gameId, payload.from, payload.to, payload.network, payload.sol, promotion);
-            }
-            if (message.type == MESSAGE) {
-                const result = MESSAGE_TYPE.safeParse(message);
-                if (!result.success) {
-                    return;
-                }
-                const { payload } = result.data;
-                this.sendMessage(socket, payload.gameId, { message: payload.message, from: payload.from }, payload.network, payload.sol);
+            catch (error) {
+                console.error("Error handling WebSocket message:", error);
             }
         });
-    }
-    pendingUserExist(network, sol) {
-        if (network === "MAINNET") {
-            if (sol === "0.01" && this.pendingUser0_01Sol) {
-                return this.pendingUser0_01Sol;
-            }
-            else if (sol === "0.05" && this.pendingUser0_05Sol) {
-                return this.pendingUser0_05Sol;
-            }
-            else if (sol === "0.1" && this.pendingUser0_1Sol) {
-                return this.pendingUser0_1Sol;
-            }
-        }
-        else {
-            if (sol === "0.01" && this.pendingUser0_01SolDevnet) {
-                return this.pendingUser0_01SolDevnet;
-            }
-            else if (sol === "0.05" && this.pendingUser0_05SolDevnet) {
-                return this.pendingUser0_05SolDevnet;
-            }
-            else if (sol === "0.1" && this.pendingUser0_1SolDevnet) {
-                return this.pendingUser0_1SolDevnet;
-            }
-        }
-        return undefined;
-    }
-    addPendingUser(network, sol, socket, publicKey) {
-        if (network === "MAINNET") {
-            if (sol === "0.01") {
-                this.pendingUser0_01Sol = { socket, publicKey };
-            }
-            else if (sol === "0.05") {
-                this.pendingUser0_05Sol = { socket, publicKey };
-            }
-            else {
-                this.pendingUser0_1Sol = { socket, publicKey };
-            }
-        }
-        else {
-            if (sol === "0.01") {
-                this.pendingUser0_01SolDevnet = { socket, publicKey };
-            }
-            else if (sol === "0.05") {
-                this.pendingUser0_05SolDevnet = { socket, publicKey };
-            }
-            else {
-                this.pendingUser0_1SolDevnet = { socket, publicKey };
-            }
-        }
     }
     async addGame(player1, player2, player1PublicKey, player2PublicKey, network, sol) {
-        const game = await prisma.game.create({
-            data: {
-                player1PublicKey,
-                player2PublicKey,
-                network,
-                lamports: sol === "0.01" ? 10000000 : sol === "0.05" ? 50000000 : 100000000,
-                fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                status: "IN_PROGRESS",
+        let gameId = null;
+        let maxTries = 3;
+        let retries = 0;
+        while (maxTries > retries) {
+            try {
+                const tx = await prisma.$transaction(async (tx) => {
+                    const stake = sol === "0.01"
+                        ? 10000000n
+                        : sol === "0.05"
+                            ? 50000000n
+                            : 100000000n;
+                    const game = await tx.game.create({
+                        data: {
+                            player1PublicKey,
+                            player2PublicKey,
+                            network,
+                            lamports: sol === "0.01" ? 10000000 : sol === "0.05" ? 50000000 : 100000000,
+                            fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                            status: "IN_PROGRESS",
+                        },
+                        select: {
+                            id: true
+                        }
+                    });
+                    const result1 = await tx.player.updateMany({
+                        where: {
+                            publicKey: player1PublicKey,
+                            lamports: {
+                                gte: stake
+                            }
+                        },
+                        data: {
+                            lamports: {
+                                decrement: stake
+                            }
+                        }
+                    });
+                    if (result1.count == 0)
+                        throw new Error("failed to deduct stake from player1");
+                    const result2 = await tx.player.updateMany({
+                        where: {
+                            publicKey: player2PublicKey,
+                            lamports: {
+                                gte: stake
+                            }
+                        },
+                        data: {
+                            lamports: {
+                                decrement: stake
+                            }
+                        }
+                    });
+                    if (result2.count == 0)
+                        throw new Error("failed to deduct stake from player2");
+                    return game;
+                }, {
+                    isolationLevel: "Serializable",
+                    maxWait: 10000,
+                    timeout: 10000,
+                });
+                gameId = tx.id;
+                break;
+            }
+            catch (err) {
+                console.error("Database error creating game:", err);
+                retries++;
+            }
+        }
+        if (!gameId) {
+            throw new Error("Failed to create game");
+        }
+        this.games.get(this.getGameKey(network, sol))?.set(gameId, new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, gameId));
+    }
+    verifySignature(publicKey, signature, message) {
+        const messageBytes = new TextEncoder().encode(message);
+        const publicKeyBytes = bs58.decode(publicKey);
+        const signatureBytes = Buffer.from(signature, "base64");
+        return nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes);
+    }
+    getGameKey(network, sol) {
+        return `${network}-${sol}`;
+    }
+    async isEligible(publicKey, sol) {
+        const stake = sol === "0.01"
+            ? 10000000n
+            : sol === "0.05"
+                ? 50000000n
+                : 100000000n;
+        const result = await prisma.player.findUnique({
+            where: {
+                publicKey,
             },
             select: {
-                id: true
+                lamports: true
             }
         });
-        if (network === "MAINNET") {
-            if (sol === "0.01") {
-                this._0_01SolGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-            else if (sol === "0.05") {
-                this._0_05SolGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-            else {
-                this._0_1SolGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-        }
-        else {
-            if (sol === "0.01") {
-                this._0_01SolDevnetGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-            else if (sol === "0.05") {
-                this._0_05SolDevnetGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-            else {
-                this._0_1SolDevnetGame.push(new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, game.id));
-            }
-        }
-    }
-    makeMove(socket, gameId, from, to, network, sol, promotion) {
-        if (network === "MAINNET") {
-            if (sol === "0.01") {
-                this._0_01SolGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-            else if (sol === "0.05") {
-                this._0_05SolGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-            else {
-                this._0_1SolGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-        }
-        else {
-            if (sol === "0.01") {
-                this._0_01SolDevnetGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-            else if (sol === "0.05") {
-                this._0_05SolDevnetGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-            else {
-                this._0_1SolDevnetGame.find(g => g.gameId === gameId)?.makeMove(socket, { from, to }, promotion);
-            }
-        }
-    }
-    sendMessage(socket, gameId, message, network, sol) {
-        if (network === "MAINNET") {
-            if (sol === "0.01") {
-                this._0_01SolGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-            else if (sol === "0.05") {
-                this._0_05SolGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-            else {
-                this._0_1SolGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-        }
-        else {
-            if (sol === "0.01") {
-                this._0_01SolDevnetGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-            else if (sol === "0.05") {
-                this._0_05SolDevnetGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-            else {
-                this._0_1SolDevnetGame.find(g => g.gameId === gameId)?.addMessage(socket, message);
-            }
-        }
+        if (!result || result.lamports < stake)
+            return false;
+        return true;
     }
 }

@@ -3,21 +3,22 @@ import { Chess } from "chess.js"
 import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
 import { Message } from "./types/type.js";
 import { prisma } from "./lib/prisma.js"
-import { LAMPORTS_PER_SOL } from "@solana/web3.js"
+
 export class Game {
     public player1: WebSocket | null;
     public player2: WebSocket | null;
     public player1Pubkey: string;
     public player2Pubkey: string;
     private board: Chess;
-    private startTime: Date;
-    private timer1: number;
-    private timer2: number;
+    public timer1: number;
+    public timer2: number;
     private lastMoveTimestamp: number;
     private messages: Message[];
     public gameId: string;
     public network: "MAINNET" | "DEVNET";
     public sol: "0.01" | "0.05" | "0.1";
+    private ispaymentSettling: boolean = false;
+    public gameEnded: boolean = false;
 
     constructor(player1: WebSocket, player2: WebSocket, player1Pubkey: string, player2Pubkey: string, network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1", gameId: string) {
         this.player1 = player1;
@@ -29,7 +30,6 @@ export class Game {
         this.timer1 = (10 * 60 * 1000);
         this.timer2 = (10 * 60 * 1000);
         this.board = new Chess();
-        this.startTime = new Date();
         this.lastMoveTimestamp = Date.now();
         this.gameId = gameId
         this.messages = [];
@@ -90,7 +90,8 @@ export class Game {
         }
     }
 
-    public async makeMove(socket: WebSocket, move: { from: string, to: string }, promotion: string | undefined) {
+    public async makeMove(socket: WebSocket | null, move: { from: string, to: string }, promotion: string | undefined) {
+        if (this.gameEnded) return;
 
         // validating only the correct user makes the move whose turn is this
         if (this.board.turn() === "w" && socket !== this.player1) {
@@ -101,52 +102,7 @@ export class Game {
             return;
         }
 
-        const now = Date.now();
-        const timeSpent = now - this.lastMoveTimestamp;
-
-        if (this.board.turn() === "w") {
-            this.timer1 -= timeSpent;
-        } else {
-            this.timer2 -= timeSpent;
-        }
-
-        this.lastMoveTimestamp = now;
-
-        if (this.timer1 <= 0 || this.timer2 <= 0) {
-
-            const winner = this.timer1 <= 0 ? "b" : "w";
-
-            const payload = {
-                winner,
-                gameOverType: "time_out",
-                board: this.board.fen(),
-                timer1: this.timer1,
-                timer2: this.timer2,
-                history: this.board.history({ verbose: true }),
-                move: {
-                    ...move
-                }
-            };
-
-            this.player1?.send(JSON.stringify({
-                type: TIME_OUT,
-                payload
-            }));
-
-            this.player2?.send(JSON.stringify({
-                type: TIME_OUT,
-                payload
-            }));
-
-            try {
-                await this.settlePaymentAndGameEnd("TIME_OUT", winner, this.gameId);
-            }
-            catch (err) {
-                console.log(err);
-            }
-            return;
-        }
-
+        if (await this.updateTimerAndCheckTimeout()) return;
 
         try {
             let result;
@@ -207,8 +163,14 @@ export class Game {
                 payload: finalPayload
             }));
 
+            this.gameEnded = true;
+
             try {
-                await this.settlePaymentAndGameEnd(gameOverType, winner, this.gameId);
+                if (!this.ispaymentSettling) {
+                    this.ispaymentSettling = true;
+                    await this.settlePaymentAndGameEnd(gameOverType, winner, this.gameId);
+                    // this.ispaymentSettling = false; // game is already over do not reset this
+                }
             }
             catch (err) {
                 console.log(err);
@@ -325,14 +287,16 @@ export class Game {
                         isolationLevel: "Serializable"
                     });
 
-                    break
+                    break;
                 }
                 else {
                     await prisma.$transaction(async (tx) => {
                         const result = await tx.game.updateMany({
                             where: {
                                 id: gameId,
-                                status: "IN_PROGRESS"
+                                status: {
+                                    in: ["IN_PROGRESS"]
+                                }
                             },
                             data: {
                                 status: gameOverType,
@@ -397,5 +361,49 @@ export class Game {
         }
 
         if (maxTries == retries) throw new Error("Failed to settle game after multiple retries");
+    }
+
+    public async updateTimerAndCheckTimeout() {
+        if (this.gameEnded) return true;
+        const now = Date.now();
+        const timeSpent = now - this.lastMoveTimestamp;
+
+        if (this.board.turn() === "w") {
+            this.timer1 -= timeSpent;
+        } else {
+            this.timer2 -= timeSpent;
+        }
+
+        this.lastMoveTimestamp = now;
+
+        if (this.timer1 <= 0 || this.timer2 <= 0) {
+            await this.handleTimeout();
+            return true; // game ended
+        }
+
+        return false;
+    }
+
+    private async handleTimeout() {
+        if (this.gameEnded) return;
+        if (this.ispaymentSettling) return;
+        this.gameEnded = true;
+        const winner = this.timer1 <= 0 ? "b" : "w";
+        const payload = {
+            winner,
+            gameOverType: "TIME_OUT",
+            board: this.board.fen(),
+            timer1: this.timer1,
+            timer2: this.timer2,
+            history: this.board.history({ verbose: true }),
+        };
+
+        this.player1?.send(JSON.stringify({ type: TIME_OUT, payload }));
+        this.player2?.send(JSON.stringify({ type: TIME_OUT, payload }));
+
+
+        this.ispaymentSettling = true;
+        await this.settlePaymentAndGameEnd("TIME_OUT", winner, this.gameId);
+        // this.ispaymentSettling = false; // not resetting because the game ended
     }
 }

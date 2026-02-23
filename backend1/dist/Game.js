@@ -1,5 +1,6 @@
 import { Chess } from "chess.js";
 import { GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
+import { prisma } from "./lib/prisma.js";
 export class Game {
     player1;
     player2;
@@ -34,7 +35,10 @@ export class Game {
                 color: "w",
                 board: this.board.fen(),
                 timer1: this.timer1,
-                timer2: this.timer2
+                timer2: this.timer2,
+                gameId,
+                network,
+                sol,
             }
         }));
         this.player2.send(JSON.stringify({
@@ -43,7 +47,10 @@ export class Game {
                 color: "b",
                 board: this.board.fen(),
                 timer1: this.timer1,
-                timer2: this.timer2
+                timer2: this.timer2,
+                gameId,
+                network,
+                sol,
             }
         }));
     }
@@ -75,7 +82,7 @@ export class Game {
             }));
         }
     }
-    makeMove(socket, move, promotion) {
+    async makeMove(socket, move, promotion) {
         // validating only the correct user makes the move whose turn is this
         if (this.board.turn() === "w" && socket !== this.player1) {
             return;
@@ -113,6 +120,12 @@ export class Game {
                 type: TIME_OUT,
                 payload
             }));
+            try {
+                await this.settlePaymentAndGameEnd("TIME_OUT", winner, this.gameId);
+            }
+            catch (err) {
+                console.log(err);
+            }
             return;
         }
         try {
@@ -139,16 +152,16 @@ export class Game {
         if (this.board.isGameOver()) {
             let gameOverType;
             if (this.board.isCheckmate()) {
-                gameOverType = "checkmate";
+                gameOverType = "CHECKMATE";
             }
             else if (this.board.isStalemate()) {
-                gameOverType = "stalemate";
+                gameOverType = "STALEMATE";
             }
             else {
-                gameOverType = "draw";
+                gameOverType = "DRAW";
             }
             let winner = null;
-            if (gameOverType === "checkmate") {
+            if (gameOverType === "CHECKMATE") {
                 winner = this.board.turn() === "w" ? "b" : "w";
             }
             const finalPayload = {
@@ -164,6 +177,12 @@ export class Game {
                 type: GAME_OVER,
                 payload: finalPayload
             }));
+            try {
+                await this.settlePaymentAndGameEnd(gameOverType, winner, this.gameId);
+            }
+            catch (err) {
+                console.log(err);
+            }
             return;
         }
         // normal case we can check it on client side
@@ -186,5 +205,142 @@ export class Game {
             type: MOVE,
             payload
         }));
+    }
+    handleDisconnect(socket) {
+        if (this.player1 === socket) {
+            this.player1 = null;
+        }
+        if (this.player2 === socket) {
+            this.player2 = null;
+        }
+    }
+    async settlePaymentAndGameEnd(gameOverType, winner, gameId) {
+        const maxTries = 3;
+        let retries = 0;
+        while (retries < maxTries) {
+            try {
+                if (gameOverType != "DRAW" && winner != null) {
+                    await prisma.$transaction(async (tx) => {
+                        const result = await tx.game.updateMany({
+                            where: {
+                                id: gameId,
+                                status: "IN_PROGRESS"
+                            },
+                            data: {
+                                status: gameOverType,
+                                fen: this.board.fen(),
+                                timer1: this.timer1,
+                                timer2: this.timer2,
+                                winner,
+                                history: JSON.stringify(this.board.history({ verbose: true })),
+                            }
+                        });
+                        if (result.count == 0) {
+                            throw new Error("Game not found or already settled");
+                        }
+                        // stake by each player
+                        const stake = this.sol == "0.01" ?
+                            10_000_000 :
+                            (this.sol == "0.05" ?
+                                50_000_000 :
+                                100_000_000);
+                        const totalStake = stake * 2;
+                        const winnerGain = totalStake;
+                        const feeFromWinnerGain = (winnerGain * 5) / 100;
+                        const payout = winnerGain - feeFromWinnerGain;
+                        if (winner == "w") {
+                            await tx.player.update({
+                                where: {
+                                    publicKey: this.player1Pubkey
+                                },
+                                data: {
+                                    lamports: {
+                                        increment: payout
+                                    }
+                                }
+                            });
+                        }
+                        else {
+                            await tx.player.update({
+                                where: {
+                                    publicKey: this.player2Pubkey
+                                },
+                                data: {
+                                    lamports: {
+                                        increment: payout
+                                    }
+                                }
+                            });
+                        }
+                    }, {
+                        maxWait: 10000,
+                        timeout: 10000,
+                        isolationLevel: "Serializable"
+                    });
+                    break;
+                }
+                else {
+                    await prisma.$transaction(async (tx) => {
+                        const result = await tx.game.updateMany({
+                            where: {
+                                id: gameId,
+                                status: "IN_PROGRESS"
+                            },
+                            data: {
+                                status: gameOverType,
+                                fen: this.board.fen(),
+                                timer1: this.timer1,
+                                timer2: this.timer2,
+                                winner,
+                                history: JSON.stringify(this.board.history({ verbose: true })),
+                            }
+                        });
+                        if (result.count == 0) {
+                            throw new Error("Game not found or already settled");
+                        }
+                        // stake by each player
+                        const stake = this.sol === "0.01"
+                            ? 10_000_000
+                            : this.sol === "0.05"
+                                ? 50_000_000
+                                : 100_000_000;
+                        // for each player game fees is 5%
+                        const gameFees = (stake * 5) / 100;
+                        const refund = stake - gameFees;
+                        await tx.player.update({
+                            where: {
+                                publicKey: this.player1Pubkey
+                            },
+                            data: {
+                                lamports: {
+                                    increment: refund
+                                }
+                            }
+                        });
+                        await tx.player.update({
+                            where: {
+                                publicKey: this.player2Pubkey
+                            },
+                            data: {
+                                lamports: {
+                                    increment: refund
+                                }
+                            }
+                        });
+                    }, {
+                        maxWait: 10000,
+                        timeout: 10000,
+                        isolationLevel: "Serializable"
+                    });
+                }
+                break;
+            }
+            catch (err) {
+                console.log(err);
+                retries++;
+            }
+        }
+        if (maxTries == retries)
+            throw new Error("Failed to settle game after multiple retries");
     }
 }
