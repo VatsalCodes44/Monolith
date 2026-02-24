@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, View, TextInput} from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native'
 import React, { memo, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import FontAwesome5 from '@expo/vector-icons/Ionicons'
@@ -12,25 +12,23 @@ export const SendMessage = memo(({
     setShowMessages,
     showMenuIcon,
     setMessages,
-    publicKey,
-    signature,
     gameId,
     sol,
-    isDevnet
+    isDevnet,
+    jwt
 }: {
     sendMessage(message: MESSAGE_TYPE_TS): void,
     color: "w" | "b",
     setShowMessages: React.Dispatch<React.SetStateAction<boolean>>,
     showMenuIcon: boolean,
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-    publicKey: string,
-    signature: string,
     gameId: string | null,
     sol: "0.01" | "0.05" | "0.1",
-    isDevnet: boolean
+    isDevnet: boolean,
+    jwt: string
 }) => {
     const [message, setMessage] = useState<string>("")
-    
+
     const handleSend = () => {
         if (!message.trim() || !gameId) return;
         sendMessage({
@@ -38,17 +36,16 @@ export const SendMessage = memo(({
             payload: {
                 from: color,
                 message,
-                publicKey,
-                signature,
-                gameId, 
+                gameId,
                 sol,
-                network: isDevnet ? "DEVNET" : "MAINNET"
+                network: isDevnet ? "DEVNET" : "MAINNET",
+                jwt
             }
         });
-        setMessages(p=>[...p, {from: color, message}])
+        setMessages(p => [...p, { from: color, message }])
         setMessage("");
     }
-    
+
     return (
         <LinearGradient
             colors={['#B048C2', '#9082DB', '#3DE3B4']}
@@ -85,7 +82,7 @@ export const SendMessage = memo(({
                         marginRight: showMenuIcon ? 0 : 15,
                     }}
                 />
-                {showMenuIcon && <TouchableOpacity 
+                {showMenuIcon && <TouchableOpacity
                     style={{ height: "100%" }}
                     onPress={() => {
                         setShowMessages(true)

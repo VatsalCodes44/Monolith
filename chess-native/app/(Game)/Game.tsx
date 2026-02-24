@@ -1,7 +1,7 @@
 import { Alert, StyleSheet, View, Text, useWindowDimensions, TouchableOpacity, FlatList, ScrollView } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import {ChessBoard} from "@/src/components/ChessBoard"
+import { ChessBoard } from "@/src/components/ChessBoard"
 import { CHECK, GAME_OVER, GAME_OVER_RESPONSE_PAYLOAD, GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD, INIT_GAME, INIT_GAME_RESPONSE_PAYLOAD, MESSAGE, message_payload, MOVE, MOVE_RESPONSE_PAYLOAD, TIME_OUT } from '@/src/config/serverResponds'
 import { Chess, Move, Square } from 'chess.js'
 import { WS_URL } from '@/src/config/config'
@@ -18,9 +18,9 @@ import { MoveHistory } from '@/src/components/MoveHistory'
 import { Captured } from '@/src/components/Captured'
 import { ShowMessages } from '@/src/components/ShowMessages'
 import { usePreventRemove } from '@react-navigation/native'
-import { signedPubkey } from '@/src/stores/gameStore'
 import { useWalletStore } from '@/src/stores/wallet-store'
 import { INIT_GAME_TYPE_PAYLOAD_TS, INIT_GAME_TYPE_TS, MESSAGE_TYPE_TS } from '@/src/config/serverInputs'
+import { jwtStore } from '@/src/stores/jwt'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -33,7 +33,7 @@ export interface Message {
   message: string,
 };
 export default function Game() {
-  const [socket, setSocket] = useState<WebSocket | null> (null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [chess, setChess] = useState(new Chess())
   const [color, setColor] = useState<"w" | "b">("w");
   const [from, setFrom] = useState<Square | null>(null);
@@ -46,8 +46,8 @@ export default function Game() {
     gameOverType: null,
     isGameOver: false
   });
-  const [timer1, setTimer1] = useState(10*60*1000);
-  const [timer2, setTimer2] = useState(10*60*1000);
+  const [timer1, setTimer1] = useState(10 * 60 * 1000);
+  const [timer2, setTimer2] = useState(10 * 60 * 1000);
   const moveSoundRef = useRef<Audio.Sound | null>(null);
   const checkSoundRef = useRef<Audio.Sound | null>(null);
   const illegalSoundRef = useRef<Audio.Sound | null>(null);
@@ -55,19 +55,19 @@ export default function Game() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [lastMessage, setLastMessage] = useState<Message>();
   const [moves, setMoves] = useState<Move[]>([]);
-  const {height, width} = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const [showMessages, setShowMessages] = useState(false);
   const [gameId, setGameId] = useState<string | null>(null);
   const [fontsLoaded] = useFonts({
     Orbitron_900Black,
   });
   const navigation = useNavigation();
-  const setSol = GameBet(s=> s.setSol);
+  const setSol = GameBet(s => s.setSol);
   const sol = GameBet(s => s.sol);
-  const signature = signedPubkey(s => s.signature);
-  const setSignature = signedPubkey(s => s.setSignature);
+  const jwt = jwtStore(s => s.jwt);
   const publicKey = useWalletStore(s => s.publicKey);
   const isDevnet = useWalletStore(s => s.isDevnet)
+
   const playMoveSound = async () => {
     if (!moveSoundRef.current) return;
 
@@ -120,27 +120,27 @@ export default function Game() {
   useEffect(() => {
     if (!socket) {
       const ws = new WebSocket(WS_URL);
-  
+
       ws.onopen = () => {
         setSocket(ws);
       };
-  
+
       ws.onclose = () => {
-          // Alert.alert("Are you sure want to leave the game ?")
-          // setSocket(null);
-          // router.replace("/")
+        // Alert.alert("Are you sure want to leave the game ?")
+        // setSocket(null);
+        // router.replace("/")
       };
-  
+
       ws.onerror = () => {
         setSocket(null);
         // router.replace("/");
       };
-  
+
       ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
         const payload = message.payload;
         switch (message.type) {
-          case INIT_GAME: 
+          case INIT_GAME:
             const initPayload = payload as INIT_GAME_RESPONSE_PAYLOAD;
             setColor(initPayload.color);
             setChess(new Chess(initPayload.board));
@@ -150,9 +150,9 @@ export default function Game() {
             setGameId(initPayload.gameId);
             setSol(initPayload.sol);
             break;
-          case MOVE: 
-          const move_response_payload = payload as MOVE_RESPONSE_PAYLOAD;
-          let newChess = new Chess(move_response_payload.board)
+          case MOVE:
+            const move_response_payload = payload as MOVE_RESPONSE_PAYLOAD;
+            let newChess = new Chess(move_response_payload.board)
             setChess(newChess);
             setPrevFrom(move_response_payload.move.from);
             setPrevTo(move_response_payload.move.to);
@@ -161,7 +161,7 @@ export default function Game() {
             setMoves(move_response_payload.history)
             playMoveSound()
             break;
-            
+
           // case CHECK:
           //   let checkChess = new Chess(payload.board)
           //   setChess(checkChess);
@@ -173,7 +173,7 @@ export default function Game() {
           //   setMoves(payload.history)
           //   playCheckSound()
           // break;
-              
+
           case GAME_OVER:
             console.log("game over");
             const gameOverPayload = payload as GAME_OVER_RESPONSE_PAYLOAD;
@@ -214,12 +214,11 @@ export default function Game() {
         }
       }
     } else {
-      if (!publicKey || !signature || !sol) return;
+      if (!publicKey || !jwt || !sol) return;
       const payload: INIT_GAME_TYPE_TS = {
         type: INIT_GAME,
         payload: {
-          publicKey,
-          signature,
+          jwt,
           network: isDevnet ? "DEVNET" : "MAINNET",
           sol: sol
         }
@@ -287,19 +286,19 @@ export default function Game() {
   }, []);
 
   usePreventRemove(!GameOver.isGameOver, ({ data }) => {
-    
-      Alert.alert(
-        'Are you sure you want to leave the game?',
-        'Please be aware that leaving now will result in the loss of all SOL you have staked in this game.',
-        [
-          { text: "cancel", style: 'cancel', onPress: () => {} },
-          {
-            text: 'Leave',
-            style: 'destructive',
-            onPress: () => navigation.dispatch(data.action),
-          },
-        ]
-      );
+
+    Alert.alert(
+      'Are you sure you want to leave the game?',
+      'Please be aware that leaving now will result in the loss of all SOL you have staked in this game.',
+      [
+        { text: "cancel", style: 'cancel', onPress: () => { } },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: () => navigation.dispatch(data.action),
+        },
+      ]
+    );
   });
 
   if (!socket) {
@@ -315,83 +314,82 @@ export default function Game() {
     })
   }
 
-  if (!publicKey || !signature || !sol) return null;
+  if (!publicKey || !jwt || !sol) return null;
 
   return (
     <SafeAreaView style={{
-      flex: 1, 
-      backgroundColor: "#000000", 
+      flex: 1,
+      backgroundColor: "#000000",
       paddingVertical: 20,
     }}>
 
-    <ShowMessages
-     width= {width * 0.95}
-     isOpen={showMessages} 
-     onClose={() => {
-      setShowMessages(false);
-    }} >
-      {
-        messages.length > 0 ?
-        <View style={{ height: 450, gap: 15 }}>
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingBottom: 10 }}
-            nestedScrollEnabled
-            showsVerticalScrollIndicator={false}
-          >
-            {messages.map((item, index) => (
-              <View
-                key={index}
-                style={{
-                  width: "100%",
-                  flexDirection: "row",
-                  justifyContent: color == item.from ? "flex-end" : "flex-start",
-                  marginVertical: 8
-                }}
+      <ShowMessages
+        width={width * 0.95}
+        isOpen={showMessages}
+        onClose={() => {
+          setShowMessages(false);
+        }} >
+        {
+          messages.length > 0 ?
+            <View style={{ height: 450, gap: 15 }}>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 10 }}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
               >
-                <Text style={{ 
-                  color: "#ffffff",
-                  backgroundColor: color == item.from ? "#3DE3B4" : "#B048C2",
-                  paddingVertical: 2,
-                  paddingHorizontal: 8,
-                  borderRadius: 8,
-                  fontSize: 18,
-                  maxWidth:"80%"
-                }}>
-                  {item.message}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
-          <SendMessage 
-          sendMessage={sendMessage} 
-          setMessages={setMessages} 
-          color={color} 
-          setShowMessages={setShowMessages} 
-          showMenuIcon={false}
-          publicKey={publicKey}
-          signature={signature}         
-          gameId={gameId}
-          isDevnet={isDevnet}
-          sol={sol}
-          />
-        </View> :
-        <Text style={{color: "#ffffff", fontSize: 25, textAlign: "center", opacity: .3}}>
-          No messages 
-        </Text>
-      }
-    </ShowMessages>
+                {messages.map((item, index) => (
+                  <View
+                    key={index}
+                    style={{
+                      width: "100%",
+                      flexDirection: "row",
+                      justifyContent: color == item.from ? "flex-end" : "flex-start",
+                      marginVertical: 8
+                    }}
+                  >
+                    <Text style={{
+                      color: "#ffffff",
+                      backgroundColor: color == item.from ? "#3DE3B4" : "#B048C2",
+                      paddingVertical: 2,
+                      paddingHorizontal: 8,
+                      borderRadius: 8,
+                      fontSize: 18,
+                      maxWidth: "80%"
+                    }}>
+                      {item.message}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+              <SendMessage
+                sendMessage={sendMessage}
+                setMessages={setMessages}
+                color={color}
+                setShowMessages={setShowMessages}
+                showMenuIcon={false}
+                jwt={jwt}
+                gameId={gameId}
+                isDevnet={isDevnet}
+                sol={sol}
+              />
+            </View> :
+            <Text style={{ color: "#ffffff", fontSize: 25, textAlign: "center", opacity: .3 }}>
+              No messages
+            </Text>
+        }
+      </ShowMessages>
 
-      <View style={{paddingHorizontal: 4}}>
-        <Timer 
-        fontsLoaded={fontsLoaded} 
-        timer1={timer1} 
-        timer2={timer2}
-        turn={chess.turn()}
-        gameStarted={gameStarted}
-        GameOver={GameOver}
-        playLowOnTimeSound={playLowOnTimeSound}
-        color={color}
+      <View style={{ paddingHorizontal: 4 }}>
+        <Timer
+          fontsLoaded={fontsLoaded}
+          timer1={timer1}
+          timer2={timer2}
+          turn={chess.turn()}
+          gameStarted={gameStarted}
+          GameOver={GameOver}
+          playLowOnTimeSound={playLowOnTimeSound}
+          color={color}
         />
       </View>
       <View style={{
@@ -415,23 +413,20 @@ export default function Game() {
         </View>
         <ChessBoard
           chess={chess}
-          from={from} 
-          setFrom={setFrom} 
-          socket={socket} 
-          fen={chess.fen()}
-          color= {color}
+          from={from}
+          setFrom={setFrom}
+          socket={socket}
+          color={color}
           prevFrom={prevFrom}
           prevTo={prevTo}
           GameOver={GameOver}
-          isCheck={isCheck}
           gameStarted={gameStarted}
           playIllegalMoveSound={playIllegalMoveSound}
           playCheckSound={playCheckSound}
-          publicKey={publicKey}
-          signature= {signature}
           gameId={gameId}
           network={isDevnet ? "DEVNET" : "MAINNET"}
           sol={sol}
+          jwt={jwt}
         />
       </View>
 
@@ -443,17 +438,16 @@ export default function Game() {
         flex: 1
       }}>
         {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
-        <SendMessage 
-        sendMessage={sendMessage} 
-        setMessages={setMessages} 
-        color={color} 
-        setShowMessages={setShowMessages} 
-        showMenuIcon={true}
-        gameId={gameId}
-        publicKey={publicKey}
-        signature={signature}
-        isDevnet={isDevnet}
-        sol={sol}
+        <SendMessage
+          sendMessage={sendMessage}
+          setMessages={setMessages}
+          color={color}
+          setShowMessages={setShowMessages}
+          showMenuIcon={true}
+          gameId={gameId}
+          jwt={jwt}
+          isDevnet={isDevnet}
+          sol={sol}
         />
       </View>
     </SafeAreaView>

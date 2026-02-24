@@ -3,44 +3,64 @@ import z from "zod";
 export const INIT_GAME_TYPE = z.object({
     type: z.literal(INIT_GAME),
     payload: z.object({
-        publicKey: z.string(),
-        signature: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"])
+        sol: z.enum(["0.01", "0.05", "0.1"]),
+        jwt: z.string()
     })
 });
 export const Re_JOIN_GAME_TYPE = z.object({
     type: z.literal(RE_JOIN_GAME),
     payload: z.object({
         gameId: z.string(),
-        playerPublicKey: z.string(),
-        signature: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"])
+        sol: z.enum(["0.01", "0.05", "0.1"]),
+        jwt: z.string()
     })
 });
 export const MOVE_TYPE = z.object({
     type: z.literal(MOVE),
     payload: z.object({
-        publicKey: z.string(),
+        jwt: z.string(),
         gameId: z.string(),
-        signature: z.string(),
         from: z.string(),
         to: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"])
+        sol: z.enum(["0.01", "0.05", "0.1"]),
     }),
     promotion: z.string().optional()
 });
 export const MESSAGE_TYPE = z.object({
     type: z.literal(MESSAGE),
     payload: z.object({
+        // publicKey: z.string(),
+        // signature: z.string(),
         from: z.enum(["w", "b"]),
         message: z.string(),
-        publicKey: z.string(),
-        signature: z.string(),
         gameId: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"])
+        sol: z.enum(["0.01", "0.05", "0.1"]),
+        jwt: z.string(),
     })
+});
+export const login = z.object({
+    publicKey: z.string()
+});
+export const deposit = z.object({
+    publicKey: z.string(),
+    signature: z.string(),
+    network: z.enum(["MAINNET", "DEVNET"]),
+    asset: z.enum(["SOL", "SKR"]),
+});
+export const verifyLogin = z.object({
+    publicKey: z.string(),
+    signature: z.string(),
+    nonce: z.string(),
+});
+export const verifyJwt = z.object({
+    token: z.string(),
+});
+export const getBalance = z.object({
+    publicKey: z.string(),
+    network: z.enum(["MAINNET", "DEVNET"]),
+    jwt: z.string(),
 });

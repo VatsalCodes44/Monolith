@@ -54,8 +54,15 @@ export const MESSAGE_TYPE = z.object({
     })
 })
 
+export const getBalance = z.object({
+    publicKey: z.string(),
+    network: z.enum(["MAINNET", "DEVNET"]),
+    jwt: z.string(),
+})
+
 export type INIT_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
 export type INIT_GAME_TYPE_PAYLOAD_TS = z.infer<typeof INIT_GAME_TYPE>["payload"];
 export type Re_JOIN_GAME_TYPE_TS = z.infer<typeof RE_JOIN_GAME>;
 export type MOVE_TYPE_TS = z.infer<typeof MOVE_TYPE>;
 export type MESSAGE_TYPE_TS = z.infer<typeof MESSAGE_TYPE>;
+export type GET_BALANCE_TYPE_TS = z.infer<typeof getBalance>;

@@ -10,17 +10,14 @@ import { WN } from '@/src/components/pieces/wN';
 import { WK } from '@/src/components/pieces/wK';
 import { useWalletStore } from '@/src/stores/wallet-store';
 import { useWallet } from '@/src/hooks/useWallet';
-import { signedPubkey } from '@/src/stores/gameStore';
 import { WalletConnect } from '@/src/components/WalletConnect';
 import axios from "axios";
 import { REST_URL } from '@/src/config/config';
 import { gameBalance } from '@/src/stores/gameBalance';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { Header } from '@/src/components/Header';
-import { StatusBar } from '@/src/components/StatusBar';
 import { HeroSection } from '@/src/components/HeroSection';
 import { TopContainer } from '@/src/components/TopContainer';
 import { GradientButton } from '@/src/components/GradientButton';
+import { GET_BALANCE_TYPE_TS } from '@/src/config/serverInputs';
 
 export default function index() {
   const [fontsLoaded] = useFonts({
@@ -30,7 +27,6 @@ export default function index() {
   const wallet = useWallet();
   const setIsDevnet = useWalletStore(s => s.setIsDevnet)
   const setSol = GameBet(s => s.setSol)
-  const setPubKeySignature = signedPubkey(s => s.setSignature);
   const lamports = gameBalance(s => s.lamports);
   const setLamports = gameBalance(s => s.setLamports);
   const setSkr = gameBalance(s => s.setSkr);
@@ -57,12 +53,14 @@ export default function index() {
   ];
 
   const fetchBlance = async () => {
-    if (!wallet.publicKey) return;
+    if (!wallet.publicKey || !wallet.jwt) return;
     try {
-      const res = await axios.post(`${REST_URL}/getBalance`, {
+      const payload: GET_BALANCE_TYPE_TS = {
         publicKey: wallet.publicKey,
-        network: wallet.isDevnet ? "DEVNET" : "MAINNET"
-      })
+        network: wallet.isDevnet ? "DEVNET" : "MAINNET",
+        jwt: wallet.jwt
+      }
+      const res = await axios.post(`${REST_URL}/getBalance`, payload)
       const data = res.data;
       console.log(data)
       setLamports(parseInt(data.lamports));
@@ -99,11 +97,7 @@ export default function index() {
             style={styles.stakeCard}
             activeOpacity={0.9}
             onPress={async () => {
-              if (!wallet.publicKey) return;
-              if (!signedPubkey) {
-                const signature = await wallet.signMessage(wallet.publicKey)
-                setPubKeySignature(signature);
-              }
+              if (!wallet.publicKey || !wallet.jwt) return;
               setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
               router.push("/Game");
             }}
@@ -145,11 +139,7 @@ export default function index() {
                 {/* CTA Button */}
                 <GradientButton
                   onPress={async () => {
-                    if (!wallet.publicKey) return;
-                    if (!signedPubkey) {
-                      const signature = await wallet.signMessage(wallet.publicKey)
-                      setPubKeySignature(signature);
-                    }
+                    if (!wallet.publicKey || !wallet.jwt) return;
                     setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
                     router.push("/Game");
                   }}

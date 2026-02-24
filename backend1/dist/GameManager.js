@@ -2,8 +2,7 @@ import { INIT_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS } from "./Messages.js";
 import { Game } from "./Game.js";
 import { INIT_GAME_TYPE, MESSAGE_TYPE, MOVE_TYPE } from "./types/type.js";
 import { prisma } from "./lib/prisma.js";
-import bs58 from "bs58";
-import nacl from "tweetnacl";
+import jwt from "jsonwebtoken";
 export class GameManager {
     users;
     games;
@@ -45,14 +44,18 @@ export class GameManager {
                         return;
                     }
                     const { payload } = result.data;
-                    const { network, sol, publicKey } = payload;
+                    const { network, sol, jwt } = payload;
+                    let publicKey;
+                    try {
+                        publicKey = this.jwtVerification(jwt).publicKey;
+                    }
+                    catch (err) {
+                        return;
+                    }
                     // check if user is eligible
                     const eligible = await this.isEligible(publicKey, sol, network);
                     if (!eligible)
                         throw new Error("Insufficient balance");
-                    const verify = this.verifySignature(publicKey, payload.signature, publicKey);
-                    if (!verify)
-                        return;
                     const pendingUser = this.pendingUsers.get(`${network}-${sol}`);
                     if (pendingUser) {
                         this.pendingUsers.set(`${network}-${sol}`, null);
@@ -68,9 +71,13 @@ export class GameManager {
                         return;
                     }
                     const { payload, promotion } = result.data;
-                    const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
-                    if (!verify)
+                    let publicKey;
+                    try {
+                        publicKey = this.jwtVerification(payload.jwt).publicKey;
+                    }
+                    catch (err) {
                         return;
+                    }
                     this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.makeMove(socket, { from: payload.from, to: payload.to }, promotion);
                 }
                 if (message.type == MESSAGE) {
@@ -79,9 +86,13 @@ export class GameManager {
                         return;
                     }
                     const { payload } = result.data;
-                    const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
-                    if (!verify)
+                    let publicKey;
+                    try {
+                        publicKey = this.jwtVerification(payload.jwt).publicKey;
+                    }
+                    catch (err) {
                         return;
+                    }
                     this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
                 }
             }
@@ -172,12 +183,6 @@ export class GameManager {
         }
         this.games.get(this.getGameKey(network, sol))?.set(gameId, new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, gameId));
     }
-    verifySignature(publicKey, signature, message) {
-        const messageBytes = new TextEncoder().encode(message);
-        const publicKeyBytes = bs58.decode(publicKey);
-        const signatureBytes = Buffer.from(signature, "base64");
-        return nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes);
-    }
     getGameKey(network, sol) {
         return `${network}-${sol}`;
     }
@@ -226,5 +231,11 @@ export class GameManager {
                 }
             }
         }
+    }
+    jwtVerification(token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return {
+            publicKey: decoded.publicKey
+        };
     }
 }

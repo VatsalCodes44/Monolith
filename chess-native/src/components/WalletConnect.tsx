@@ -15,11 +15,11 @@ export function WalletConnect({
     return (
         <GradientButton
             onPress={() => {
-                !wallet.publicKey ? wallet.connect() : wallet.disconnect()
+                !wallet.publicKey || !wallet.jwt ? wallet.login() : wallet.disconnect()
             }}
         >
             <View style={styles.walletButtonInner}>
-                {wallet.publicKey ?
+                {wallet.publicKey && wallet.jwt ?
                     (<View style={{
                         flexDirection: "row",
                         justifyContent: "center",

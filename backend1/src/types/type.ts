@@ -72,3 +72,9 @@ export const verifyLogin = z.object({
 export const verifyJwt = z.object({
     token: z.string(),
 })
+
+export const getBalance = z.object({
+    publicKey: z.string(),
+    network: z.enum(["MAINNET", "DEVNET"]),
+    jwt: z.string(),
+})

@@ -9,7 +9,7 @@ import { Connection } from "@solana/web3.js";
 import { verifySolTransfer } from "./lib/verifySolTransfer.js";
 import { verifySeekerTransfer } from "./lib/verifySeekerTransfer.js";
 import jwt from "jsonwebtoken";
-import { login, deposit, verifyLogin } from "./types/type.js";
+import { login, deposit, verifyLogin, getBalance } from "./types/type.js";
 import { jwtVerification } from "./middlewares/jwtVerification.js";
 
 const app = express();
@@ -36,12 +36,9 @@ wss.on('connection', function connection(socket) {
     })
 });
 
-app.post('/getBalance', async (req, res) => {
+app.post('/getBalance', jwtVerification, async (req, res) => {
 
-    const result = z.object({
-        publicKey: z.string(),
-        network: z.enum(["MAINNET", "DEVNET"]),
-    }).safeParse(req.body);
+    const result = getBalance.safeParse(req.body);
 
     if (!result.success) {
         return res.status(400).json({ error: "Invalid request" });

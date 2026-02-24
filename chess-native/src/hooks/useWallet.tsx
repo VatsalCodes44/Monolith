@@ -14,6 +14,8 @@ import {
 import { useWalletStore } from "../stores/wallet-store";
 import { Account } from "@solana-mobile/mobile-wallet-adapter-protocol";
 import { jwtStore } from "../stores/jwt";
+import axios from "axios";
+import { REST_URL } from "../config/config";
 
 const APP_IDENTITY = {
   name: "chess-native",
@@ -32,8 +34,8 @@ export interface Wallet {
   getBalance: () => Promise<number>;
   sendSOL: (toAddress: string, amountSOL: number) => Promise<string>;
   connection: Connection;
-  signMessage: (message: string) => Promise<string>;
   jwt: string | null;
+  login: () => Promise<void>;
 }
 
 export function useWallet(): Wallet {
@@ -147,12 +149,27 @@ export function useWallet(): Wallet {
     [publicKey, connection, cluster]
   );
 
-  const signMessage = useCallback(
-    async (message: string) => {
-      if (!publicKey) throw new Error("Wallet not connected");
-
-      setSigning(true);
+  const login = useCallback(
+    async () => {
       try {
+        if (!publicKey) return;
+
+        setSigning(true);
+
+        connect();
+
+        const res = await axios.post(`${REST_URL}/login`, {
+          publicKey
+        })
+
+        if (res.status !== 200) {
+          return;
+        }
+
+        const nonce = res.data.nonce as string;
+        if (!nonce) {
+          return;
+        }
 
         const signature = await transact(
           async (wallet: Web3MobileWallet) => {
@@ -163,14 +180,29 @@ export function useWallet(): Wallet {
 
             const signatures = await wallet.signMessages({
               addresses: [publicKey],
-              payloads: [new TextEncoder().encode(message)]
+              payloads: [new TextEncoder().encode(nonce)]
             });
 
             return Buffer.from(signatures[0]).toString("base64");
           }
         );
 
-        return signature;
+        const res2 = await axios.post(`${REST_URL}/verifyLogin`, {
+          publicKey,
+          signature,
+          nonce
+        })
+
+        if (res2.status !== 200) {
+          return;
+        }
+
+        const token = res2.data.token as string;
+        if (!token) {
+          return;
+        }
+
+        setJwt(token);
       } finally {
         setSigning(false);
       }
@@ -189,7 +221,7 @@ export function useWallet(): Wallet {
     getBalance,
     sendSOL,
     connection,
-    signMessage,
+    login,
     jwt
   };
 }
