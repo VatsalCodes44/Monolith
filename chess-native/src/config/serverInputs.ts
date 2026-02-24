@@ -1,36 +1,41 @@
-import {z} from "zod"
+import { z } from "zod"
 import { INIT_GAME, CHECK, GAME_OVER, MESSAGE, MOVE, TIME_OUT, RE_JOIN_GAME } from "./serverResponds"
+
+
+export interface Message {
+    from: "w" | "b",
+    message: string,
+}
+
 
 export const INIT_GAME_TYPE = z.object({
     type: z.literal(INIT_GAME),
     payload: z.object({
-        publicKey: z.string(),
-        signature: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"])
+        sol: z.enum(["0.01", "0.05", "0.1"]),
+        jwt: z.string()
     })
 })
 
-
-const Re_JOIN_GAME_TYPE = z.object({
+export const Re_JOIN_GAME_TYPE = z.object({
     type: z.literal(RE_JOIN_GAME),
     payload: z.object({
         gameId: z.string(),
-        playerPublicKey: z.string(),
-        signature: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"])
+        sol: z.enum(["0.01", "0.05", "0.1"]),
+        jwt: z.string()
     })
 })
 
-const MOVE_TYPE = z.object({
+export const MOVE_TYPE = z.object({
     type: z.literal(MOVE),
     payload: z.object({
+        jwt: z.string(),
         gameId: z.string(),
         from: z.string(),
         to: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"])
+        sol: z.enum(["0.01", "0.05", "0.1"]),
     }),
     promotion: z.string().optional()
 })
@@ -38,16 +43,16 @@ const MOVE_TYPE = z.object({
 export const MESSAGE_TYPE = z.object({
     type: z.literal(MESSAGE),
     payload: z.object({
+        // publicKey: z.string(),
+        // signature: z.string(),
         from: z.enum(["w", "b"]),
         message: z.string(),
-        publicKey: z.string(),
-        signature: z.string(),
         gameId: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),
-        sol: z.enum(["0.01", "0.05", "0.1"])
+        sol: z.enum(["0.01", "0.05", "0.1"]),
+        jwt: z.string(),
     })
 })
-
 
 export type INIT_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
 export type INIT_GAME_TYPE_PAYLOAD_TS = z.infer<typeof INIT_GAME_TYPE>["payload"];

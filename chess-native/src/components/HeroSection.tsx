@@ -11,6 +11,7 @@ export function HeroSection({
     onPress,
     title,
     tagline,
+    fetchbalance
 }: {
     wallet: Wallet,
     lamports: number,
@@ -18,6 +19,7 @@ export function HeroSection({
     onPress: () => void
     title: string,
     tagline?: string,
+    fetchbalance: () => void
 }) {
     return (
         <View style={styles.heroSection}>
@@ -25,7 +27,9 @@ export function HeroSection({
                 wallet={wallet}
                 onPress={onPress}
                 lamports={lamports}
-                fontsLoaded={fontsLoaded} />
+                fontsLoaded={fontsLoaded}
+                fetchbalance={fetchbalance}
+            />
 
             <Header title={title} tagline={tagline} />
         </View>

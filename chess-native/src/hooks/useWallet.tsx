@@ -13,6 +13,7 @@ import {
 } from "@solana/web3.js";
 import { useWalletStore } from "../stores/wallet-store";
 import { Account } from "@solana-mobile/mobile-wallet-adapter-protocol";
+import { jwtStore } from "../stores/jwt";
 
 const APP_IDENTITY = {
   name: "chess-native",
@@ -32,6 +33,7 @@ export interface Wallet {
   sendSOL: (toAddress: string, amountSOL: number) => Promise<string>;
   connection: Connection;
   signMessage: (message: string) => Promise<string>;
+  jwt: string | null;
 }
 
 export function useWallet(): Wallet {
@@ -44,6 +46,8 @@ export function useWallet(): Wallet {
   const setPublicKey = useWalletStore(s => s.setPublicKey)
   const cluster = isDevnet ? "devnet" : "mainnet-beta";
   const connection = new Connection(clusterApiUrl(cluster), "confirmed");
+  const jwt = jwtStore(s => s.jwt);
+  const setJwt = jwtStore(s => s.setJwt);
 
   const connect = useCallback(async () => {
     setConnecting(true);
@@ -121,7 +125,7 @@ export function useWallet(): Wallet {
           async (wallet: Web3MobileWallet) => {
             // Re-authorize (Phantom needs this each session)
             await wallet.authorize({
-              chain: `solana:${cluster}`,
+              cluster,
               identity: APP_IDENTITY,
             });
 
@@ -153,7 +157,7 @@ export function useWallet(): Wallet {
         const signature = await transact(
           async (wallet: Web3MobileWallet) => {
             await wallet.authorize({
-              chain: `solana:${cluster}`,
+              cluster,
               identity: APP_IDENTITY,
             });
 
@@ -185,6 +189,7 @@ export function useWallet(): Wallet {
     getBalance,
     sendSOL,
     connection,
-    signMessage
+    signMessage,
+    jwt
   };
 }

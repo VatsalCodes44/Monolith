@@ -3,8 +3,7 @@ import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS } from "./Me
 import { Game } from "./Game.js";
 import { INIT_GAME_TYPE, Message, MESSAGE_TYPE, MOVE_TYPE } from "./types/type.js";
 import { prisma } from "./lib/prisma.js"
-import bs58 from "bs58";
-import nacl from "tweetnacl";
+import jwt from "jsonwebtoken"
 
 export class GameManager {
 
@@ -55,14 +54,19 @@ export class GameManager {
                         return;
                     }
                     const { payload } = result.data;
-                    const { network, sol, publicKey } = payload;
+                    const { network, sol, jwt } = payload;
+
+                    let publicKey: string;
+                    try {
+                        publicKey = this.jwtVerification(jwt).publicKey;
+                    }
+                    catch (err) {
+                        return;
+                    }
 
                     // check if user is eligible
                     const eligible = await this.isEligible(publicKey, sol, network);
                     if (!eligible) throw new Error("Insufficient balance");
-
-                    const verify = this.verifySignature(publicKey, payload.signature, publicKey);
-                    if (!verify) return;
 
                     const pendingUser = this.pendingUsers.get(`${network}-${sol}`);
                     if (pendingUser) {
@@ -80,8 +84,13 @@ export class GameManager {
                         return;
                     }
                     const { payload, promotion } = result.data;
-                    const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
-                    if (!verify) return;
+                    let publicKey: string;
+                    try {
+                        publicKey = this.jwtVerification(payload.jwt).publicKey;
+                    }
+                    catch (err) {
+                        return;
+                    }
                     this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.makeMove(socket, { from: payload.from, to: payload.to }, promotion);
                 }
 
@@ -91,8 +100,13 @@ export class GameManager {
                         return;
                     }
                     const { payload } = result.data;
-                    const verify = this.verifySignature(payload.publicKey, payload.signature, payload.publicKey);
-                    if (!verify) return;
+                    let publicKey: string;
+                    try {
+                        publicKey = this.jwtVerification(payload.jwt).publicKey;
+                    }
+                    catch (err) {
+                        return;
+                    }
                     this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
                 }
             } catch (error) {
@@ -193,24 +207,6 @@ export class GameManager {
         this.games.get(this.getGameKey(network, sol))?.set(gameId, new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, gameId))
     }
 
-    private verifySignature(
-        publicKey: string,
-        signature: string,
-        message: string
-    ) {
-        const messageBytes = new TextEncoder().encode(message);
-
-        const publicKeyBytes = bs58.decode(publicKey);
-
-        const signatureBytes = Buffer.from(signature, "base64");
-
-        return nacl.sign.detached.verify(
-            messageBytes,
-            signatureBytes,
-            publicKeyBytes
-        );
-    }
-
     private getGameKey(network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1"): string {
         return `${network}-${sol}`;
     }
@@ -269,6 +265,15 @@ export class GameManager {
                     gamesMap.delete(game.gameId);
                 }
             }
+        }
+    }
+
+    private jwtVerification(token: string) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+            publicKey: string
+        };
+        return {
+            publicKey: decoded.publicKey
         }
     }
 }

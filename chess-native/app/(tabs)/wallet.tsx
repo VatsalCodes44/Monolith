@@ -5,16 +5,19 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
-
+import axios from "axios";
 import { useWallet } from '@/src/hooks/useWallet'
 import { useWalletStore } from '@/src/stores/wallet-store'
 import { GradientCard } from '@/src/components/GradientCard'
 import { TopContainer } from '@/src/components/TopContainer'
 import { HeroSection } from '@/src/components/HeroSection'
 import { SegmentToggle } from '@/src/components/SegmentToggle'
+import { gameBalance } from '@/src/stores/gameBalance'
+import { REST_URL } from '@/src/config/config'
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 export default function Profile() {
   const [fontsLoaded] = useFonts({ Orbitron_900Black })
@@ -28,16 +31,40 @@ export default function Profile() {
   const [mode, setMode] = useState<"DEPOSIT" | "WITHDRAW">("DEPOSIT")
   const [amount, setAmount] = useState("")
 
-  const solBalance = 0.2500
-  const seekerBalance = 120
+  const lamports = gameBalance(s => s.lamports);
+  const skr = gameBalance(s => s.skr);
+  const setLamports = gameBalance(s => s.setLamports);
+  const setSkr = gameBalance(s => s.setSkr);
+
+  const fetchBlance = async () => {
+    if (!wallet.publicKey) return;
+    try {
+      const res = await axios.post(`${REST_URL}/getBalance`, {
+        publicKey: wallet.publicKey,
+        network: wallet.isDevnet ? "DEVNET" : "MAINNET"
+      })
+      const data = res.data;
+      console.log(data)
+      setLamports(parseInt(data.lamports));
+      setSkr(parseInt(data.skr));
+    }
+    catch (e) {
+      console.log(e)
+    }
+  }
+
+  useEffect(() => {
+    fetchBlance();
+  }, [wallet.publicKey, wallet.isDevnet]);
 
   return (
     <TopContainer>
 
       <HeroSection
         wallet={wallet}
-        lamports={solBalance}
+        lamports={lamports}
         fontsLoaded={fontsLoaded}
+        fetchbalance={fetchBlance}
         onPress={() => {
           if (!wallet.publicKey) return
           setIsDevnet(!wallet.isDevnet)
@@ -63,8 +90,8 @@ export default function Profile() {
         <Text style={styles.balanceLabel}>{asset} BALANCE</Text>
         <Text style={[styles.balanceBig, { fontFamily: displayFont }]}>
           {asset === "SOL"
-            ? `${solBalance.toFixed(4)} sol`
-            : `${seekerBalance} skr`}
+            ? `${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol`
+            : `${skr / 1000000} skr`}
         </Text>
       </LinearGradient>
 

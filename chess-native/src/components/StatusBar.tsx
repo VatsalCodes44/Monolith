@@ -3,7 +3,19 @@ import React from 'react'
 import { Wallet } from '../hooks/useWallet';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
-export function StatusBar({ wallet, onPress, lamports, fontsLoaded }: { wallet: Wallet, onPress: () => void, lamports: number, fontsLoaded: boolean }) {
+export function StatusBar({
+    wallet,
+    onPress,
+    lamports,
+    fontsLoaded,
+    fetchbalance
+}: {
+    wallet: Wallet,
+    onPress: () => void,
+    lamports: number,
+    fontsLoaded: boolean,
+    fetchbalance: () => void
+}) {
     return (
         <View style={styles.statusBar}>
             <TouchableOpacity style={{
@@ -26,14 +38,14 @@ export function StatusBar({ wallet, onPress, lamports, fontsLoaded }: { wallet: 
                     </Text>
                 </View>
             </TouchableOpacity>
-            <View style={styles.balanceBadge}>
+            <TouchableOpacity onPress={fetchbalance} style={styles.balanceBadge}>
                 <Text style={[
                     styles.balanceText,
                     { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
                 ]}>
                     {`◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol`}
                 </Text>
-            </View>
+            </TouchableOpacity>
         </View>
 
     )

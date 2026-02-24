@@ -1,42 +1,44 @@
-import { FlatList, StyleSheet, Text, View, useWindowDimensions, ImageBackground, Pressable, Touchable, ViewStyle  } from 'react-native'
+import { FlatList, StyleSheet, Text, View, useWindowDimensions, ImageBackground, Pressable, Touchable, ViewStyle } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { Chess, Color, Move, PieceSymbol, Square } from 'chess.js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MOVE } from '../config/serverResponds';
 import { GameOver } from '@/app/(Game)/Game';
 import { Piece } from './Piece';
+import { MOVE_TYPE_TS } from '../config/serverInputs';
 
 type Piece = ({
-    square: Square;
-    type: PieceSymbol;
-    color: Color;
+  square: Square;
+  type: PieceSymbol;
+  color: Color;
 } | null)
-      
+
 export function ChessBoard(
-  {chess, 
-   socket, 
-   fen, 
-   from, 
-   setFrom, 
-   color, 
-   prevFrom, 
-   prevTo,
-   GameOver,
-   isCheck,
-   gameStarted,
-   playIllegalMoveSound,
-   playCheckSound,
-   publicKey,
-   signature,
-   network,
-   sol,
-   gameId
-  }:{
-    chess: Chess, 
-    socket: WebSocket, 
+  { chess,
+    socket,
+    fen,
+    from,
+    setFrom,
+    color,
+    prevFrom,
+    prevTo,
+    GameOver,
+    isCheck,
+    gameStarted,
+    playIllegalMoveSound,
+    playCheckSound,
+    publicKey,
+    signature,
+    network,
+    sol,
+    gameId,
+    jwt
+  }: {
+    chess: Chess,
+    socket: WebSocket,
     fen: string,
     from: Square | null,
-    setFrom:  React.Dispatch<React.SetStateAction<Square | null>>,
+    setFrom: React.Dispatch<React.SetStateAction<Square | null>>,
     color: "w" | "b",
     prevFrom: Square | null,
     prevTo: Square | null,
@@ -47,15 +49,16 @@ export function ChessBoard(
     playCheckSound: () => Promise<void>,
     publicKey: string,
     signature: string,
-    network: "MAINNET"| "DEVNET",
+    network: "MAINNET" | "DEVNET",
     sol: "0.01" | "0.05" | "0.1",
     gameId: string | null,
+    jwt: string | null
   }) {
   const { width, height } = useWindowDimensions();
   const [showPromotionOptions, setShowPromotionOptions] = useState(false)
   const [promotionPiece, setPromotionPiece] = useState<"q" | "r" | "b" | "k">("q");
-  const [pendingPromotionMove, setPendingPromotionMove] = useState<{from: Square, to: Square} | null>(null);
-  const [possibleMoves, setPossibleMoves] = useState<string[] | null> (null);
+  const [pendingPromotionMove, setPendingPromotionMove] = useState<{ from: Square, to: Square } | null>(null);
+  const [possibleMoves, setPossibleMoves] = useState<string[] | null>(null);
   const boardSize = Math.min(width, 642);
 
   useEffect(() => {
@@ -73,7 +76,7 @@ export function ChessBoard(
   }, [from]);
 
   const onPress = (piece: Piece, rowIdx: number, colIdx: number) => {
-    if (GameOver.isGameOver || !gameStarted || !gameId) return;
+    if (GameOver.isGameOver || !gameStarted || !gameId || !jwt) return;
     if (chess.turn() != color) return;
     if (!piece && !from) return;
     if (!from && piece) {
@@ -81,7 +84,7 @@ export function ChessBoard(
       return;
     }
 
-    const moveTo = String.fromCharCode('a'.charCodeAt(0)+colIdx)+(8-rowIdx) as Square;
+    const moveTo = String.fromCharCode('a'.charCodeAt(0) + colIdx) + (8 - rowIdx) as Square;
 
     if (chess.get(moveTo)?.color == color) {
       setFrom(moveTo);
@@ -95,30 +98,31 @@ export function ChessBoard(
       // checking for pawn promotion
       const isPromotion =
         fromPiece?.type === "p" &&
-        ((fromPiece.color === "w" && moveTo[1] === "8") || 
-        (fromPiece.color === "b" && moveTo[1] === "1"));
+        ((fromPiece.color === "w" && moveTo[1] === "8") ||
+          (fromPiece.color === "b" && moveTo[1] === "1"));
       if (isPromotion && !showPromotionOptions) {
-        setPendingPromotionMove({from: from!, to: moveTo});
+        setPendingPromotionMove({ from: from!, to: moveTo });
         setShowPromotionOptions(true);
         return;
       }
-      const move = isPromotion ? 
-      newChess.move({from: from!, to: moveTo, promotion: promotionPiece}) :
-      newChess.move({from: from!, to: moveTo});
-      
-      socket.send(JSON.stringify({
+      const move = isPromotion ?
+        newChess.move({ from: from!, to: moveTo, promotion: promotionPiece }) :
+        newChess.move({ from: from!, to: moveTo });
+
+      if (!from) return;
+      const moveObj: MOVE_TYPE_TS = {
         type: MOVE,
         payload: {
-          publicKey,
-          signature,
           from: from,
           to: moveTo,
           sol,
           network,
-          gameId
+          gameId,
+          jwt
         },
         promotion: isPromotion ? promotionPiece : undefined
-      }))
+      }
+      socket.send(JSON.stringify(moveObj))
 
       setFrom(null)
       setShowPromotionOptions(false)
@@ -133,17 +137,22 @@ export function ChessBoard(
   }
 
   const handlePromotionSelect = (selectedPiece: "q" | "r" | "b" | "k") => {
-    if (!pendingPromotionMove) return;
+    if (!pendingPromotionMove || !gameId || !jwt) return;
 
     // Make the move with the selected promotion piece
-    socket.send(JSON.stringify({
+    const moveObj: MOVE_TYPE_TS = {
       type: MOVE,
       payload: {
         from: pendingPromotionMove.from,
-        to: pendingPromotionMove.to
+        to: pendingPromotionMove.to,
+        gameId,
+        network,
+        sol,
+        jwt
       },
       promotion: selectedPiece
-    }))
+    }
+    socket.send(JSON.stringify(moveObj))
 
     // Clean up state
     setShowPromotionOptions(false);
@@ -155,11 +164,11 @@ export function ChessBoard(
     <View>
       <View style={{ position: 'relative' }}>
         <View style={{
-          width: boardSize, 
+          width: boardSize,
           height: boardSize,
           maxWidth: 642,
           maxHeight: 642,
-          transform: [{rotate: color == "b" ? "180deg" : "0deg"}]
+          transform: [{ rotate: color == "b" ? "180deg" : "0deg" }]
         }}>
           <LinearGradient
             colors={color == "w" ? ["#B048C2", "#9082DB", "#3DE3B4"] : ["#3DE3B4", "#9082DB", "#B048C2"]}
@@ -168,32 +177,32 @@ export function ChessBoard(
             style={styles.gradient}
           >
 
-            <FlatList 
+            <FlatList
               data={chess.board()}
               keyExtractor={(_, rowIdx) => rowIdx.toString()}
               scrollEnabled={false}
               renderItem={({ item: row, index: rowIdx }) => (
-                <FlatList style={{flexDirection: "row"}}
+                <FlatList style={{ flexDirection: "row" }}
                   data={row}
                   keyExtractor={(_, colIdx) => `square-${rowIdx}-${colIdx}`}
                   scrollEnabled={false}
                   renderItem={({ item: piece, index: colIdx }) => {
 
                     const isLight = (rowIdx + colIdx) % 2 === 0;
-                    const squareName =  String.fromCharCode("a".charCodeAt(0) + colIdx) +
+                    const squareName = String.fromCharCode("a".charCodeAt(0) + colIdx) +
                       (8 - rowIdx);
 
-                    if (squareName === prevFrom || squareName === prevTo){
+                    if (squareName === prevFrom || squareName === prevTo) {
                       return (
-                        <PreviousTurn 
-                        width={width}
-                        piece={piece}
-                        onPress={onPress}
-                        prevFrom={prevFrom}
-                        colIdx={colIdx}
-                        rowIdx={rowIdx}
-                        color={color}
-                        squareName={squareName}
+                        <PreviousTurn
+                          width={width}
+                          piece={piece}
+                          onPress={onPress}
+                          prevFrom={prevFrom}
+                          colIdx={colIdx}
+                          rowIdx={rowIdx}
+                          color={color}
+                          squareName={squareName}
                         />
                       )
                     }
@@ -206,8 +215,8 @@ export function ChessBoard(
                         // CHECKMATE
                         (GameOver.isGameOver &&
                           GameOver.gameOverType === "checkmate" &&
-                          piece.color === chess.turn()) 
-                          
+                          piece.color === chess.turn())
+
                         ||
 
                         // NORMAL CHECK
@@ -231,13 +240,13 @@ export function ChessBoard(
                     }
                     return (
                       <Block color={color}
-                      rowIdx={rowIdx}
-                      colIdx={colIdx}
-                      isLight={isLight}
-                      onPress={onPress}
-                      piece={piece} 
-                      width={width}
-                      moves={possibleMoves}
+                        rowIdx={rowIdx}
+                        colIdx={colIdx}
+                        isLight={isLight}
+                        onPress={onPress}
+                        piece={piece}
+                        width={width}
+                        moves={possibleMoves}
                       />
                     );
                   }}
@@ -247,100 +256,100 @@ export function ChessBoard(
           </LinearGradient>
         </View>
 
-        {showPromotionOptions && 
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          }}
-        >
+        {showPromotionOptions &&
           <View
             style={{
-              marginHorizontal: 28,
-              width: '80%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
             }}
           >
-            <LinearGradient
-              colors={['#B048C2', '#9082DB', '#3DE3B4']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[
-                styles.gradient,
-                {
-                  borderRadius: 20,
-                  paddingVertical: 20,
-                },
-              ]}
+            <View
+              style={{
+                marginHorizontal: 28,
+                width: '80%',
+              }}
             >
-              <Text
-                style={{
-                  color: '#fff',
-                  fontSize: 16,
-                  marginBottom: 16,
-                  textAlign: 'center',
-                }}
-              >
-                Select the promotion piece
-              </Text>
-
-              <FlatList
-                horizontal
-                contentContainerStyle={{
-                  flexGrow: 1,
-                  justifyContent: 'space-evenly',
-                  paddingVertical: 4,
-                }}
-                data={[
-                  { value: 'q' },
-                  { value: 'r' },
-                  { value: 'b' },
-                  { value: 'n' },
+              <LinearGradient
+                colors={['#B048C2', '#9082DB', '#3DE3B4']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[
+                  styles.gradient,
+                  {
+                    borderRadius: 20,
+                    paddingVertical: 20,
+                  },
                 ]}
-                keyExtractor={(item) => item.value}
-                scrollEnabled={false}
-                renderItem={({ item }) => {
-                  const pieceSize =
-                    width > 640 ? 70 : (width - 2) / 10
+              >
+                <Text
+                  style={{
+                    color: '#fff',
+                    fontSize: 16,
+                    marginBottom: 16,
+                    textAlign: 'center',
+                  }}
+                >
+                  Select the promotion piece
+                </Text>
 
-                  const isSelected = promotionPiece === item.value
+                <FlatList
+                  horizontal
+                  contentContainerStyle={{
+                    flexGrow: 1,
+                    justifyContent: 'space-evenly',
+                    paddingVertical: 4,
+                  }}
+                  data={[
+                    { value: 'q' },
+                    { value: 'r' },
+                    { value: 'b' },
+                    { value: 'n' },
+                  ]}
+                  keyExtractor={(item) => item.value}
+                  scrollEnabled={false}
+                  renderItem={({ item }) => {
+                    const pieceSize =
+                      width > 640 ? 70 : (width - 2) / 10
 
-                  return (
-                    <Pressable
-                      onPress={() =>
-                        handlePromotionSelect(
-                          item.value as "q" | "r" | "b" | "k"
-                        )
-                      }
-                      style={{
-                        padding: 8,
-                        borderRadius: 12,
-                        backgroundColor: isSelected
-                          ? 'rgba(255,255,255,0.2)'
-                          : 'transparent',
-                      }}
-                    >
-                      <Piece
-                        piece={{
-                          type: item.value as any,
-                          color: color,
+                    const isSelected = promotionPiece === item.value
+
+                    return (
+                      <Pressable
+                        onPress={() =>
+                          handlePromotionSelect(
+                            item.value as "q" | "r" | "b" | "k"
+                          )
+                        }
+                        style={{
+                          padding: 8,
+                          borderRadius: 12,
+                          backgroundColor: isSelected
+                            ? 'rgba(255,255,255,0.2)'
+                            : 'transparent',
                         }}
-                        width={pieceSize}
-                        color={color}
-                        rotation={"0deg"}
-                      />
-                    </Pressable>
-                  )
-                }}
-              />
-            </LinearGradient>
+                      >
+                        <Piece
+                          piece={{
+                            type: item.value as any,
+                            color: color,
+                          }}
+                          width={pieceSize}
+                          color={color}
+                          rotation={"0deg"}
+                        />
+                      </Pressable>
+                    )
+                  }}
+                />
+              </LinearGradient>
+            </View>
           </View>
-        </View>
         }
       </View>
     </View>
@@ -517,40 +526,49 @@ function Block({
 }) {
   const squareSize = Math.min(width, 640) / 8;
   const pieceSize = squareSize * 0.95;
-  const squareName =  String.fromCharCode("a".charCodeAt(0) + colIdx) +
-  (8 - rowIdx);
+  const squareName = String.fromCharCode("a".charCodeAt(0) + colIdx) +
+    (8 - rowIdx);
   const isPossibleMove = moves?.includes(squareName);
 
   const squareProps = isLight
     ? {
-        style: [
-          styles.square,
-          {
-            width: squareSize,
-            height: squareSize,
-            backgroundColor: "#1A1A1A", // 🔳 Light square
-          },
-        ],
-      }
+      style: [
+        styles.square,
+        {
+          width: squareSize,
+          height: squareSize,
+          backgroundColor: "#1A1A1A", // 🔳 Light square
+        },
+      ],
+    }
     : {
-        colors: ["#9945FF", "#14F195"], // 🟪 Solana gradient
-        start: { x: 0, y: 0 },
-        end: { x: 1, y: 1 },
-        style: [
-          styles.square,
-          {
-            width: squareSize,
-            height: squareSize,
-          },
-        ],
-      };
+      colors: ["#9945FF", "#14F195"], // 🟪 Solana gradient
+      start: { x: 0, y: 0 },
+      end: { x: 1, y: 1 },
+      style: [
+        styles.square,
+        {
+          width: squareSize,
+          height: squareSize,
+        },
+      ],
+    };
 
-    return isLight ? (
-      <LinearGradient
-        colors={color == "w" ? ["#B048C2", "#9082DB", "#3DE3B4"] : ["#3DE3B4", "#9082DB", "#B048C2"]}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+  return isLight ? (
+    <LinearGradient
+      colors={color == "w" ? ["#B048C2", "#9082DB", "#3DE3B4"] : ["#3DE3B4", "#9082DB", "#B048C2"]}
+      locations={[0, 0.5, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{
+        width: squareSize,
+        height: squareSize,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <Pressable
+        onPress={() => onPress(piece, rowIdx, colIdx)}
         style={{
           width: squareSize,
           height: squareSize,
@@ -558,73 +576,64 @@ function Block({
           alignItems: "center",
         }}
       >
-        <Pressable
-          onPress={() => onPress(piece, rowIdx, colIdx)}
-          style={{
-            width: squareSize,
-            height: squareSize,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          {piece && (
-            <Piece piece={piece} width={pieceSize} color={color} />
-          )}
+        {piece && (
+          <Piece piece={piece} width={pieceSize} color={color} />
+        )}
 
-          {isPossibleMove && (
-            <View
-              style={{
-                position: "absolute",
-                width: squareSize * 0.35,
-                height: squareSize * 0.35,
-                borderRadius: (squareSize * 0.35) / 2,
-                backgroundColor: isLight
-                  ? "rgba(0,0,0,0.25)"
-                  : "rgba(255,255,255,0.25)"
-              }}
-            />
-          )}
-        </Pressable>
-      </LinearGradient>
-    ) : (
-      <View
+        {isPossibleMove && (
+          <View
+            style={{
+              position: "absolute",
+              width: squareSize * 0.35,
+              height: squareSize * 0.35,
+              borderRadius: (squareSize * 0.35) / 2,
+              backgroundColor: isLight
+                ? "rgba(0,0,0,0.25)"
+                : "rgba(255,255,255,0.25)"
+            }}
+          />
+        )}
+      </Pressable>
+    </LinearGradient>
+  ) : (
+    <View
+      style={{
+        width: squareSize,
+        height: squareSize,
+        backgroundColor: "#1A1028", // clean dark block
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <Pressable
+        onPress={() => onPress(piece, rowIdx, colIdx)}
         style={{
           width: squareSize,
           height: squareSize,
-          backgroundColor: "#1A1028", // clean dark block
           justifyContent: "center",
           alignItems: "center",
         }}
       >
-        <Pressable
-          onPress={() => onPress(piece, rowIdx, colIdx)}
-          style={{
-            width: squareSize,
-            height: squareSize,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          {piece && (
-            <Piece piece={piece} width={pieceSize} color={color} />
-          )}
+        {piece && (
+          <Piece piece={piece} width={pieceSize} color={color} />
+        )}
 
-          {isPossibleMove && (
-            <View
-              style={{
-                position: "absolute",
-                width: squareSize * 0.35,
-                height: squareSize * 0.35,
-                borderRadius: (squareSize * 0.35) / 2,
-                backgroundColor: isLight
-                  ? "rgba(0,0,0,0.25)"
-                  : "rgba(255,255,255,0.25)"
-              }}
-            />
-          )}
-        </Pressable>
-      </View>
-    );
+        {isPossibleMove && (
+          <View
+            style={{
+              position: "absolute",
+              width: squareSize * 0.35,
+              height: squareSize * 0.35,
+              borderRadius: (squareSize * 0.35) / 2,
+              backgroundColor: isLight
+                ? "rgba(0,0,0,0.25)"
+                : "rgba(255,255,255,0.25)"
+            }}
+          />
+        )}
+      </Pressable>
+    </View>
+  );
 }
 
 

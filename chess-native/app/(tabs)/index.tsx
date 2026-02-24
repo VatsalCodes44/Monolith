@@ -85,6 +85,7 @@ export default function index() {
         fontsLoaded={fontsLoaded}
         title='CHESS on CHAIN'
         tagline='Instant Deposit. Instant Withdraw.'
+        fetchbalance={fetchBlance}
         onPress={() => {
           if (!wallet.publicKey) return;
           setIsDevnet(!wallet.isDevnet)
