@@ -225,22 +225,25 @@ app.post("/login", async (req, res) => {
     }
     console.log("login")
     const { publicKey } = parsed.data;
-    const user = await prisma.player.upsert({
-        where: {
-            publicKey: publicKey
-        },
-        update: {
-        },
-        create: {
-            publicKey,
-        }
-    })
-    if (!user) {
-        return res.status(404).json({ error: "User not found" });
+    try {
+        const user = await prisma.player.upsert({
+            where: {
+                publicKey: publicKey
+            },
+            update: {
+            },
+            create: {
+                publicKey,
+            }
+        })
     }
-    const nonce = Math.floor(Math.random() * 1000000).toString();
+    catch {
+        res.status(400).json({ error: "error occured" })
+        return;
+    }
+    const nonce = `Chess on chain wants you to sign this message: ${Math.floor(Math.random() * 10000000000)}`;
     loginHandler.set(publicKey, nonce);
-    res.json({ nonce });
+    res.status(200).json({ nonce });
 })
 
 app.post("/verifyLogin", async (req, res) => {

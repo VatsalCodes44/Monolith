@@ -11,11 +11,16 @@ import {
   LAMPORTS_PER_SOL,
   clusterApiUrl,
 } from "@solana/web3.js";
+import {
+  getAssociatedTokenAddressSync,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createTransferInstruction,
+  createAssociatedTokenAccountInstruction,
+} from "@solana/spl-token";
 import { useWalletStore } from "../stores/wallet-store";
 import { Account } from "@solana-mobile/mobile-wallet-adapter-protocol";
-import { jwtStore } from "../stores/jwt";
-import axios from "axios";
-import { REST_URL } from "../config/config";
+import { PUBLIC_KEY, SEEKER_MINT } from "../config/config";
 
 const APP_IDENTITY = {
   name: "chess-native",
@@ -29,14 +34,17 @@ export interface Wallet {
   connected: boolean;
   connecting: boolean;
   sending: boolean;
-  connect: () => Promise<PublicKey>;
+  connect: () => Promise<string>;
   disconnect: () => void;
   getBalance: () => Promise<number>;
-  sendSOL: (toAddress: string, amountSOL: number) => Promise<string>;
+  sendSOL: (amountSOL: number) => Promise<string>;
+  sendSKR: (amountSKR: number) => Promise<string>;
   connection: Connection;
-  jwt: string | null;
-  login: () => Promise<void>;
+  signMessage: (message: string, pubKey: string) => Promise<string>;
 }
+
+const reciever = PUBLIC_KEY;
+const seekerMint = SEEKER_MINT;
 
 export function useWallet(): Wallet {
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -48,8 +56,6 @@ export function useWallet(): Wallet {
   const setPublicKey = useWalletStore(s => s.setPublicKey)
   const cluster = isDevnet ? "devnet" : "mainnet-beta";
   const connection = new Connection(clusterApiUrl(cluster), "confirmed");
-  const jwt = jwtStore(s => s.jwt);
-  const setJwt = jwtStore(s => s.setJwt);
 
   const connect = useCallback(async () => {
     setConnecting(true);
@@ -72,7 +78,7 @@ export function useWallet(): Wallet {
       );
       setPublicKey(pubkey.toBase58());
       setAccounts(authResult.accounts);
-      return pubkey;
+      return pubkey.toBase58();
     } catch (error: any) {
       console.error("Connect failed:", error);
       throw error;
@@ -81,34 +87,28 @@ export function useWallet(): Wallet {
     }
   }, [cluster]);
 
-  // ============================================
-  // DISCONNECT
-  // ============================================
+
   const disconnect = useCallback(() => {
     setPublicKey(null);
     setAccounts([]);
   }, []);
 
-  // ============================================
-  // GET BALANCE
-  // ============================================
+
   const getBalance = useCallback(async () => {
     if (!publicKey) return 0;
     const balance = await connection.getBalance(new PublicKey(publicKey));
     return balance / LAMPORTS_PER_SOL;
   }, [publicKey, connection]);
 
-  // ============================================
-  // SEND SOL — Build, sign, and send a transaction
-  // ============================================
+
   const sendSOL = useCallback(
-    async (toAddress: string, amountSOL: number) => {
+    async (amountSOL: number) => {
       if (!publicKey) throw new Error("Wallet not connected");
 
       setSending(true);
       try {
         // Step 1: Build the transaction
-        const toPublicKey = new PublicKey(toAddress);
+        const toPublicKey = new PublicKey(reciever);
         const transaction = new Transaction().add(
           SystemProgram.transfer({
             fromPubkey: new PublicKey(publicKey),
@@ -127,7 +127,7 @@ export function useWallet(): Wallet {
           async (wallet: Web3MobileWallet) => {
             // Re-authorize (Phantom needs this each session)
             await wallet.authorize({
-              cluster,
+              chain: `solana:${cluster}`,
               identity: APP_IDENTITY,
             });
 
@@ -149,60 +149,108 @@ export function useWallet(): Wallet {
     [publicKey, connection, cluster]
   );
 
-  const login = useCallback(
-    async () => {
+
+  const sendSKR = useCallback(
+    async (amountSKR: number) => {
+      if (!publicKey) throw new Error("Wallet not connected");
+
+      setSending(true);
       try {
-        if (!publicKey) return;
+        // Step 1: Build the transaction
+        const toPublicKey = new PublicKey(reciever);
+        const feePayer = new PublicKey(publicKey);
 
-        setSigning(true);
+        const feePayerATA = getAssociatedTokenAddressSync(
+          new PublicKey(seekerMint),
+          feePayer,
+          false, // allowOwnerOffCurve
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        );
 
-        connect();
+        const recipientATA = getAssociatedTokenAddressSync(
+          new PublicKey(seekerMint),
+          toPublicKey,
+          false, // allowOwnerOffCurve
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        );
 
-        const res = await axios.post(`${REST_URL}/login`, {
-          publicKey
-        })
+        const createRecipientATA = createAssociatedTokenAccountInstruction(
+          feePayer, // payer
+          recipientATA, // associated token account address
+          toPublicKey, // owner
+          new PublicKey(seekerMint), // mint
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        );
 
-        if (res.status !== 200) {
-          return;
-        }
+        const transferInstruction = createTransferInstruction(
+          feePayerATA, // source
+          recipientATA, // destination
+          new PublicKey(publicKey), // owner
+          amountSKR * 1000000, // amount
+          [], // multiSigners
+          TOKEN_PROGRAM_ID // programId
+        );
 
-        const nonce = res.data.nonce as string;
-        if (!nonce) {
-          return;
-        }
+        const transferBlockhash = await connection.getLatestBlockhash();
 
+        let transferTransaction = new Transaction({
+          feePayer: feePayer,
+          blockhash: transferBlockhash.blockhash,
+          lastValidBlockHeight: transferBlockhash.lastValidBlockHeight
+        }).add(createRecipientATA).add(transferInstruction);
+
+        // Step 3: Send to Phantom for signing + submission
+        const txSignature = await transact(
+          async (wallet: Web3MobileWallet) => {
+            // Re-authorize (Phantom needs this each session)
+            await wallet.authorize({
+              chain: `solana:${cluster}`,
+              identity: APP_IDENTITY,
+            });
+
+            // Sign and send — Phantom shows the transaction details
+            // User approves → Phantom signs → sends to network
+            const signatures = await wallet.signAndSendTransactions({
+              transactions: [transferTransaction],
+            });
+
+            return signatures[0];
+          }
+        );
+
+        return txSignature;
+      } finally {
+        setSending(false);
+      }
+    },
+    [publicKey, connection, cluster]
+  );
+
+
+  const signMessage = useCallback(
+    async (message: string, pubKey: string) => {
+      setSigning(true);
+      try {
         const signature = await transact(
           async (wallet: Web3MobileWallet) => {
             await wallet.authorize({
-              cluster,
+              chain: `solana:${cluster}`,
               identity: APP_IDENTITY,
             });
 
             const signatures = await wallet.signMessages({
-              addresses: [publicKey],
-              payloads: [new TextEncoder().encode(nonce)]
+              addresses: [pubKey],
+              payloads: [new TextEncoder().encode(message)]
             });
 
             return Buffer.from(signatures[0]).toString("base64");
           }
         );
 
-        const res2 = await axios.post(`${REST_URL}/verifyLogin`, {
-          publicKey,
-          signature,
-          nonce
-        })
-
-        if (res2.status !== 200) {
-          return;
-        }
-
-        const token = res2.data.token as string;
-        if (!token) {
-          return;
-        }
-
-        setJwt(token);
+        return signature;
       } finally {
         setSigning(false);
       }
@@ -221,7 +269,7 @@ export function useWallet(): Wallet {
     getBalance,
     sendSOL,
     connection,
-    login,
-    jwt
+    signMessage,
+    sendSKR
   };
 }

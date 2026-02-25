@@ -50,6 +50,7 @@ export const deposit = z.object({
     signature: z.string(),
     network: z.enum(["MAINNET", "DEVNET"]),
     asset: z.enum(["SOL", "SKR"]),
+    jwt: z.string(),
 });
 export const verifyLogin = z.object({
     publicKey: z.string(),

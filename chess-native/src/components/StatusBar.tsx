@@ -18,9 +18,20 @@ export function StatusBar({
 }) {
     return (
         <View style={styles.statusBar}>
-            <TouchableOpacity style={{
-                padding: 6
-            }} onPress={onPress}>
+            <TouchableOpacity style={
+                {
+                    backgroundColor: wallet.publicKey
+                        ? (wallet.isDevnet
+                            ? "rgba(18, 55, 44, 0.57)"
+                            : "rgba(57, 30, 60, 0.66)")
+                        : "rgba(79, 25, 25, 0.43)",
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: '#2A2A30',
+                }
+            } onPress={onPress}>
                 <View style={styles.statusItem}>
                     <View style={[
                         styles.statusDot,

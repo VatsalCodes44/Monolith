@@ -1,25 +1,64 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React from 'react'
-import { LinearGradient } from 'react-native-svg'
 import { Ionicons } from '@expo/vector-icons'
 import { GradientButton } from './GradientButton'
 import { Wallet } from '../hooks/useWallet'
-
+import axios from 'axios'
+import { REST_URL } from '../config/config'
+import { jwt } from 'zod'
 export function WalletConnect({
     wallet,
-    fontsLoaded
+    fontsLoaded,
+    setJwt,
+    setJwtLogin,
+    jwtLogin,
+    jwt
 }: {
     wallet: Wallet,
-    fontsLoaded?: boolean
+    fontsLoaded?: boolean,
+    setJwt: (jwt: string | null) => void,
+    setJwtLogin: React.Dispatch<React.SetStateAction<boolean>>,
+    jwtLogin: boolean,
+    jwt: string | null
 }) {
     return (
         <GradientButton
-            onPress={() => {
-                !wallet.publicKey || !wallet.jwt ? wallet.login() : wallet.disconnect()
+            onPress={async () => {
+                try {
+
+                    if (!wallet.publicKey) {
+                        const pubKey = await wallet.connect();
+
+                        const loginRes = await axios.post(`${REST_URL}/login`, {
+                            publicKey: pubKey,
+                        });
+                        setJwtLogin(true);
+                        const { nonce } = loginRes.data;
+
+                        const signature = await wallet.signMessage(nonce, pubKey);
+
+                        const verifyRes = await axios.post(`${REST_URL}/verifyLogin`, {
+                            publicKey: pubKey,
+                            signature,
+                            nonce,
+                        });
+                        setJwtLogin(false);
+                        setJwt(verifyRes.data.token);
+                        setJwtLogin(true);
+                    }
+                    else {
+                        wallet.disconnect();
+                        setJwt(null);
+                        setJwtLogin(false);
+                    }
+
+                } catch (error) {
+                    console.error("Wallet Connect Error:", error);
+                }
             }}
         >
             <View style={styles.walletButtonInner}>
-                {wallet.publicKey && wallet.jwt ?
+                {wallet.publicKey && jwt ?
                     (<View style={{
                         flexDirection: "row",
                         justifyContent: "center",
@@ -37,7 +76,7 @@ export function WalletConnect({
                         styles.walletButtonText,
                         { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
                     ]}>
-                        CONNECT SOLANA WALLET
+                        {jwtLogin ? "Logging In..." : "CONNECT SOLANA WALLET"}
                     </Text>)}
             </View>
         </GradientButton>

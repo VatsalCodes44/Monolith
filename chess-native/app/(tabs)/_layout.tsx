@@ -10,26 +10,29 @@ export default function () {
             <Tabs screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: "#191919"
+                    backgroundColor: "#0D0D0F"
                 },
                 tabBarActiveTintColor: "#3DE3B4",
                 tabBarInactiveTintColor: "#B048C2",
                 tabBarShowLabel: false,
-                
+
             }}>
                 <Tabs.Screen name='index' options={{
-                    tabBarIcon: ({color, focused}) => <FontAwesome color={color} name={focused ? "home" : "home-outline"} size={focused ? 26: 24} />,
-                }}/>
+                    tabBarIcon: ({ color, focused }) => <FontAwesome color={color} name={focused ? "home" : "home-outline"} size={focused ? 26 : 24} />,
+                }} />
                 <Tabs.Screen name='games' options={{
-                    tabBarIcon: ({color, focused}) => <FontAwesome color={color} name={focused ? "game-controller" : "game-controller-outline"} size={focused ? 26: 24} />,
-                }}/>
+                    tabBarIcon: ({ color, focused }) => <FontAwesome color={color} name={focused ? "game-controller" : "game-controller-outline"} size={focused ? 26 : 24} />,
+                }} />
                 <Tabs.Screen name='wallet' options={{
-                    tabBarIcon: ({color, focused}) => <FontAwesome color={color} name={focused ? "wallet" : "wallet-outline"}  size={focused ? 26: 24} />,
-                }}/>
+                    tabBarIcon: ({ color, focused }) => <FontAwesome color={color} name={focused ? "wallet" : "wallet-outline"} size={focused ? 26 : 24} />,
+                }} />
                 <Tabs.Screen name='profile' options={{
-                    tabBarIcon: ({color, focused}) => <FontAwesome color={color} name={focused ? "person" : "person-outline"} size={focused ? 26: 24} />,
-                }}/>
-                
+                    tabBarIcon: ({ color, focused }) => <FontAwesome color={color} name={focused ? "image" : "image-outline"} size={focused ? 26 : 24} />,
+                }} />
+                <Tabs.Screen name='info' options={{
+                    tabBarIcon: ({ color, focused }) => <FontAwesome color={color} name={focused ? "information-circle" : "information-circle-outline"} size={focused ? 28 : 26} />,
+                }} />
+
             </Tabs>
         </>
     )

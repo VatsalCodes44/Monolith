@@ -18,23 +18,41 @@ import { SegmentToggle } from '@/src/components/SegmentToggle'
 import { gameBalance } from '@/src/stores/gameBalance'
 import { REST_URL } from '@/src/config/config'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { jwtStore } from '@/src/stores/jwt';
 
-export default function Profile() {
+export default function Wallet() {
   const [fontsLoaded] = useFonts({ Orbitron_900Black })
 
-  const wallet = useWallet()
-  const setIsDevnet = useWalletStore(s => s.setIsDevnet)
 
   const displayFont = fontsLoaded ? "Orbitron_900Black" : "System"
 
-  const [asset, setAsset] = useState<"SOL" | "SEEKER">("SOL")
+  const [asset, setAsset] = useState<"SOL" | "SKR">("SOL")
   const [mode, setMode] = useState<"DEPOSIT" | "WITHDRAW">("DEPOSIT")
-  const [amount, setAmount] = useState("")
-
+  const [amount, setAmount] = useState<string>("")
+  const isDevnet = useWalletStore(s => s.isDevnet)
+  const wallet = useWallet()
+  const setIsDevnet = useWalletStore(s => s.setIsDevnet)
   const lamports = gameBalance(s => s.lamports);
   const skr = gameBalance(s => s.skr);
   const setLamports = gameBalance(s => s.setLamports);
   const setSkr = gameBalance(s => s.setSkr);
+  const jwt = jwtStore(s => s.jwt);
+
+  let opacity = .95;
+  if (!wallet.publicKey || !jwt) opacity = .5;
+  else if (isDevnet) {
+    if (mode == "DEPOSIT") {
+      if (asset == "SOL") opacity = .95;
+      else opacity = .5;
+    }
+    else {
+      if (asset == "SOL") opacity = .95;
+      else opacity = .5;
+    }
+  }
+  else {
+    opacity = .95;
+  }
 
   const fetchBlance = async () => {
     if (!wallet.publicKey) return;
@@ -50,6 +68,67 @@ export default function Profile() {
     }
     catch (e) {
       console.log(e)
+    }
+  }
+
+  const transferSol = async () => {
+    if (!wallet.publicKey || !jwt) return;
+    try {
+      const signature = await wallet.sendSOL(parseFloat(amount));
+      if (!signature) return;
+      const res = await axios.post(`${REST_URL}/deposit`, {
+        publicKey: wallet.publicKey,
+        network: wallet.isDevnet ? "DEVNET" : "MAINNET",
+        asset,
+        signature,
+        jwt
+      })
+      const data = res.data;
+      console.log(data)
+      fetchBlance();
+    }
+    catch (e) {
+      console.log(e)
+    }
+  }
+
+  const transferSeeker = async () => {
+    if (!wallet.publicKey || !jwt || isDevnet) return;
+    try {
+      const signature = await wallet.sendSKR(parseFloat(amount));
+      if (!signature) return;
+      const res = await axios.post(`${REST_URL}/deposit`, {
+        publicKey: wallet.publicKey,
+        network: wallet.isDevnet ? "DEVNET" : "MAINNET",
+        asset,
+        signature,
+        jwt
+      })
+      const data = res.data;
+      console.log(data)
+      fetchBlance();
+    }
+    catch (e) {
+      console.log(e)
+    }
+  }
+
+  const handleDepositWithdraw = async () => {
+    if (mode == "DEPOSIT") {
+      if (asset == "SOL") {
+        transferSol();
+      }
+      else {
+        transferSeeker();
+      }
+    }
+    else {
+      // if(asset == "SOL") {
+      //   withdrawSol();
+      // }
+      // else {
+      //   withdrawSeeker();
+      // }
     }
   }
 
@@ -75,11 +154,16 @@ export default function Profile() {
       {/* WALLET CARD */}
       <GradientCard>
         <Text style={styles.label}>CONNECTED WALLET</Text>
-        <Text style={styles.pubKey}>
-          {wallet.publicKey
-            ? `${wallet.publicKey.slice(0, 6)}...${wallet.publicKey.slice(-6)}`
-            : "Wallet Not Connected"}
-        </Text>
+        {!wallet.publicKey && <Text style={styles.pubKey}>
+          Wallet Not Connected
+        </Text>}
+        {wallet.publicKey && <Text style={[styles.pubKey,
+        {
+          fontFamily: displayFont
+        }
+        ]}>
+          {wallet.publicKey}
+        </Text>}
       </GradientCard>
 
       {/* BALANCE */}
@@ -88,16 +172,27 @@ export default function Profile() {
         style={styles.balanceContainer}
       >
         <Text style={styles.balanceLabel}>{asset} BALANCE</Text>
-        <Text style={[styles.balanceBig, { fontFamily: displayFont }]}>
-          {asset === "SOL"
-            ? `${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol`
-            : `${skr / 1000000} skr`}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Text style={[styles.balanceBig, { fontFamily: displayFont }]}>
+            {asset === "SOL"
+              ? `${(lamports / LAMPORTS_PER_SOL).toFixed(4)}`
+              : `${skr / 1000000}`}
+          </Text>
+          <Text style={{
+            fontFamily: displayFont,
+            color: !isDevnet ? '#B048C2' : '#3DE3B4',
+            fontSize: 18,
+          }}>
+            {asset === "SOL"
+              ? `sol`
+              : `skr`}
+          </Text>
+        </View>
       </LinearGradient>
 
       {/* SEGMENT TOGGLES */}
       <SegmentToggle
-        options={["SOL", "SEEKER"]}
+        options={["SOL", "SKR"]}
         selected={asset}
         onChange={setAsset}
       />
@@ -115,16 +210,29 @@ export default function Profile() {
         <TextInput
           placeholder="0.00"
           placeholderTextColor="#6B7280"
-          keyboardType="numeric"
+          keyboardType="numbers-and-punctuation"
+          inputMode="decimal"
           value={amount}
-          onChangeText={setAmount}
+          onChangeText={(value) => {
+            // Normalize comma to dot
+            const normalized = value.replace(",", ".");
+
+            // Allow:
+            // "", "0", "0.", ".5", "1.23"
+            if (/^\d*\.?\d*$/.test(normalized)) {
+              setAmount(normalized);
+            }
+          }}
           style={styles.input}
         />
 
         <TouchableOpacity
-          activeOpacity={0.9}
-          style={styles.actionButtonWrapper}
-          onPress={() => { }}
+          activeOpacity={.5}
+          style={[
+            styles.actionButtonWrapper,
+            { opacity }
+          ]}
+          onPress={handleDepositWithdraw}
         >
           <LinearGradient
             colors={['#B048C2', '#9082DB', '#3DE3B4']}
@@ -146,7 +254,7 @@ export default function Profile() {
 
       </GradientCard>
 
-    </TopContainer>
+    </TopContainer >
   )
 }
 
@@ -186,7 +294,7 @@ const styles = StyleSheet.create({
   },
 
   balanceBig: {
-    fontSize: 36,
+    fontSize: 18,
     color: "#fff"
   },
 
