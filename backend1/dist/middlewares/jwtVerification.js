@@ -11,9 +11,11 @@ export async function jwtVerification(req, res, next) {
         if (!decoded) {
             return res.status(401).json({ error: "Invalid token" });
         }
+        console.log("hello");
         next();
     }
     catch (error) {
+        console.log(error);
         return res.status(500).json({ error: "Internal server error" });
     }
 }

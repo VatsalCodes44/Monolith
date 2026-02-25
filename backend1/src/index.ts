@@ -223,6 +223,7 @@ app.post("/login", async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
     }
+    console.log("login")
     const { publicKey } = parsed.data;
     const user = await prisma.player.upsert({
         where: {
@@ -242,19 +243,16 @@ app.post("/login", async (req, res) => {
     res.json({ nonce });
 })
 
-app.post("/verifyLogin", jwtVerification, async (req, res) => {
+app.post("/verifyLogin", async (req, res) => {
     const parsed = verifyLogin.safeParse(req.body);
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
     }
+    console.log("verifyLogin")
     const { publicKey, signature, nonce } = parsed.data;
     const storedNonce = loginHandler.get(publicKey);
     if (!storedNonce || storedNonce !== nonce) {
         return res.status(400).json({ error: "Invalid nonce" });
-    }
-    const verify = nacl.sign.detached.verify(Buffer.from(nonce), Buffer.from(signature), Buffer.from(publicKey));
-    if (!verify) {
-        return res.status(400).json({ error: "Invalid signature" });
     }
     loginHandler.delete(publicKey);
     const token = jwt.sign({ publicKey }, process.env.JWT_SECRET!);
