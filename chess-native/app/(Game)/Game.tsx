@@ -56,6 +56,10 @@ export default function Game() {
   const [showMessages, setShowMessages] = useState(false)
   const [connected, setConnected] = useState(false)
 
+  const moveSoundRef = useRef<Audio.Sound | null>(null);
+  const checkSoundRef = useRef<Audio.Sound | null>(null);
+  const illegalSoundRef = useRef<Audio.Sound | null>(null);
+  const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
   const [timer1, setTimer1] = useState(10 * 60 * 1000)
   const [timer2, setTimer2] = useState(10 * 60 * 1000)
 
@@ -74,6 +78,99 @@ export default function Game() {
 
   const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwdWJsaWNLZXkiOiI2a25CQlVSUWNpMW5Na24xRlFtM0NOR2tVWmtLVjNTTHNuODhueUF0TldXbyIsImlhdCI6MTc3MjEwNjUwM30.Xf_Tnl1uDvyO3knbSAHij6KEHQhkReaKKcFXvzQ2esQ"
   const publicKey = "6knBBURQci1nMkn1FQm3CNGkUZkKV3SLsn88nyAtNW"
+
+  const playMoveSound = async () => {
+    if (!moveSoundRef.current) return;
+
+    try {
+      await moveSoundRef.current.stopAsync();
+      await moveSoundRef.current.setPositionAsync(0);
+      await moveSoundRef.current.playAsync();
+    } catch (err) {
+      console.log("Move sound error:", err);
+    }
+  };
+
+  const playCheckSound = async () => {
+    if (!checkSoundRef.current) return;
+
+    try {
+      await checkSoundRef.current.stopAsync();
+      await checkSoundRef.current.setPositionAsync(0);
+      await checkSoundRef.current.playAsync();
+    } catch (err) {
+      console.log("Check sound error:", err);
+    }
+  };
+
+  const playIllegalMoveSound = async () => {
+    if (!illegalSoundRef.current) return;
+
+    try {
+      await illegalSoundRef.current.stopAsync();
+      await illegalSoundRef.current.setPositionAsync(0);
+      await illegalSoundRef.current.playAsync();
+    } catch (err) {
+      console.log("Check sound error:", err);
+    }
+  };
+
+  const playLowOnTimeSound = async () => {
+    if (!lowOnTimeSoundRef.current) return;
+
+    try {
+      await lowOnTimeSoundRef.current.stopAsync();
+      await lowOnTimeSoundRef.current.setPositionAsync(0);
+      await lowOnTimeSoundRef.current.playAsync();
+    } catch (err) {
+      console.log("Check sound error:", err);
+    }
+  };
+
+  useEffect(() => {
+    const loadSounds = async () => {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        playThroughEarpieceAndroid: true,
+      });
+
+      const moveSound = new Audio.Sound();
+      const checkSound = new Audio.Sound();
+      const illegalSound = new Audio.Sound();
+      const lowOnTimeSound = new Audio.Sound();
+
+      await moveSound.loadAsync(
+        require('../../assets/audios/moveSound.mp3')
+      );
+
+      await checkSound.loadAsync(
+        require('../../assets/audios/checkSound.mp3')
+      );
+
+      await illegalSound.loadAsync(
+        require('../../assets/audios/illegalMoveSound.mp3')
+      );
+
+      await lowOnTimeSound.loadAsync(
+        require('../../assets/audios/lowOnTime.mp3')
+      );
+
+      moveSoundRef.current = moveSound;
+      checkSoundRef.current = checkSound;
+      illegalSoundRef.current = illegalSound;
+      lowOnTimeSoundRef.current = lowOnTimeSound;
+    };
+
+    loadSounds();
+
+    return () => {
+      moveSoundRef.current?.unloadAsync();
+      checkSoundRef.current?.unloadAsync();
+      illegalSoundRef.current?.unloadAsync();
+      lowOnTimeSoundRef.current?.unloadAsync();
+    };
+  }, []);
 
   useEffect(() => {
 
@@ -187,64 +284,142 @@ export default function Game() {
       }
 
       {(socket.current && publicKey && jwt && sol) &&
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+        <SafeAreaView style={{
+          flex: 1,
+          backgroundColor: "#000000",
+          paddingVertical: 20,
+        }}>
 
-          <Timer
-            fontsLoaded={true}
-            timer1={timer1}
-            timer2={timer2}
-            turn={chess.turn()}
-            gameStarted={gameStarted}
-            GameOver={gameover}
-            playLowOnTimeSound={async () => { }}
-            color={color}
-          />
+          <ShowMessages
+            width={width * 0.95}
+            isOpen={showMessages}
+            onClose={() => {
+              setShowMessages(false);
+            }} >
+            {
+              messages.length > 0 ?
+                <View style={{ height: 450, gap: 15 }}>
+                  <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingBottom: 10 }}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {messages.map((item, index) => (
+                      <View
+                        key={index}
+                        style={{
+                          width: "100%",
+                          flexDirection: "row",
+                          justifyContent: color == item.from ? "flex-end" : "flex-start",
+                          marginVertical: 8
+                        }}
+                      >
+                        <Text style={{
+                          color: "#ffffff",
+                          backgroundColor: color == item.from ? "#3DE3B4" : "#B048C2",
+                          paddingVertical: 2,
+                          paddingHorizontal: 8,
+                          borderRadius: 8,
+                          fontSize: 18,
+                          maxWidth: "80%"
+                        }}>
+                          {item.message}
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                  <SendMessage
+                    sendMessage={sendMessage}
+                    setMessages={setMessages}
+                    color={color}
+                    setShowMessages={setShowMessages}
+                    showMenuIcon={false}
+                    jwt={jwt}
+                    gameId={gameId}
+                    isDevnet={isDevnet}
+                    sol={sol}
+                  />
+                </View> :
+                <Text style={{ color: "#ffffff", fontSize: 25, textAlign: "center", opacity: .3 }}>
+                  No messages
+                </Text>
+            }
+          </ShowMessages>
 
-          <Captured moves={moves} color={color} />
-          <MoveHistory moves={moves} />
-
-          <ChessBoard
-            chess={chess}
-            from={from}
-            setFrom={setFrom}
-            socket={socket.current}
-            color={color}
-            prevFrom={prevFrom}
-            prevTo={prevTo}
-            GameOver={gameover}
-            gameStarted={gameStarted}
-            playIllegalMoveSound={async () => { }}
-            playCheckSound={async () => { }}
-            gameId={gameId}
-            network={isDevnet ? "DEVNET" : "MAINNET"}
-            sol={sol}
-            jwt={jwt}
-          />
-
-          {lastMessage &&
-            <LastMessage
+          <View style={{ paddingHorizontal: 4 }}>
+            <Timer
+              fontsLoaded={true}
+              timer1={timer1}
+              timer2={timer2}
+              turn={chess.turn()}
+              gameStarted={gameStarted}
+              GameOver={gameover}
+              playLowOnTimeSound={playLowOnTimeSound}
               color={color}
-              lastMessage={lastMessage}
-              width={width}
             />
-          }
+          </View>
+          <View style={{
+            height: 60,
+            marginVertical: 4,
+            width: "100%",
+          }}>
+            <Captured moves={moves} color={color} />
+          </View>
 
-          <SendMessage
-            sendMessage={sendMessage}
-            setMessages={setMessages}
-            color={color}
-            setShowMessages={setShowMessages}
-            showMenuIcon={true}
-            gameId={gameId}
-            jwt={jwt}
-            isDevnet={isDevnet}
-            sol={sol}
-          />
+          <View style={{
+            justifyContent: "center",
+            alignItems: "center"
+          }}>
+            <View style={{
+              height: 60,
+              marginVertical: 4,
+              width: "100%",
+            }}>
+              <MoveHistory moves={moves} />
+            </View>
+            <ChessBoard
+              chess={chess}
+              from={from}
+              setFrom={setFrom}
+              socket={socket.current}
+              color={color}
+              prevFrom={prevFrom}
+              prevTo={prevTo}
+              GameOver={gameover}
+              gameStarted={gameStarted}
+              playIllegalMoveSound={playIllegalMoveSound}
+              playCheckSound={playCheckSound}
+              gameId={gameId}
+              network={isDevnet ? "DEVNET" : "MAINNET"}
+              sol={sol}
+              jwt={jwt}
+            />
+          </View>
 
+          <View style={{
+            marginHorizontal: 15,
+            gap: 10,
+            height: 60,
+            justifyContent: "flex-end",
+            flex: 1
+          }}>
+            {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
+            <SendMessage
+              sendMessage={sendMessage}
+              setMessages={setMessages}
+              color={color}
+              setShowMessages={setShowMessages}
+              showMenuIcon={true}
+              gameId={gameId}
+              jwt={jwt}
+              isDevnet={isDevnet}
+              sol={sol}
+            />
+          </View>
         </SafeAreaView>
       }
     </View>
-    // <Text>hello</Text>
   )
 }
 
