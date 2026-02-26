@@ -40,6 +40,7 @@ const styles = StyleSheet.create({
     heroSection: {
         alignItems: "center",
         marginVertical: 16,
+        width: "100%",
     },
 
 })

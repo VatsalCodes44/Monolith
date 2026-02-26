@@ -9,7 +9,7 @@ export function GradientButton({
 }: {
   text?: string,
   children?: React.ReactNode,
-  onPress: () => void,
+  onPress?: () => void,
   fontFamily?: string
 }) {
   return (

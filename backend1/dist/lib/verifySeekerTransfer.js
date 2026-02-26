@@ -6,15 +6,15 @@ import bs58 from "bs58";
 const SEEKER_MINT = new PublicKey("SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3");
 const BACKEND_WALLET = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY)).publicKey.toBase58();
 export async function verifySeekerTransfer(signature, from) {
-    const connection = new Connection(process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta"), "finalized");
+    const connection = new Connection(process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta"), "confirmed");
     let tx = await connection.getParsedTransaction(signature, {
-        commitment: "finalized",
+        commitment: "confirmed",
         maxSupportedTransactionVersion: 0,
     });
     if (!tx) {
         await new Promise(r => setTimeout(r, 2000));
         tx = await connection.getParsedTransaction(signature, {
-            commitment: "finalized",
+            commitment: "confirmed",
             maxSupportedTransactionVersion: 0,
         });
     }

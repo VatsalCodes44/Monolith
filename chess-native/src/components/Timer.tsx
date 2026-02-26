@@ -24,7 +24,7 @@ export function Timer({
 
     const [t1, setT1] = useState(timer1)
     const [t2, setT2] = useState(timer2)
-    
+
     const timer1Ref = useRef(timer1)
     const timer2Ref = useRef(timer2)
     const lastUpdateRef = useRef<number>(Date.now())
@@ -36,7 +36,7 @@ export function Timer({
         setT1(timer1)
         setT2(timer2)
         lastUpdateRef.current = Date.now()
-        
+
         if (timer1 > 30_000 && timer2 > 30_000) {
             hasPlayedLowTimeSoundRef.current = false
         }
@@ -50,7 +50,7 @@ export function Timer({
         const interval = setInterval(() => {
             const now = Date.now()
             const elapsed = now - lastUpdateRef.current
-            
+
             if (turn === "w") {
                 const actualTime = timer1Ref.current - elapsed
                 setT1(Math.max(actualTime, 0))
@@ -68,15 +68,13 @@ export function Timer({
         if (hasPlayedLowTimeSoundRef.current) return
 
         const currentTimer = turn === "w" ? t1 : t2
-        
+
         if (currentTimer <= 30_000 && currentTimer > 0) {
             playLowOnTimeSound()
             hasPlayedLowTimeSoundRef.current = true
         }
     }, [t1, t2, turn])
 
-    // ========== ADDED: Determine which timer goes on which side ==========
-    // Current player's timer always on the right
     const leftTimer = color === "w" ? t2 : t1;
     const rightTimer = color === "w" ? t1 : t2;
     const isLeftLowTime = color === "w" ? t2 < 30_000 : t1 < 30_000;
@@ -98,9 +96,9 @@ const formatTime = (time: number) => {
 
 const RenderTimer = (time: number, isLowTime: boolean, fontsLoaded: boolean) => {
     const { minutes, seconds } = formatTime(time);
-    
+
     return (
-        <View style={{flexDirection: "row"}}>
+        <View style={{ flexDirection: "row" }}>
             {minutes.toString().split("").map((digit, idx) => (
                 <Text
                     key={`min-${idx}`}
@@ -116,7 +114,7 @@ const RenderTimer = (time: number, isLowTime: boolean, fontsLoaded: boolean) => 
                     {digit}
                 </Text>
             ))}
-            
+
             <Text
                 style={{
                     fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto",

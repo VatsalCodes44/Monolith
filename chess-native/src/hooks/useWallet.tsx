@@ -103,6 +103,7 @@ export function useWallet(): Wallet {
 
   const sendSOL = useCallback(
     async (amountSOL: number) => {
+      console.log("Before transact");
       if (!publicKey) throw new Error("Wallet not connected");
 
       setSending(true);
@@ -189,7 +190,7 @@ export function useWallet(): Wallet {
           feePayerATA, // source
           recipientATA, // destination
           new PublicKey(publicKey), // owner
-          amountSKR * 1000000, // amount
+          BigInt(Math.round(amountSKR * 1_000_000)), // amount
           [], // multiSigners
           TOKEN_PROGRAM_ID // programId
         );

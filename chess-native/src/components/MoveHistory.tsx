@@ -37,7 +37,7 @@ export function MoveHistory({ moves }: { moves: Move[] }) {
 
               <Piece
                 piece={piece}
-                width={40}     // 👈 same visual size as old icon
+                width={40}
                 color={item.color}
                 rotation={"0deg"}
               />

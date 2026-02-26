@@ -1,4 +1,3 @@
-
 import {
     Connection,
     SystemProgram,
@@ -12,18 +11,18 @@ const BACKEND_WALLET = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY
 export async function verifySolTransfer(network: "MAINNET" | "DEVNET", signature: string, from: string) {
     const connection = new Connection(
         network === "MAINNET" ? (process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta")) : (process.env.DEVNET_RPC_URL || clusterApiUrl("devnet")),
-        "finalized"
+        "confirmed"
     );
 
     let tx = await connection.getTransaction(signature, {
-        commitment: "finalized",
+        commitment: "confirmed",
         maxSupportedTransactionVersion: 0,
     });
 
     if (!tx) {
         await new Promise(r => setTimeout(r, 2000))
         tx = await connection.getTransaction(signature, {
-            commitment: "finalized",
+            commitment: "confirmed",
             maxSupportedTransactionVersion: 0,
         })
     }

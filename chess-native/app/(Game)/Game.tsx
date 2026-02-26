@@ -1,5 +1,5 @@
 import { Alert, StyleSheet, View, Text, useWindowDimensions, TouchableOpacity, FlatList, ScrollView } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChessBoard } from "@/src/components/ChessBoard"
 import { CHECK, GAME_OVER, GAME_OVER_RESPONSE_PAYLOAD, GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD, INIT_GAME, INIT_GAME_RESPONSE_PAYLOAD, MESSAGE, message_payload, MOVE, MOVE_RESPONSE_PAYLOAD, TIME_OUT } from '@/src/config/serverResponds'
@@ -116,6 +116,14 @@ export default function Game() {
     }
   };
 
+  const sendMessage = useCallback((message: MESSAGE_TYPE_TS) => {
+    if (!socket) return;
+    socket.send(JSON.stringify(message))
+    setLastMessage({
+      from: message.payload.from,
+      message: message.payload.message
+    })
+  }, [socket])
 
   useEffect(() => {
     if (!socket) {
@@ -223,16 +231,13 @@ export default function Game() {
           sol: sol
         }
       }
-      socket.send(JSON.stringify({
-        type: INIT_GAME,
-        payload
-      }))
+      socket.send(JSON.stringify(payload))
     }
 
     return () => {
     };
 
-  }, [socket]);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -301,20 +306,9 @@ export default function Game() {
     );
   });
 
-  if (!socket) {
-    return <ConnectingToServer message='Connecting to the server' />;
+  if (!socket || !publicKey || !jwt || !sol) {
+    return <ConnectingToServer message='Connecting to the server' fontsLoaded={fontsLoaded} />;
   }
-
-  function sendMessage(message: MESSAGE_TYPE_TS) {
-    if (!socket) return;
-    socket.send(JSON.stringify(message))
-    setLastMessage({
-      from: message.payload.from,
-      message: message.payload.message
-    })
-  }
-
-  if (!publicKey || !jwt || !sol) return null;
 
   return (
     <SafeAreaView style={{

@@ -22,17 +22,17 @@ export async function verifySeekerTransfer(
     signature: string,
     from: string
 ) {
-    const connection = new Connection(process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta"), "finalized");
+    const connection = new Connection(process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta"), "confirmed");
 
     let tx = await connection.getParsedTransaction(signature, {
-        commitment: "finalized",
+        commitment: "confirmed",
         maxSupportedTransactionVersion: 0,
     });
 
     if (!tx) {
         await new Promise(r => setTimeout(r, 2000))
         tx = await connection.getParsedTransaction(signature, {
-            commitment: "finalized",
+            commitment: "confirmed",
             maxSupportedTransactionVersion: 0,
         })
     }

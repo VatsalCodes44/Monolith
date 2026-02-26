@@ -25,7 +25,7 @@ export default function index() {
     Orbitron_900Black,
   });
 
-  const [jwtLogin, setJwtLogin] = useState(false);
+
   const wallet = useWallet();
   const setIsDevnet = useWalletStore(s => s.setIsDevnet)
   const setSol = GameBet(s => s.setSol)
@@ -59,11 +59,13 @@ export default function index() {
     if (!wallet.publicKey || !jwt) return;
     try {
       const payload: GET_BALANCE_TYPE_TS = {
-        publicKey: wallet.publicKey,
         network: wallet.isDevnet ? "DEVNET" : "MAINNET",
-        jwt: jwt
       }
-      const res = await axios.post(`${REST_URL}/getBalance`, payload)
+      const res = await axios.post(`${REST_URL}/getBalance`, payload, {
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+        },
+      })
       const data = res.data;
       console.log(data)
       setLamports(parseInt(data.lamports));
@@ -95,63 +97,53 @@ export default function index() {
 
       <View style={styles.stakeSection}>
         {stakeOptions.map((option, index) => (
-          <TouchableOpacity
+          <LinearGradient
+            colors={['#B048C2', '#9082DB', '#3DE3B4']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cardBorderGradient}
             key={index}
-            style={styles.stakeCard}
-            activeOpacity={0.9}
-            onPress={async () => {
-              if (!wallet.publicKey || jwt) return;
-              setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
-              router.push("/Game");
-            }}
           >
-            {/* Gradient Border Effect */}
-            <LinearGradient
-              colors={['#B048C2', '#9082DB', '#3DE3B4']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.cardBorderGradient}
-            >
-              <View style={styles.cardInner}>
-                {/* Chess Piece */}
-                <View style={styles.pieceSection}>
-                  <View style={styles.pieceCircle}>
-                    {option.piece}
-                  </View>
-                  <Text style={[
-                    styles.pieceLabel,
-                    { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                  ]}>
-                    {option.label}
-                  </Text>
+            <View style={styles.cardInner}>
+              {/* Chess Piece */}
+              <View style={styles.pieceSection}>
+                <View style={styles.pieceCircle}>
+                  {option.piece}
                 </View>
-
-                {/* Stake Info */}
-                <View style={styles.stakeInfo}>
-                  <Text style={[
-                    styles.stakeAmount,
-                    { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                  ]}>
-                    {option.amount} SOL
-                  </Text>
-                  <Text style={styles.stakeSubtitle}>
-                    {option.subtitle}
-                  </Text>
-                </View>
-
-                {/* CTA Button */}
-                <GradientButton
-                  onPress={async () => {
-                    if (!wallet.publicKey || jwt) return;
-                    setSol(option.amount == 0.1 ? "0.01" : (option.amount == 0.05 ? "0.05" : "0.01"))
-                    router.push("/Game");
-                  }}
-                  text="ENTER ARENA"
-                  fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
-                />
+                <Text style={[
+                  styles.pieceLabel,
+                  { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                ]}>
+                  {option.label}
+                </Text>
               </View>
-            </LinearGradient>
-          </TouchableOpacity>
+
+              {/* Stake Info */}
+              <View style={styles.stakeInfo}>
+                <Text style={[
+                  styles.stakeAmount,
+                  { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                ]}>
+                  {option.amount} SOL
+                </Text>
+                <Text style={styles.stakeSubtitle}>
+                  {option.subtitle}
+                </Text>
+              </View>
+
+              {/* CTA Button */}
+              <GradientButton
+                onPress={async () => {
+                  console.log("hello")
+                  if (!wallet.publicKey || !jwt) return;
+                  setSol(option.amount == 0.1 ? "0.1" : (option.amount == 0.05 ? "0.05" : "0.01"))
+                  router.push("/Game");
+                }}
+                text="ENTER ARENA"
+                fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
+              />
+            </View>
+          </LinearGradient>
         ))}
       </View>
 
@@ -179,8 +171,6 @@ export default function index() {
           wallet={wallet}
           fontsLoaded={fontsLoaded}
           setJwt={setJwt}
-          setJwtLogin={setJwtLogin}
-          jwtLogin={jwtLogin}
           jwt={jwt}
         />
       </View>

@@ -36,20 +36,17 @@ wss.on('connection', function connection(socket) {
     })
 });
 
+app.get("/", (req, res) => {
+    res.json({ message: "Hello World" });
+})
+
 app.post('/getBalance', jwtVerification, async (req, res) => {
 
-    const result = getBalance.safeParse(req.body);
-
-    if (!result.success) {
-        return res.status(400).json({ error: "Invalid request" });
-    }
-
-    const { publicKey, network } = result.data;
+    const { network } = req.body;
+    const userPublicKey = (req as any).user.publicKey;
 
     const user = await prisma.player.findUnique({
-        where: {
-            publicKey: publicKey
-        }
+        where: { publicKey: userPublicKey }
     })
     if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -107,11 +104,16 @@ app.post("/getGames", jwtVerification, async (req, res) => {
 app.post("/deposit", jwtVerification, async (req, res) => {
     const parsed = deposit.safeParse(req.body);
 
+    console.log("deposit")
+
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
     }
 
-    const { publicKey, signature, network, asset } = parsed.data;
+    const { signature, network, asset } = parsed.data;
+    const userPublicKey = (req as any).user.publicKey;
+
+    console.log(parsed.data)
 
     try {
         // Verify on-chain first
@@ -120,7 +122,7 @@ app.post("/deposit", jwtVerification, async (req, res) => {
             let verification = await verifySolTransfer(
                 network,
                 signature,
-                publicKey
+                userPublicKey
             );
 
             if (!verification.success) {
@@ -135,7 +137,7 @@ app.post("/deposit", jwtVerification, async (req, res) => {
                         signature,
                         network,
                         amount: verification.lamports,
-                        from: publicKey,
+                        from: userPublicKey,
                         to: verification.to,
                         asset: "SOL"
                     },
@@ -153,10 +155,10 @@ app.post("/deposit", jwtVerification, async (req, res) => {
                         : { mainnetLamports: verification.lamports };
 
                 await tx.player.upsert({
-                    where: { publicKey },
+                    where: { publicKey: userPublicKey },
                     update: balanceField,
                     create: {
-                        publicKey,
+                        publicKey: userPublicKey,
                         ...createField,
                     },
                 });
@@ -165,7 +167,7 @@ app.post("/deposit", jwtVerification, async (req, res) => {
         else if (asset == "SKR") {
             let verification = await verifySeekerTransfer(
                 signature,
-                publicKey
+                userPublicKey
             );
 
             if (!verification.success) {
@@ -180,7 +182,7 @@ app.post("/deposit", jwtVerification, async (req, res) => {
                         signature,
                         network,
                         amount: verification.amount,
-                        from: publicKey,
+                        from: userPublicKey,
                         to: verification.to,
                         asset: "SKR",
                     },
@@ -188,14 +190,14 @@ app.post("/deposit", jwtVerification, async (req, res) => {
 
 
                 await tx.player.upsert({
-                    where: { publicKey },
+                    where: { publicKey: userPublicKey },
                     update: {
                         skr: {
                             increment: verification.amount
                         }
                     },
                     create: {
-                        publicKey,
+                        publicKey: userPublicKey,
                         skr: verification.amount,
                     },
                 });
@@ -262,6 +264,6 @@ app.post("/verifyLogin", async (req, res) => {
     res.json({ token });
 })
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
     console.log(`HTTP + WS Server started on port ${PORT}`);
 });

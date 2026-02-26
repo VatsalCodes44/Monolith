@@ -9,7 +9,7 @@ import { Connection } from "@solana/web3.js";
 import { verifySolTransfer } from "./lib/verifySolTransfer.js";
 import { verifySeekerTransfer } from "./lib/verifySeekerTransfer.js";
 import jwt from "jsonwebtoken";
-import { login, deposit, verifyLogin, getBalance } from "./types/type.js";
+import { login, deposit, verifyLogin } from "./types/type.js";
 import { jwtVerification } from "./middlewares/jwtVerification.js";
 const app = express();
 const PORT = 8080;
@@ -29,16 +29,14 @@ wss.on('connection', function connection(socket) {
         gameManager.removeUser(socket);
     });
 });
+app.get("/", (req, res) => {
+    res.json({ message: "Hello World" });
+});
 app.post('/getBalance', jwtVerification, async (req, res) => {
-    const result = getBalance.safeParse(req.body);
-    if (!result.success) {
-        return res.status(400).json({ error: "Invalid request" });
-    }
-    const { publicKey, network } = result.data;
+    const { network } = req.body;
+    const userPublicKey = req.user.publicKey;
     const user = await prisma.player.findUnique({
-        where: {
-            publicKey: publicKey
-        }
+        where: { publicKey: userPublicKey }
     });
     if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -87,14 +85,17 @@ app.post("/getGames", jwtVerification, async (req, res) => {
 });
 app.post("/deposit", jwtVerification, async (req, res) => {
     const parsed = deposit.safeParse(req.body);
+    console.log("deposit");
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
     }
-    const { publicKey, signature, network, asset } = parsed.data;
+    const { signature, network, asset } = parsed.data;
+    const userPublicKey = req.user.publicKey;
+    console.log(parsed.data);
     try {
         // Verify on-chain first
         if (asset == "SOL") {
-            let verification = await verifySolTransfer(network, signature, publicKey);
+            let verification = await verifySolTransfer(network, signature, userPublicKey);
             if (!verification.success) {
                 return res.status(400).json({ error: "Invalid transaction" });
             }
@@ -105,7 +106,7 @@ app.post("/deposit", jwtVerification, async (req, res) => {
                         signature,
                         network,
                         amount: verification.lamports,
-                        from: publicKey,
+                        from: userPublicKey,
                         to: verification.to,
                         asset: "SOL"
                     },
@@ -118,17 +119,17 @@ app.post("/deposit", jwtVerification, async (req, res) => {
                     ? { devnetLamports: verification.lamports }
                     : { mainnetLamports: verification.lamports };
                 await tx.player.upsert({
-                    where: { publicKey },
+                    where: { publicKey: userPublicKey },
                     update: balanceField,
                     create: {
-                        publicKey,
+                        publicKey: userPublicKey,
                         ...createField,
                     },
                 });
             });
         }
         else if (asset == "SKR") {
-            let verification = await verifySeekerTransfer(signature, publicKey);
+            let verification = await verifySeekerTransfer(signature, userPublicKey);
             if (!verification.success) {
                 return res.status(400).json({ error: "Invalid transaction" });
             }
@@ -139,20 +140,20 @@ app.post("/deposit", jwtVerification, async (req, res) => {
                         signature,
                         network,
                         amount: verification.amount,
-                        from: publicKey,
+                        from: userPublicKey,
                         to: verification.to,
                         asset: "SKR",
                     },
                 });
                 await tx.player.upsert({
-                    where: { publicKey },
+                    where: { publicKey: userPublicKey },
                     update: {
                         skr: {
                             increment: verification.amount
                         }
                     },
                     create: {
-                        publicKey,
+                        publicKey: userPublicKey,
                         skr: verification.amount,
                     },
                 });
@@ -210,6 +211,6 @@ app.post("/verifyLogin", async (req, res) => {
     const token = jwt.sign({ publicKey }, process.env.JWT_SECRET);
     res.json({ token });
 });
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
     console.log(`HTTP + WS Server started on port ${PORT}`);
 });

@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { Message } from '@/app/(Game)/Game'
 
-export function LastMessage({lastMessage, color, width}: {lastMessage: Message, color: "w" | "b", width: number}) {
+export function LastMessage({ lastMessage, color, width }: { lastMessage: Message, color: "w" | "b", width: number }) {
     const [visible, setVisible] = useState(true);
 
     useEffect(() => {
@@ -16,30 +16,30 @@ export function LastMessage({lastMessage, color, width}: {lastMessage: Message, 
         }
     }, [lastMessage])
     return (
-    <View style={{
-        justifyContent: color == lastMessage.from ? "flex-end" : "flex-start",
-        borderRadius: 100,
-        flexDirection: "row",
-        alignItems: "flex-end",
-        flex:1,
-        marginTop: 4
-    }}>
-        <Text 
-        ellipsizeMode="tail"
-        style={{
-            color: "#ffffff",
-            backgroundColor: color == lastMessage.from ? '#3DE3B4' : '#B048C2',
-            maxWidth: width/1.5,
-            fontSize: 18,
-            paddingVertical: 2,
-            paddingHorizontal: 8,
-            borderRadius: 15,
-            overflow: "hidden",
-            display: visible ? "flex" : "none",
+        <View style={{
+            justifyContent: color == lastMessage.from ? "flex-end" : "flex-start",
+            borderRadius: 100,
+            flexDirection: "row",
+            alignItems: "flex-end",
+            flex: 1,
+            marginTop: 4
         }}>
-            {lastMessage.message}
-        </Text>
-    </View>
+            <Text
+                ellipsizeMode="tail"
+                style={{
+                    color: "#ffffff",
+                    backgroundColor: color == lastMessage.from ? '#3DE3B4' : '#B048C2',
+                    maxWidth: width / 1.5,
+                    fontSize: 18,
+                    paddingVertical: 2,
+                    paddingHorizontal: 8,
+                    borderRadius: 15,
+                    overflow: "hidden",
+                    display: visible ? "flex" : "none",
+                }}>
+                {lastMessage.message}
+            </Text>
+        </View>
     )
 }
 

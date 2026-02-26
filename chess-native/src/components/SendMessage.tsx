@@ -30,8 +30,9 @@ export const SendMessage = memo(({
     const [message, setMessage] = useState<string>("")
 
     const handleSend = () => {
+        console.log("hiii")
         if (!message.trim() || !gameId) return;
-        sendMessage({
+        const messageInput: MESSAGE_TYPE_TS = {
             type: MESSAGE,
             payload: {
                 from: color,
@@ -41,7 +42,8 @@ export const SendMessage = memo(({
                 network: isDevnet ? "DEVNET" : "MAINNET",
                 jwt
             }
-        });
+        }
+        sendMessage(messageInput);
         setMessages(p => [...p, { from: color, message }])
         setMessage("");
     }

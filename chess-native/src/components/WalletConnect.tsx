@@ -1,5 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React from 'react'
+import React, { useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { GradientButton } from './GradientButton'
 import { Wallet } from '../hooks/useWallet'
@@ -10,17 +10,14 @@ export function WalletConnect({
     wallet,
     fontsLoaded,
     setJwt,
-    setJwtLogin,
-    jwtLogin,
-    jwt
+    jwt,
 }: {
     wallet: Wallet,
     fontsLoaded?: boolean,
     setJwt: (jwt: string | null) => void,
-    setJwtLogin: React.Dispatch<React.SetStateAction<boolean>>,
-    jwtLogin: boolean,
-    jwt: string | null
+    jwt: string | null,
 }) {
+    const [jwtLogin, setJwtLogin] = useState(false);
     return (
         <GradientButton
             onPress={async () => {
@@ -45,6 +42,8 @@ export function WalletConnect({
                         setJwtLogin(false);
                         setJwt(verifyRes.data.token);
                         setJwtLogin(true);
+                        console.log("----------------------------------")
+                        console.log(verifyRes.data.token)
                     }
                     else {
                         wallet.disconnect();

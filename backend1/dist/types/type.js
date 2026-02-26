@@ -46,11 +46,9 @@ export const login = z.object({
     publicKey: z.string()
 });
 export const deposit = z.object({
-    publicKey: z.string(),
     signature: z.string(),
     network: z.enum(["MAINNET", "DEVNET"]),
     asset: z.enum(["SOL", "SKR"]),
-    jwt: z.string(),
 });
 export const verifyLogin = z.object({
     publicKey: z.string(),
@@ -61,7 +59,5 @@ export const verifyJwt = z.object({
     token: z.string(),
 });
 export const getBalance = z.object({
-    publicKey: z.string(),
     network: z.enum(["MAINNET", "DEVNET"]),
-    jwt: z.string(),
 });

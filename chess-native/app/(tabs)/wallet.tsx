@@ -55,55 +55,89 @@ export default function Wallet() {
   }
 
   const fetchBlance = async () => {
-    if (!wallet.publicKey) return;
+    if (!wallet.publicKey || !jwt) return;
+
     try {
-      const res = await axios.post(`${REST_URL}/getBalance`, {
-        publicKey: wallet.publicKey,
-        network: wallet.isDevnet ? "DEVNET" : "MAINNET"
-      })
+      const res = await axios.post(
+        `${REST_URL}/getBalance`,
+        {
+          publicKey: wallet.publicKey,
+          network: wallet.isDevnet ? "DEVNET" : "MAINNET"
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+          },
+        }
+      );
+
       const data = res.data;
-      console.log(data)
       setLamports(parseInt(data.lamports));
       setSkr(parseInt(data.skr));
     }
     catch (e) {
-      console.log(e)
+      console.log(e);
     }
   }
 
   const transferSol = async () => {
+    console.log(wallet.publicKey)
+    console.log("---------------------------------")
+    console.log(jwt)
     if (!wallet.publicKey || !jwt) return;
+
+    const parsedAmount = parseFloat(amount);
+
+    if (!parsedAmount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      console.log("Invalid amount");
+      return;
+    }
+
     try {
-      const signature = await wallet.sendSOL(parseFloat(amount));
+      console.log("Calling sendSOL...");
+      const signature = await wallet.sendSOL(parsedAmount);
       if (!signature) return;
-      const res = await axios.post(`${REST_URL}/deposit`, {
-        publicKey: wallet.publicKey,
-        network: wallet.isDevnet ? "DEVNET" : "MAINNET",
-        asset,
-        signature,
-        jwt
-      })
-      const data = res.data;
-      console.log(data)
-      fetchBlance();
+
+      console.log("Signature:", signature);
+
+      await axios.post(
+        `${REST_URL}/deposit`,
+        {
+          network: wallet.isDevnet ? "DEVNET" : "MAINNET",
+          asset,
+          signature,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+          },
+        }
+      );
+
+      await fetchBlance();
+    } catch (e) {
+      console.log(e);
     }
-    catch (e) {
-      console.log(e)
-    }
-  }
+  };
 
   const transferSeeker = async () => {
     if (!wallet.publicKey || !jwt || isDevnet) return;
     try {
       const signature = await wallet.sendSKR(parseFloat(amount));
       if (!signature) return;
-      const res = await axios.post(`${REST_URL}/deposit`, {
-        publicKey: wallet.publicKey,
-        network: wallet.isDevnet ? "DEVNET" : "MAINNET",
-        asset,
-        signature,
-        jwt
-      })
+      const res = await axios.post(
+        `${REST_URL}/deposit`,
+        {
+          network: wallet.isDevnet ? "DEVNET" : "MAINNET",
+          asset,
+          signature,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+          },
+        }
+      );
       const data = res.data;
       console.log(data)
       fetchBlance();
@@ -114,12 +148,18 @@ export default function Wallet() {
   }
 
   const handleDepositWithdraw = async () => {
+    console.log(asset)
+    console.log(mode)
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      console.log("Invalid amount");
+      return;
+    }
     if (mode == "DEPOSIT") {
       if (asset == "SOL") {
-        transferSol();
+        await transferSol();
       }
       else {
-        transferSeeker();
+        await transferSeeker();
       }
     }
     else {
@@ -171,7 +211,7 @@ export default function Wallet() {
         colors={['rgba(176,72,194,0.08)', 'rgba(61,227,180,0.05)']}
         style={styles.balanceContainer}
       >
-        <Text style={styles.balanceLabel}>{asset} BALANCE</Text>
+        <Text style={styles.balanceLabel}>CHESS ON CHAIN BALANCE</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Text style={[styles.balanceBig, { fontFamily: displayFont }]}>
             {asset === "SOL"

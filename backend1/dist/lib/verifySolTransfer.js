@@ -2,15 +2,15 @@ import { Connection, SystemProgram, Keypair, clusterApiUrl, } from "@solana/web3
 import bs58 from "bs58";
 const BACKEND_WALLET = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY)).publicKey.toBase58();
 export async function verifySolTransfer(network, signature, from) {
-    const connection = new Connection(network === "MAINNET" ? (process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta")) : (process.env.DEVNET_RPC_URL || clusterApiUrl("devnet")), "finalized");
+    const connection = new Connection(network === "MAINNET" ? (process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta")) : (process.env.DEVNET_RPC_URL || clusterApiUrl("devnet")), "confirmed");
     let tx = await connection.getTransaction(signature, {
-        commitment: "finalized",
+        commitment: "confirmed",
         maxSupportedTransactionVersion: 0,
     });
     if (!tx) {
         await new Promise(r => setTimeout(r, 2000));
         tx = await connection.getTransaction(signature, {
-            commitment: "finalized",
+            commitment: "confirmed",
             maxSupportedTransactionVersion: 0,
         });
     }

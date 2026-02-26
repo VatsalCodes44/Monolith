@@ -70,6 +70,7 @@ const styles = StyleSheet.create({
         width: '100%',
         paddingHorizontal: 4,
         marginBottom: 16,
+        maxHeight: 40,
     },
 
     statusItem: {

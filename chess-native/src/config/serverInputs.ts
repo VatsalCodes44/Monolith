@@ -54,10 +54,12 @@ export const MESSAGE_TYPE = z.object({
     })
 })
 
+export const login = z.object({
+    publicKey: z.string()
+})
+
 export const getBalance = z.object({
-    publicKey: z.string(),
     network: z.enum(["MAINNET", "DEVNET"]),
-    jwt: z.string(),
 })
 
 export type INIT_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
