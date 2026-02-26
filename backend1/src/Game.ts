@@ -9,7 +9,7 @@ export class Game {
     public player2: WebSocket | null;
     public player1Pubkey: string;
     public player2Pubkey: string;
-    private board: Chess;
+    public board: Chess;
     public timer1: number;
     public timer2: number;
     private lastMoveTimestamp: number;
@@ -44,6 +44,7 @@ export class Game {
                 gameId,
                 network,
                 sol,
+                opponentPubkey: this.player2Pubkey
             }
         }));
 
@@ -57,6 +58,7 @@ export class Game {
                 gameId,
                 network,
                 sol,
+                opponentPubkey: this.player1Pubkey,
             }
         }));
     }
@@ -178,22 +180,6 @@ export class Game {
             return;
         }
 
-
-        // normal case we can check it on client side
-        // if (this.board.isCheck()) {
-        //     this.player1.send(JSON.stringify({
-        //         type: CHECK,
-        //         payload
-        //     }));
-
-        //     this.player2.send(JSON.stringify({
-        //         type: CHECK,
-        //         payload
-        //     }));
-        //     return;
-        // }
-
-
         this.player1?.send(JSON.stringify({
             type: MOVE,
             payload
@@ -203,7 +189,21 @@ export class Game {
             type: MOVE,
             payload
         }));
-
+        try {
+            await prisma.game.update({
+                where: {
+                    id: this.gameId
+                },
+                data: {
+                    history: JSON.stringify(this.board.history({ verbose: true })),
+                    fen: this.board.fen(),
+                    timer1: this.timer1,
+                    timer2: this.timer2,
+                }
+            })
+        }
+        catch {
+        }
     }
 
     public handleDisconnect(socket: WebSocket) {

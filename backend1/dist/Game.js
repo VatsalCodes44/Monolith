@@ -39,6 +39,7 @@ export class Game {
                 gameId,
                 network,
                 sol,
+                opponentPubkey: this.player2Pubkey
             }
         }));
         this.player2.send(JSON.stringify({
@@ -51,6 +52,7 @@ export class Game {
                 gameId,
                 network,
                 sol,
+                opponentPubkey: this.player1Pubkey,
             }
         }));
     }
@@ -156,18 +158,6 @@ export class Game {
             }
             return;
         }
-        // normal case we can check it on client side
-        // if (this.board.isCheck()) {
-        //     this.player1.send(JSON.stringify({
-        //         type: CHECK,
-        //         payload
-        //     }));
-        //     this.player2.send(JSON.stringify({
-        //         type: CHECK,
-        //         payload
-        //     }));
-        //     return;
-        // }
         this.player1?.send(JSON.stringify({
             type: MOVE,
             payload
@@ -176,6 +166,21 @@ export class Game {
             type: MOVE,
             payload
         }));
+        try {
+            await prisma.game.update({
+                where: {
+                    id: this.gameId
+                },
+                data: {
+                    history: JSON.stringify(this.board.history({ verbose: true })),
+                    fen: this.board.fen(),
+                    timer1: this.timer1,
+                    timer2: this.timer2,
+                }
+            });
+        }
+        catch {
+        }
     }
     handleDisconnect(socket) {
         if (this.player1 === socket) {

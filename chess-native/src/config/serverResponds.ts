@@ -10,13 +10,14 @@ export const RE_JOIN_GAME = "re_join_game";
 export const INSUFFICIENT_FUNDS = "Insufficient Funds";
 
 export type INIT_GAME_RESPONSE_PAYLOAD = {
-    color : "b" | "w",
+    color: "b" | "w",
     board: string,
     timer1: number,
     timer2: number,
     gameId: string,
     network: "MAINNET" | "DEVNET",
-    sol: "0.01" | "0.05" | "0.1"
+    sol: "0.01" | "0.05" | "0.1",
+    opponentPubkey: string,
 }
 
 export type MOVE_RESPONSE_PAYLOAD = {

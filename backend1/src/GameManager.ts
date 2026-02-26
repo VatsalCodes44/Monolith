@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS } from "./Messages.js";
 import { Game } from "./Game.js";
-import { INIT_GAME_TYPE, Message, MESSAGE_TYPE, MOVE_TYPE } from "./types/type.js";
+import { INIT_GAME_TYPE, Message, MESSAGE_TYPE, MOVE_TYPE, Re_JOIN_GAME_TYPE } from "./types/type.js";
 import { prisma } from "./lib/prisma.js"
 import jwt from "jsonwebtoken"
 
@@ -76,6 +76,61 @@ export class GameManager {
                     else {
                         this.pendingUsers.set(`${network}-${sol}`, { socket, publicKey });
                     }
+                }
+
+                if (message.type == RE_JOIN_GAME) {
+                    const result = Re_JOIN_GAME_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload } = result.data;
+                    const { gameId, network, sol, jwt } = payload;
+
+                    let publicKey: string;
+                    try {
+                        publicKey = this.jwtVerification(jwt).publicKey;
+                    }
+                    catch (err) {
+                        return;
+                    }
+                    const game = this.games.get(this.getGameKey(network, sol))?.get(gameId);
+                    if (!game) return;
+                    if (game.player1Pubkey == publicKey) {
+                        game.player1 = socket;
+                        const response = {
+                            type: RE_JOIN_GAME,
+                            payload: {
+                                color: "w",
+                                board: game.board.fen(),
+                                timer1: game.timer1,
+                                timer2: game.timer2,
+                                gameId,
+                                network,
+                                sol,
+                                opponentPubkey: game.player2Pubkey,
+                            }
+                        }
+                        game.player1.send(JSON.stringify(response));
+
+                    }
+                    else if (game.player2Pubkey == publicKey) {
+                        game.player2 = socket;
+                        const response = {
+                            type: RE_JOIN_GAME,
+                            payload: {
+                                color: "b",
+                                board: game.board.fen(),
+                                timer1: game.timer1,
+                                timer2: game.timer2,
+                                gameId,
+                                network,
+                                sol,
+                                opponentPubkey: game.player1Pubkey,
+                            }
+                        }
+                        game.player2.send(JSON.stringify(response));
+                    }
+                    return;
                 }
 
                 if (message.type == MOVE) {

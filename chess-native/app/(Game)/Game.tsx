@@ -1,5 +1,5 @@
-import { StyleSheet, View, Text, useWindowDimensions, ScrollView } from 'react-native'
-import React, { useEffect, useState, useRef } from 'react'
+import { StyleSheet, View, Text, useWindowDimensions, ScrollView, TouchableOpacity } from 'react-native'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChessBoard } from "@/src/components/ChessBoard"
 import {
@@ -12,6 +12,7 @@ import {
   message_payload,
   MOVE,
   MOVE_RESPONSE_PAYLOAD,
+  RE_JOIN_GAME,
   TIME_OUT
 } from '@/src/config/serverResponds'
 import { Chess, Move, Square } from 'chess.js'
@@ -26,8 +27,9 @@ import { MoveHistory } from '@/src/components/MoveHistory'
 import { Captured } from '@/src/components/Captured'
 import { ShowMessages } from '@/src/components/ShowMessages'
 import { useWalletStore } from '@/src/stores/wallet-store'
-import { INIT_GAME_TYPE_TS, MESSAGE_TYPE_TS } from '@/src/config/serverInputs'
+import { INIT_GAME_TYPE_TS, MESSAGE_TYPE_TS, Re_JOIN_GAME_TYPE_TS } from '@/src/config/serverInputs'
 import { router } from 'expo-router'
+import { ReJoin } from '@/src/components/ReJoin'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -50,7 +52,8 @@ export default function Game() {
   const [prevFrom, setPrevFrom] = useState<Square | null>(null)
   const [prevTo, setPrevTo] = useState<Square | null>(null)
   const [gameStarted, setGameStarted] = useState(false)
-  const [gameId, setGameId] = useState<string | null>(null)
+  const gameIdRef = useRef<string | null>(null)
+  const isMountedRef = useRef(true);
   const [messages, setMessages] = useState<Message[]>([])
   const [lastMessage, setLastMessage] = useState<Message>()
   const [moves, setMoves] = useState<Move[]>([])
@@ -63,12 +66,15 @@ export default function Game() {
   const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
   const [timer1, setTimer1] = useState(10 * 60 * 1000)
   const [timer2, setTimer2] = useState(10 * 60 * 1000)
+  const [opponentPubkey, setOpponentPubkey] = useState<string | null>(null)
 
   const [gameover, setGameOver] = useState<GameOver>({
     winner: null,
     gameOverType: null,
     isGameOver: false
   })
+  const gameOverRef = useRef(false)
+  const reconnectTimeoutRef = useRef<number | null>(null)
 
   const { width } = useWindowDimensions()
 
@@ -79,6 +85,145 @@ export default function Game() {
 
   const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwdWJsaWNLZXkiOiI2a25CQlVSUWNpMW5Na24xRlFtM0NOR2tVWmtLVjNTTHNuODhueUF0TldXbyIsImlhdCI6MTc3MjEwNjUwM30.Xf_Tnl1uDvyO3knbSAHij6KEHQhkReaKKcFXvzQ2esQ"
   const publicKey = "6knBBURQci1nMkn1FQm3CNGkUZkKV3SLsn88nyAtNW"
+  const fontsLoaded = true;
+
+  const onInitGameResponse = useCallback((payload: INIT_GAME_RESPONSE_PAYLOAD) => {
+    setColor(payload.color)
+    setChess(new Chess(payload.board))
+    setGameStarted(true)
+    setTimer1(payload.timer1)
+    setTimer2(payload.timer2)
+    gameIdRef.current = payload.gameId
+    setSol(payload.sol)
+    setOpponentPubkey(payload.opponentPubkey)
+  }, [])
+
+  const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
+    let newChess = new Chess(payload.board)
+    setChess(newChess);
+    setPrevFrom(payload.move.from);
+    setPrevTo(payload.move.to);
+    setTimer1(payload.timer1);
+    setTimer2(payload.timer2);
+    setMoves(payload.history)
+    playMoveSound()
+  }, [])
+
+  const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
+    setChess(new Chess(payload.board))
+    setPrevFrom(payload.move.from)
+    setPrevTo(payload.move.to)
+    setMoves(payload.history)
+    setGameOver({
+      winner: payload.winner,
+      gameOverType: payload.gameOverType,
+      isGameOver: true
+    })
+    gameOverRef.current = true;
+  }, [])
+
+  const onTimeOutResponse = useCallback((payload: GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD) => {
+    setPrevFrom(payload.move.from)
+    setPrevTo(payload.move.to)
+    setMoves(payload.history)
+    setGameOver({
+      winner: payload.winner,
+      gameOverType: payload.gameOverType,
+      isGameOver: true
+    })
+    gameOverRef.current = true;
+  }, [])
+
+  const connect = useCallback((isRejoin = false) => {
+    const ws = new WebSocket(WS_URL)
+
+    ws.onopen = () => {
+      if (!jwt || !sol) {
+        console.log("here1")
+        ws.close();
+        return;
+      }
+      socket.current = ws
+      setConnected(true)
+      if (isRejoin && gameIdRef.current) {
+        console.log("here2")
+        const payload: Re_JOIN_GAME_TYPE_TS = {
+          type: RE_JOIN_GAME,
+          payload: {
+            gameId: gameIdRef.current,
+            network: isDevnet ? "DEVNET" : "MAINNET",
+            sol,
+            jwt
+          }
+        }
+        ws.send(JSON.stringify(payload))
+      } else {
+        console.log("here3")
+        const payload: INIT_GAME_TYPE_TS = {
+          type: INIT_GAME,
+          payload: {
+            jwt,
+            network: isDevnet ? "DEVNET" : "MAINNET",
+            sol
+          }
+        }
+
+        ws.send(JSON.stringify(payload))
+      }
+    }
+
+    ws.onclose = () => {
+      if (gameOverRef.current || !isMountedRef.current) {
+        console.log("here4")
+        return;
+      };
+      if (reconnectTimeoutRef.current) return;
+      console.log("WebSocket closed")
+      socket.current = null
+      setConnected(false)
+      reconnectTimeoutRef.current = setTimeout(() => {
+        connect(true)
+        reconnectTimeoutRef.current = null
+      }, 2000)
+    }
+
+    ws.onerror = (err) => {
+      console.log("WebSocket error", err)
+    }
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data)
+      const payload = message.payload
+
+      switch (message.type) {
+
+        case INIT_GAME:
+          onInitGameResponse(payload as INIT_GAME_RESPONSE_PAYLOAD);
+          break;
+
+        case MOVE:
+          onMoveResponse(payload as MOVE_RESPONSE_PAYLOAD);
+          break;
+
+        case GAME_OVER:
+          onGameOver(payload as GAME_OVER_RESPONSE_PAYLOAD);
+          break;
+
+        case TIME_OUT:
+          onTimeOutResponse(payload as GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD);
+          break;
+
+        case MESSAGE:
+          onMessageResponse(payload as message_payload);
+          break;
+      }
+    }
+  }, [jwt, sol, isDevnet])
+
+  const onMessageResponse = useCallback((payload: message_payload) => {
+    setMessages(m => [...m, payload])
+    setLastMessage(payload)
+  }, [])
 
   const playMoveSound = async () => {
     if (!moveSoundRef.current) return;
@@ -174,112 +319,29 @@ export default function Game() {
   }, []);
 
   useEffect(() => {
-
-    const ws = new WebSocket(WS_URL)
-
-    ws.onopen = () => {
-      const payload: INIT_GAME_TYPE_TS = {
-        type: INIT_GAME,
-        payload: {
-          jwt,
-          network: isDevnet ? "DEVNET" : "MAINNET",
-          sol
-        }
-      }
-
-      ws.send(JSON.stringify(payload))
-      socket.current = ws
-      setConnected(true)
-    }
-
-    ws.onclose = () => {
-      console.log("WebSocket closed")
-      socket.current = null
-      router.replace("/")
-    }
-
-    ws.onerror = (err) => {
-      console.log("WebSocket error", err)
-    }
-
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data)
-      const payload = message.payload
-
-      switch (message.type) {
-
-        case INIT_GAME:
-          const init = payload as INIT_GAME_RESPONSE_PAYLOAD
-          console.log("init", payload)
-          setColor(init.color)
-          setChess(new Chess(init.board))
-          setGameStarted(true)
-          setTimer1(init.timer1)
-          setTimer2(init.timer2)
-          setGameId(init.gameId)
-          setSol(init.sol)
-          break
-
-        case MOVE:
-          const move_response_payload = payload as MOVE_RESPONSE_PAYLOAD;
-          let newChess = new Chess(move_response_payload.board)
-          setChess(newChess);
-          setPrevFrom(move_response_payload.move.from);
-          setPrevTo(move_response_payload.move.to);
-          setTimer1(move_response_payload.timer1);
-          setTimer2(move_response_payload.timer2);
-          setMoves(move_response_payload.history)
-          playMoveSound()
-          break;
-
-        case GAME_OVER:
-          const gameOver = payload as GAME_OVER_RESPONSE_PAYLOAD
-          setChess(new Chess(gameOver.board))
-          setPrevFrom(gameOver.move.from)
-          setPrevTo(gameOver.move.to)
-          setMoves(gameOver.history)
-          setGameOver({
-            winner: gameOver.winner,
-            gameOverType: gameOver.gameOverType,
-            isGameOver: true
-          })
-          break
-
-        case TIME_OUT:
-          const timeout = payload as GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD
-          setPrevFrom(timeout.move.from)
-          setPrevTo(timeout.move.to)
-          setMoves(timeout.history)
-          setGameOver({
-            winner: timeout.winner,
-            gameOverType: timeout.gameOverType,
-            isGameOver: true
-          })
-          break
-
-        case MESSAGE:
-          const msg = payload as message_payload
-          setMessages(m => [...m, msg])
-          setLastMessage(msg)
-          break
-      }
-    }
-
+    connect();
     return () => {
-      ws.close()
+      isMountedRef.current = false;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+      }
+      if (socket.current) {
+        socket.current.onclose = null;
+        socket.current.close();
+        socket.current = null;
+      }
     }
-
   }, [])
 
 
 
   return (
     <View style={{ flex: 1 }}>
-      {(!socket.current || !publicKey || !jwt || !sol) &&
-        <ConnectingToServer message='Connecting to server...' fontsLoaded={true} />
+      {(!socket.current || !publicKey || !jwt || !sol || !connected) &&
+        <ConnectingToServer message='Connecting to server...' fontsLoaded={fontsLoaded} />
       }
 
-      {(socket.current && publicKey && jwt && sol) &&
+      {(socket.current && publicKey && jwt && sol && connected) &&
         <SafeAreaView style={{
           flex: 1,
           backgroundColor: "#000000",
@@ -332,7 +394,7 @@ export default function Game() {
                     setShowMessages={setShowMessages}
                     showMenuIcon={false}
                     jwt={jwt}
-                    gameId={gameId}
+                    gameId={gameIdRef.current}
                     isDevnet={isDevnet}
                     sol={sol}
                   />
@@ -345,7 +407,7 @@ export default function Game() {
 
           <View style={{ paddingHorizontal: 4 }}>
             <Timer
-              fontsLoaded={true}
+              fontsLoaded={fontsLoaded}
               timer1={timer1}
               timer2={timer2}
               turn={chess.turn()}
@@ -386,7 +448,7 @@ export default function Game() {
               gameStarted={gameStarted}
               playIllegalMoveSound={playIllegalMoveSound}
               playCheckSound={playCheckSound}
-              gameId={gameId}
+              gameId={gameIdRef.current}
               network={isDevnet ? "DEVNET" : "MAINNET"}
               sol={sol}
               jwt={jwt}
@@ -406,7 +468,7 @@ export default function Game() {
               color={color}
               setShowMessages={setShowMessages}
               showMenuIcon={true}
-              gameId={gameId}
+              gameId={gameIdRef.current}
               jwt={jwt}
               isDevnet={isDevnet}
               sol={sol}
@@ -415,6 +477,11 @@ export default function Game() {
           </View>
         </SafeAreaView>
       }
+      <TouchableOpacity onPress={() => {
+        socket.current?.close()
+      }} style={{ position: "absolute", bottom: 100, right: 10, backgroundColor: "#CE2EDF", padding: 10, borderRadius: 10 }}>
+        <Text style={{ color: "#ffffff" }}>Close</Text>
+      </TouchableOpacity>
     </View>
   )
 }
