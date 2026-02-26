@@ -13,6 +13,7 @@ import {
   MOVE,
   MOVE_RESPONSE_PAYLOAD,
   RE_JOIN_GAME,
+  Re_JOIN_GAME_RESPONSE_PAYLOAD,
   TIME_OUT
 } from '@/src/config/serverResponds'
 import { Chess, Move, Square } from 'chess.js'
@@ -30,6 +31,8 @@ import { useWalletStore } from '@/src/stores/wallet-store'
 import { INIT_GAME_TYPE_TS, MESSAGE_TYPE_TS, Re_JOIN_GAME_TYPE_TS } from '@/src/config/serverInputs'
 import { router } from 'expo-router'
 import { ReJoin } from '@/src/components/ReJoin'
+import { jwtStore } from '@/src/stores/jwt'
+import { SolanaDuelHeader } from '@/src/components/SolanaDuelHeader'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -75,6 +78,7 @@ export default function Game() {
   })
   const gameOverRef = useRef(false)
   const reconnectTimeoutRef = useRef<number | null>(null)
+  const scrollRef = useRef<ScrollView>(null);
 
   const { width } = useWindowDimensions()
 
@@ -83,8 +87,8 @@ export default function Game() {
 
   const isDevnet = useWalletStore(s => s.isDevnet)
 
-  const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwdWJsaWNLZXkiOiI2a25CQlVSUWNpMW5Na24xRlFtM0NOR2tVWmtLVjNTTHNuODhueUF0TldXbyIsImlhdCI6MTc3MjEwNjUwM30.Xf_Tnl1uDvyO3knbSAHij6KEHQhkReaKKcFXvzQ2esQ"
-  const publicKey = "6knBBURQci1nMkn1FQm3CNGkUZkKV3SLsn88nyAtNW"
+  const jwt = jwtStore(s => s.jwt)
+  const publicKey = useWalletStore(s => s.publicKey)
   const fontsLoaded = true;
 
   const onInitGameResponse = useCallback((payload: INIT_GAME_RESPONSE_PAYLOAD) => {
@@ -132,6 +136,17 @@ export default function Game() {
       isGameOver: true
     })
     gameOverRef.current = true;
+  }, [])
+
+  const onReJoinGameResponse = useCallback((payload: Re_JOIN_GAME_RESPONSE_PAYLOAD) => {
+    setColor(payload.color)
+    setChess(new Chess(payload.board))
+    setGameStarted(true)
+    setTimer1(payload.timer1)
+    setTimer2(payload.timer2)
+    gameIdRef.current = payload.gameId
+    setSol(payload.sol)
+    setOpponentPubkey(payload.opponentPubkey)
   }, [])
 
   const connect = useCallback((isRejoin = false) => {
@@ -216,6 +231,10 @@ export default function Game() {
         case MESSAGE:
           onMessageResponse(payload as message_payload);
           break;
+
+        case RE_JOIN_GAME:
+          onReJoinGameResponse(payload as Re_JOIN_GAME_RESPONSE_PAYLOAD);
+          break;
       }
     }
   }, [jwt, sol, isDevnet])
@@ -274,6 +293,15 @@ export default function Game() {
   };
 
   useEffect(() => {
+    if (showMessages && messages.length > 0) {
+      // slight delay because modal animation + layout timing
+      setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+    }
+  }, [showMessages, messages]);
+
+  useEffect(() => {
     const loadSounds = async () => {
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
@@ -311,10 +339,13 @@ export default function Game() {
     loadSounds();
 
     return () => {
-      moveSoundRef.current?.unloadAsync();
-      checkSoundRef.current?.unloadAsync();
-      illegalSoundRef.current?.unloadAsync();
-      lowOnTimeSoundRef.current?.unloadAsync();
+      // Do NOT unload on unmount
+      // Let Expo AV handle destruction.
+      // moveSoundRef.current?.unloadAsync();
+      // checkSoundRef.current?.unloadAsync();
+      // illegalSoundRef.current?.unloadAsync();
+      // lowOnTimeSoundRef.current?.unloadAsync();
+      setSol(null)
     };
   }, []);
 
@@ -345,7 +376,7 @@ export default function Game() {
         <SafeAreaView style={{
           flex: 1,
           backgroundColor: "#000000",
-          paddingVertical: 20,
+          paddingVertical: 0,
         }}>
 
           <ShowMessages
@@ -358,6 +389,7 @@ export default function Game() {
               messages.length > 0 ?
                 <View style={{ height: 450, gap: 15 }}>
                   <ScrollView
+                    ref={scrollRef}
                     style={{ flex: 1 }}
                     contentContainerStyle={{ paddingBottom: 10 }}
                     nestedScrollEnabled
@@ -404,6 +436,15 @@ export default function Game() {
                 </Text>
             }
           </ShowMessages>
+
+          <SolanaDuelHeader
+            player1Pubkey='ABCDEjecnjc'
+            player2Pubkey='jcnejbnbUYG'
+            turnColor={chess.turn()}
+            myColor={color}
+            stake={`${sol} sol`}
+            fontsLoaded={fontsLoaded}
+          />
 
           <View style={{ paddingHorizontal: 4 }}>
             <Timer

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Game" ADD COLUMN     "skr" BIGINT NOT NULL DEFAULT 0,
+ALTER COLUMN "lamports" SET DEFAULT 0;

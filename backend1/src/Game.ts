@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 import { Chess } from "chess.js"
-import { CHECK, GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
+import { GAME_OVER, INIT_GAME, MESSAGE, MOVE, TIME_OUT } from "./Messages.js";
 import { Message } from "./types/type.js";
 import { prisma } from "./lib/prisma.js"
 
@@ -12,15 +12,24 @@ export class Game {
     public board: Chess;
     public timer1: number;
     public timer2: number;
-    private lastMoveTimestamp: number;
-    private messages: Message[];
+    public lastMoveTimestamp: number;
+    public messages: Message[];
     public gameId: string;
     public network: "MAINNET" | "DEVNET";
     public sol: "0.01" | "0.05" | "0.1";
-    private ispaymentSettling: boolean = false;
+    public ispaymentSettling: boolean = false;
     public gameEnded: boolean = false;
 
-    constructor(player1: WebSocket, player2: WebSocket, player1Pubkey: string, player2Pubkey: string, network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1", gameId: string) {
+    constructor(
+        player1: WebSocket | null,
+        player2: WebSocket | null,
+        player1Pubkey: string,
+        player2Pubkey: string,
+        network: "MAINNET" | "DEVNET",
+        sol: "0.01" | "0.05" | "0.1",
+        gameId: string,
+        customGame?: boolean
+    ) {
         this.player1 = player1;
         this.player2 = player2;
         this.player1Pubkey = player1Pubkey;
@@ -34,7 +43,9 @@ export class Game {
         this.gameId = gameId
         this.messages = [];
 
-        this.player1.send(JSON.stringify({
+        if (customGame) return;
+
+        this.player1?.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
                 color: "w",
@@ -48,7 +59,7 @@ export class Game {
             }
         }));
 
-        this.player2.send(JSON.stringify({
+        this.player2?.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
                 color: "b",
@@ -215,7 +226,7 @@ export class Game {
         }
     }
 
-    private async settlePaymentAndGameEnd(gameOverType: "CHECKMATE" | "STALEMATE" | "DRAW" | "TIME_OUT", winner: "w" | "b" | null, gameId: string) {
+    protected async settlePaymentAndGameEnd(gameOverType: "CHECKMATE" | "STALEMATE" | "DRAW" | "TIME_OUT", winner: "w" | "b" | null, gameId: string) {
         const maxTries = 3;
         let retries = 0;
         while (retries < maxTries) {
@@ -290,9 +301,7 @@ export class Game {
                         const result = await tx.game.updateMany({
                             where: {
                                 id: gameId,
-                                status: {
-                                    in: ["IN_PROGRESS"]
-                                }
+                                status: "IN_PROGRESS"
                             },
                             data: {
                                 status: gameOverType,
@@ -376,7 +385,7 @@ export class Game {
         return false;
     }
 
-    private async handleTimeout() {
+    public async handleTimeout() {
         if (this.gameEnded) return;
         if (this.ispaymentSettling) return;
         this.gameEnded = true;

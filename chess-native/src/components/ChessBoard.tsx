@@ -576,9 +576,9 @@ function Block({
           <View
             style={{
               position: "absolute",
-              width: squareSize * 0.35,
-              height: squareSize * 0.35,
-              borderRadius: (squareSize * 0.35) / 2,
+              width: squareSize * 0.50, //.35 initially
+              height: squareSize * 0.50,
+              borderRadius: (squareSize * 0.50) / 2,
               backgroundColor: isLight
                 ? "rgba(0,0,0,0.25)"
                 : "rgba(255,255,255,0.25)"
@@ -614,9 +614,9 @@ function Block({
           <View
             style={{
               position: "absolute",
-              width: squareSize * 0.35,
-              height: squareSize * 0.35,
-              borderRadius: (squareSize * 0.35) / 2,
+              width: squareSize * 0.50,
+              height: squareSize * 0.50,
+              borderRadius: (squareSize * 0.50) / 2,
               backgroundColor: isLight
                 ? "rgba(0,0,0,0.25)"
                 : "rgba(255,255,255,0.25)"

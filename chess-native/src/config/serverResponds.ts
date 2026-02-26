@@ -45,3 +45,14 @@ export type message_payload = {
     from: "b" | "w",
     message: string
 }
+
+export type Re_JOIN_GAME_RESPONSE_PAYLOAD = {
+    color: "b" | "w",
+    board: string,
+    timer1: number,
+    timer2: number,
+    gameId: string,
+    network: "MAINNET" | "DEVNET",
+    sol: "0.01" | "0.05" | "0.1",
+    opponentPubkey: string,
+}

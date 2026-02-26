@@ -1,9 +1,10 @@
 import { WebSocket } from "ws";
-import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS } from "./Messages.js";
+import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS, INIT_CUSTOM_GAME, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM } from "./Messages.js";
 import { Game } from "./Game.js";
 import { INIT_GAME_TYPE, Message, MESSAGE_TYPE, MOVE_TYPE, Re_JOIN_GAME_TYPE } from "./types/type.js";
 import { prisma } from "./lib/prisma.js"
 import jwt from "jsonwebtoken"
+import { CustomGame } from "./CustomGame.js";
 
 export class GameManager {
 
@@ -11,6 +12,7 @@ export class GameManager {
 
     private games: Map<string, Map<string, Game>>;
     private pendingUsers: Map<string, { socket: WebSocket, publicKey: string } | null>;
+    private customGames: Map<string, CustomGame>;
 
     constructor() {
         this.games = new Map([
@@ -30,6 +32,8 @@ export class GameManager {
             ['DEVNET-0.05', null],
             ['DEVNET-0.1', null]
         ]);
+
+        this.customGames = new Map();
 
         this.users = [];
 
@@ -164,6 +168,123 @@ export class GameManager {
                     }
                     this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
                 }
+
+                if (message.type === INIT_CUSTOM_GAME) {
+                    const result = INIT_GAME_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload } = result.data;
+                    const { network, sol, jwt } = payload;
+
+                    let publicKey: string;
+                    try {
+                        publicKey = this.jwtVerification(jwt).publicKey;
+                    }
+                    catch (err) {
+                        return;
+                    }
+
+                    // check if user is eligible
+                    const eligible = await this.isEligible(publicKey, sol, network);
+                    if (!eligible) throw new Error("Insufficient balance");
+
+                    const pendingUser = this.pendingUsers.get(`${network}-${sol}`);
+                    if (pendingUser) {
+                        this.pendingUsers.set(`${network}-${sol}`, null);
+                        await this.addGame(pendingUser.socket, socket, pendingUser.publicKey, publicKey, network, sol);
+                    }
+                    else {
+                        this.pendingUsers.set(`${network}-${sol}`, { socket, publicKey });
+                    }
+                }
+
+                if (message.type == RE_JOIN_CUSTOM_GAME) {
+                    const result = Re_JOIN_GAME_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload } = result.data;
+                    const { gameId, network, sol, jwt } = payload;
+
+                    let publicKey: string;
+                    try {
+                        publicKey = this.jwtVerification(jwt).publicKey;
+                    }
+                    catch (err) {
+                        return;
+                    }
+                    const game = this.games.get(this.getGameKey(network, sol))?.get(gameId);
+                    if (!game) return;
+                    if (game.player1Pubkey == publicKey) {
+                        game.player1 = socket;
+                        const response = {
+                            type: RE_JOIN_GAME,
+                            payload: {
+                                color: "w",
+                                board: game.board.fen(),
+                                timer1: game.timer1,
+                                timer2: game.timer2,
+                                gameId,
+                                network,
+                                sol,
+                                opponentPubkey: game.player2Pubkey,
+                            }
+                        }
+                        game.player1.send(JSON.stringify(response));
+
+                    }
+                    else if (game.player2Pubkey == publicKey) {
+                        game.player2 = socket;
+                        const response = {
+                            type: RE_JOIN_GAME,
+                            payload: {
+                                color: "b",
+                                board: game.board.fen(),
+                                timer1: game.timer1,
+                                timer2: game.timer2,
+                                gameId,
+                                network,
+                                sol,
+                                opponentPubkey: game.player1Pubkey,
+                            }
+                        }
+                        game.player2.send(JSON.stringify(response));
+                    }
+                    return;
+                }
+
+                if (message.type == MOVE_CUSTOM) {
+                    const result = MOVE_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload, promotion } = result.data;
+                    let publicKey: string;
+                    try {
+                        publicKey = this.jwtVerification(payload.jwt).publicKey;
+                    }
+                    catch (err) {
+                        return;
+                    }
+                    this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.makeMove(socket, { from: payload.from, to: payload.to }, promotion);
+                }
+
+                if (message.type == MESSAGE_CUSTOM) {
+                    const result = MESSAGE_TYPE.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { payload } = result.data;
+                    let publicKey: string;
+                    try {
+                        publicKey = this.jwtVerification(payload.jwt).publicKey;
+                    }
+                    catch (err) {
+                        return;
+                    }
+                    this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
+                }
             } catch (error) {
                 console.error("Error handling WebSocket message:", error);
             }
@@ -262,6 +383,89 @@ export class GameManager {
         this.games.get(this.getGameKey(network, sol))?.set(gameId, new Game(player1, player2, player1PublicKey, player2PublicKey, network, sol, gameId))
     }
 
+    private async addCustomGame(player1: WebSocket, player2: WebSocket, player1PublicKey: string, player2PublicKey: string, skrValue: number) {
+        let gameId = null;
+        let maxTries = 3;
+        let retries = 0
+        let insufficientBalanceError: "player1" | "player2" | null = null;
+        while (maxTries > retries) {
+            try {
+                const tx = await prisma.$transaction(async (tx) => {
+
+                    const game = await tx.game.create({
+                        data: {
+                            player1PublicKey,
+                            player2PublicKey,
+                            network: "MAINNET",
+                            fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                            status: "IN_PROGRESS",
+                            skr: skrValue,
+                            customGame: true,
+                        },
+                        select: {
+                            id: true
+                        }
+                    })
+
+                    const result1 = await tx.player.updateMany({
+                        where: {
+                            publicKey: player1PublicKey,
+                            skr: { gte: skrValue }
+                        },
+                        data: {
+                            skr: { decrement: skrValue }
+                        }
+                    })
+                    if (result1.count == 0) {
+                        throw new Error("insufficient_balance_player1");
+                    }
+
+                    const result2 = await tx.player.updateMany({
+                        where: {
+                            publicKey: player2PublicKey,
+                            skr: { gte: skrValue }
+                        },
+                        data: {
+                            skr: { decrement: skrValue }
+                        }
+                    })
+                    if (result2.count == 0) {
+                        throw new Error("insufficient_balance_player2");
+                    }
+
+                    return game
+
+                }, {
+                    isolationLevel: "Serializable",
+                    maxWait: 10000,
+                    timeout: 10000,
+                })
+
+                gameId = tx.id;
+                break;
+            }
+            catch (err) {
+                console.error("Database error creating game:", err);
+                if (err instanceof Error && (err.message == "insufficient_balance_player2" || err.message == "insufficient_balance_player1")) {
+                    insufficientBalanceError = (err.message == "insufficient_balance_player2" ? "player2" : "player1");
+                    if (insufficientBalanceError == "player1") {
+                        player1.send(JSON.stringify({ type: INSUFFICIENT_FUNDS, payload: {} }));
+                    }
+                    else {
+                        player2.send(JSON.stringify({ type: INSUFFICIENT_FUNDS, payload: {} }));
+                    }
+                    break;
+                }
+                retries++;
+            }
+        }
+
+        if (!gameId) {
+            return;
+        }
+        this.customGames.set(gameId, new CustomGame(player1, player2, player1PublicKey, player2PublicKey, gameId, skrValue))
+    }
+
     private getGameKey(network: "MAINNET" | "DEVNET", sol: "0.01" | "0.05" | "0.1"): string {
         return `${network}-${sol}`;
     }
@@ -292,7 +496,7 @@ export class GameManager {
         return network === "MAINNET" ? result.mainnetLamports >= stake : result.devnetLamports >= stake;
     }
 
-    removeUser(socket: WebSocket) {
+    public removeUser(socket: WebSocket) {
         this.users = this.users.filter(s => s !== socket);
 
         for (const [key, pending] of this.pendingUsers) {

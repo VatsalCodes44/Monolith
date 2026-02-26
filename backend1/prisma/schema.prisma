@@ -35,7 +35,9 @@ model Game {
   timer1           BigInt     @default(600000)
   timer2           BigInt     @default(600000)
   history          String?
-  lamports         BigInt
+  lamports         BigInt     @default(0)
+  customGame       Boolean    @default(false)
+  skr              BigInt     @default(0)
   createdAt        DateTime   @default(now())
   player1          Player     @relation("Player1", fields: [player1PublicKey], references: [publicKey])
   player2          Player     @relation("Player2", fields: [player2PublicKey], references: [publicKey])
