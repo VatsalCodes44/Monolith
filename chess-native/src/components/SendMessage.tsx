@@ -7,7 +7,6 @@ import { MESSAGE_TYPE_TS } from '../config/serverInputs'
 import { MESSAGE } from '../config/serverResponds'
 
 export const SendMessage = memo(({
-    sendMessage,
     color,
     setShowMessages,
     showMenuIcon,
@@ -15,9 +14,9 @@ export const SendMessage = memo(({
     gameId,
     sol,
     isDevnet,
-    jwt
+    jwt,
+    socket
 }: {
-    sendMessage(message: MESSAGE_TYPE_TS): void,
     color: "w" | "b",
     setShowMessages: React.Dispatch<React.SetStateAction<boolean>>,
     showMenuIcon: boolean,
@@ -25,12 +24,12 @@ export const SendMessage = memo(({
     gameId: string | null,
     sol: "0.01" | "0.05" | "0.1",
     isDevnet: boolean,
-    jwt: string
+    jwt: string,
+    socket: WebSocket
 }) => {
     const [message, setMessage] = useState<string>("")
 
     const handleSend = () => {
-        console.log("hiii")
         if (!message.trim() || !gameId) return;
         const messageInput: MESSAGE_TYPE_TS = {
             type: MESSAGE,
@@ -43,7 +42,7 @@ export const SendMessage = memo(({
                 jwt
             }
         }
-        sendMessage(messageInput);
+        socket.send(JSON.stringify(messageInput))
         setMessages(p => [...p, { from: color, message }])
         setMessage("");
     }

@@ -27,6 +27,7 @@ import { Captured } from '@/src/components/Captured'
 import { ShowMessages } from '@/src/components/ShowMessages'
 import { useWalletStore } from '@/src/stores/wallet-store'
 import { INIT_GAME_TYPE_TS, MESSAGE_TYPE_TS } from '@/src/config/serverInputs'
+import { router } from 'expo-router'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -194,6 +195,7 @@ export default function Game() {
     ws.onclose = () => {
       console.log("WebSocket closed")
       socket.current = null
+      router.replace("/")
     }
 
     ws.onerror = (err) => {
@@ -208,6 +210,7 @@ export default function Game() {
 
         case INIT_GAME:
           const init = payload as INIT_GAME_RESPONSE_PAYLOAD
+          console.log("init", payload)
           setColor(init.color)
           setChess(new Chess(init.board))
           setGameStarted(true)
@@ -218,14 +221,16 @@ export default function Game() {
           break
 
         case MOVE:
-          const movePayload = payload as MOVE_RESPONSE_PAYLOAD
-          setChess(new Chess(movePayload.board))
-          setPrevFrom(movePayload.move.from)
-          setPrevTo(movePayload.move.to)
-          setTimer1(movePayload.timer1)
-          setTimer2(movePayload.timer2)
-          setMoves(movePayload.history)
-          break
+          const move_response_payload = payload as MOVE_RESPONSE_PAYLOAD;
+          let newChess = new Chess(move_response_payload.board)
+          setChess(newChess);
+          setPrevFrom(move_response_payload.move.from);
+          setPrevTo(move_response_payload.move.to);
+          setTimer1(move_response_payload.timer1);
+          setTimer2(move_response_payload.timer2);
+          setMoves(move_response_payload.history)
+          playMoveSound()
+          break;
 
         case GAME_OVER:
           const gameOver = payload as GAME_OVER_RESPONSE_PAYLOAD
@@ -267,16 +272,7 @@ export default function Game() {
   }, [])
 
 
-  // // ---------------- MESSAGE SEND ----------------
-  const sendMessage = (message: MESSAGE_TYPE_TS) => {
-    if (!socket) return
-    socket.current?.send(JSON.stringify(message))
-  }
 
-
-
-
-  // ---------------- UI ----------------
   return (
     <View style={{ flex: 1 }}>
       {(!socket.current || !publicKey || !jwt || !sol) &&
@@ -330,7 +326,7 @@ export default function Game() {
                     ))}
                   </ScrollView>
                   <SendMessage
-                    sendMessage={sendMessage}
+                    socket={socket.current}
                     setMessages={setMessages}
                     color={color}
                     setShowMessages={setShowMessages}
@@ -406,7 +402,6 @@ export default function Game() {
           }}>
             {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
             <SendMessage
-              sendMessage={sendMessage}
               setMessages={setMessages}
               color={color}
               setShowMessages={setShowMessages}
@@ -415,6 +410,7 @@ export default function Game() {
               jwt={jwt}
               isDevnet={isDevnet}
               sol={sol}
+              socket={socket.current}
             />
           </View>
         </SafeAreaView>
