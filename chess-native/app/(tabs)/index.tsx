@@ -20,7 +20,7 @@ import { GradientButton } from '@/src/components/GradientButton';
 import { GET_BALANCE_TYPE_TS } from '@/src/config/serverInputs';
 import { jwtStore } from '@/src/stores/jwt';
 
-export default function index() {
+export default function Index() {
   const [fontsLoaded] = useFonts({
     Orbitron_900Black,
   });
@@ -135,8 +135,8 @@ export default function index() {
               <GradientButton
                 onPress={async () => {
                   console.log("hello")
-                  if (!wallet.publicKey || !jwt) return;
-                  setSol(option.amount == 0.1 ? "0.1" : (option.amount == 0.05 ? "0.05" : "0.01"))
+                  // if (!wallet.publicKey || !jwt) return;
+                  // setSol(option.amount == 0.1 ? "0.1" : (option.amount == 0.05 ? "0.05" : "0.01"))
                   router.push("/Game");
                 }}
                 text="ENTER ARENA"
