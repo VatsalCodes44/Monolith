@@ -25,6 +25,7 @@ import { useWalletStore } from '@/src/stores/wallet-store'
 import { INIT_GAME_TYPE_TS, Re_JOIN_GAME_TYPE_TS } from '@/src/config/serverInputs'
 import { jwtStore } from '@/src/stores/jwt'
 import { GameBase } from '@/src/components/GameBase'
+import { router } from 'expo-router'
 
 export interface GameOver {
   winner: "b" | "w" | null,
@@ -93,7 +94,7 @@ export default function Game() {
     setTimer1(payload.timer1)
     setTimer2(payload.timer2)
     gameIdRef.current = payload.gameId
-    setSol(payload.sol)
+    // setSol(payload.sol)
     setOpponentPubkey(payload.opponentPubkey)
   }, [])
 
@@ -145,6 +146,15 @@ export default function Game() {
   }, [])
 
   const connect = useCallback((isRejoin = false) => {
+    if (socket.current?.readyState === WebSocket.CONNECTING ||
+      socket.current?.readyState === WebSocket.OPEN) {
+      console.log("Already connecting/connected, skipping");
+      return;
+    }
+    if (!jwt || !sol) {
+      router.replace("/");
+      return;
+    }
     const ws = new WebSocket(WS_URL)
 
     ws.onopen = () => {
@@ -232,7 +242,7 @@ export default function Game() {
           break;
       }
     }
-  }, [jwt, sol, isDevnet])
+  }, [jwt, isDevnet])
 
   const onMessageResponse = useCallback((payload: message_payload) => {
     setMessages(m => [...m, payload])
@@ -396,6 +406,9 @@ export default function Game() {
           playIllegalMoveSound={playIllegalMoveSound}
           playCheckSound={playCheckSound}
           lastMessage={lastMessage}
+          player1Pubkey={publicKey}
+          player2Pubkey={opponentPubkey}
+          gameType='NORMAL'
         />
       }
       <TouchableOpacity onPress={() => {

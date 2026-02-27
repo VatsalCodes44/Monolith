@@ -135,8 +135,8 @@ export default function Index() {
               <GradientButton
                 onPress={async () => {
                   console.log("hello")
-                  // if (!wallet.publicKey || !jwt) return;
-                  // setSol(option.amount == 0.1 ? "0.1" : (option.amount == 0.05 ? "0.05" : "0.01"))
+                  if (!wallet.publicKey || !jwt) return;
+                  setSol(option.amount == 0.1 ? "0.1" : (option.amount == 0.05 ? "0.05" : "0.01"))
                   router.push("/Game");
                 }}
                 text="ENTER ARENA"
@@ -154,6 +154,7 @@ export default function Index() {
           <GradientButton
             text="DEPLOY CUSTOM"
             onPress={() => {
+              router.push("/DeployCustom")
             }}
             fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
           />

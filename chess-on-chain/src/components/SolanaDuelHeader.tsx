@@ -4,8 +4,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 interface Props {
-    player1Pubkey: string; // Right side
-    player2Pubkey: string; // Left side
+    player1Pubkey: string | null; // Right side
+    player2Pubkey: string | null; // Left side
     turnColor: "b" | "w";
     myColor: "b" | "w";
     stake: string;
@@ -70,7 +70,7 @@ export const SolanaDuelHeader: React.FC<Props> = ({
                         fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto"
                     }
                 ]}>
-                    {shortenKey(player2Pubkey)}
+                    {player2Pubkey ? shortenKey(player2Pubkey) : "Finding..."}
                 </Text>
             </View>
 
@@ -92,7 +92,7 @@ export const SolanaDuelHeader: React.FC<Props> = ({
                         fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto"
                     }
                 ]}>
-                    {shortenKey(player1Pubkey)}
+                    {player1Pubkey ? shortenKey(player1Pubkey) : "Finding..."}
                 </Text>
                 {renderAvatar(highlightPlayer1, "#3DE3B4")}
             </View>

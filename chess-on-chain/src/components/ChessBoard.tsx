@@ -2,10 +2,10 @@ import { FlatList, StyleSheet, Text, View, useWindowDimensions, ImageBackground,
 import React, { useEffect, useState } from 'react'
 import { Chess, Color, Move, PieceSymbol, Square } from 'chess.js';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MOVE } from '../config/serverResponds';
-import { GameOver } from '@/app/(Game)/Game';
+import { MOVE, MOVE_CUSTOM } from '../config/serverResponds';
 import { Piece } from './Piece';
-import { MOVE_TYPE_TS } from '../config/serverInputs';
+import { MOVE_CUSTOM_TYPE_TS, MOVE_TYPE_TS } from '../config/serverInputs';
+import { GameOver } from '@/app/(Game)/Game';
 
 type Piece = ({
   square: Square;
@@ -28,7 +28,8 @@ export function ChessBoard(
     network,
     sol,
     gameId,
-    jwt
+    jwt,
+    gameType,
   }: {
     chess: Chess,
     socket: WebSocket,
@@ -44,7 +45,8 @@ export function ChessBoard(
     network: "MAINNET" | "DEVNET",
     sol: "0.01" | "0.05" | "0.1",
     gameId: string | null,
-    jwt: string | null
+    jwt: string | null,
+    gameType: "NORMAL" | "CUSTOM",
   }) {
   const { width, height } = useWindowDimensions();
   const [showPromotionOptions, setShowPromotionOptions] = useState(false)
@@ -102,19 +104,34 @@ export function ChessBoard(
         newChess.move({ from: from!, to: moveTo });
 
       if (!from) return;
-      const moveObj: MOVE_TYPE_TS = {
-        type: MOVE,
-        payload: {
-          from: from,
-          to: moveTo,
-          sol,
-          network,
-          gameId,
-          jwt
-        },
-        promotion: isPromotion ? promotionPiece : undefined
+      if (gameType == "NORMAL") {
+        const moveObj: MOVE_TYPE_TS = {
+          type: MOVE,
+          payload: {
+            from: from,
+            to: moveTo,
+            sol,
+            network,
+            gameId,
+            jwt
+          },
+          promotion: isPromotion ? promotionPiece : undefined
+        }
+        socket.send(JSON.stringify(moveObj))
       }
-      socket.send(JSON.stringify(moveObj))
+      else {
+        const moveObj: MOVE_CUSTOM_TYPE_TS = {
+          type: MOVE_CUSTOM,
+          payload: {
+            from: from,
+            to: moveTo,
+            jwt,
+            gameId,
+          },
+          promotion: isPromotion ? promotionPiece : undefined
+        }
+        socket.send(JSON.stringify(moveObj))
+      }
 
       setFrom(null)
       setShowPromotionOptions(false)

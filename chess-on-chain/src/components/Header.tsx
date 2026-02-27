@@ -1,12 +1,8 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React from 'react'
-import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
 import { LinearGradient } from 'expo-linear-gradient';
 
-export function Header({ title, tagline }: { title: string, tagline?: string }) {
-    const [fontsLoaded] = useFonts({
-        Orbitron_900Black,
-    });
+export function Header({ title, tagline, fontsLoaded }: { title: string, tagline?: string, fontsLoaded: boolean }) {
     return (
         <View style={{ alignItems: "center", marginBottom: 16 }}>
             <Text style={[

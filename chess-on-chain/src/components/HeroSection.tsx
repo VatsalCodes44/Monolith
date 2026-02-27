@@ -31,7 +31,7 @@ export function HeroSection({
                 fetchbalance={fetchbalance}
             />
 
-            <Header title={title} tagline={tagline} />
+            <Header title={title} tagline={tagline} fontsLoaded={fontsLoaded} />
         </View>
     )
 }

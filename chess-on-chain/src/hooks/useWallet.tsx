@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   transact,
   Web3MobileWallet,
@@ -55,7 +55,9 @@ export function useWallet(): Wallet {
   const publicKey = useWalletStore(s => s.publicKey);
   const setPublicKey = useWalletStore(s => s.setPublicKey)
   const cluster = isDevnet ? "devnet" : "mainnet-beta";
-  const connection = new Connection(clusterApiUrl(cluster), "confirmed");
+  const connection = useMemo(() => {
+    return new Connection(clusterApiUrl(cluster), "confirmed");
+  }, [cluster]);
 
   const connect = useCallback(async () => {
     setConnecting(true);

@@ -50,6 +50,9 @@ function GameBaseComponent({
     playIllegalMoveSound,
     playCheckSound,
     lastMessage,
+    player1Pubkey,
+    player2Pubkey,
+    gameType,
 }: {
     width: number,
     showMessages: boolean,
@@ -77,7 +80,11 @@ function GameBaseComponent({
     prevTo: Square | null,
     playIllegalMoveSound: () => Promise<void>,
     playCheckSound: () => Promise<void>,
-    lastMessage: Message | undefined
+    lastMessage: Message | undefined,
+    player1Pubkey: string | null,
+    player2Pubkey: string | null,
+    gameType: "NORMAL" | "CUSTOM",
+    skr?: number
 }) {
     return (
         <SafeAreaView style={{
@@ -136,6 +143,7 @@ function GameBaseComponent({
                                 gameId={gameIdRef.current}
                                 isDevnet={isDevnet}
                                 sol={sol}
+                                gameType={gameType}
                             />
                         </View> :
                         <Text style={{ color: "#ffffff", fontSize: 25, textAlign: "center", opacity: .3 }}>
@@ -145,8 +153,8 @@ function GameBaseComponent({
             </ShowMessages>
 
             <SolanaDuelHeader
-                player1Pubkey='ABCDEjecnjc'
-                player2Pubkey='jcnejbnbUYG'
+                player1Pubkey={player1Pubkey}
+                player2Pubkey={player2Pubkey}
                 turnColor={chess.turn()}
                 myColor={color}
                 stake={`${sol} sol`}
@@ -200,6 +208,7 @@ function GameBaseComponent({
                     network={isDevnet ? "DEVNET" : "MAINNET"}
                     sol={sol}
                     jwt={jwt}
+                    gameType={gameType}
                 />
             </View>
 
@@ -221,6 +230,7 @@ function GameBaseComponent({
                     isDevnet={isDevnet}
                     sol={sol}
                     socket={socket.current!}
+                    gameType={gameType}
                 />
             </View>
         </SafeAreaView>

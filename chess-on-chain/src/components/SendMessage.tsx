@@ -3,8 +3,8 @@ import React, { memo, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import FontAwesome5 from '@expo/vector-icons/Ionicons'
 import { Message } from '@/app/(Game)/Game'
-import { MESSAGE_TYPE_TS } from '../config/serverInputs'
-import { MESSAGE } from '../config/serverResponds'
+import { MESSAGE_CUSTOM_TYPE_TS, MESSAGE_TYPE_TS } from '../config/serverInputs'
+import { MESSAGE, MESSAGE_CUSTOM } from '../config/serverResponds'
 
 export const SendMessage = memo(({
     color,
@@ -15,7 +15,8 @@ export const SendMessage = memo(({
     sol,
     isDevnet,
     jwt,
-    socket
+    socket,
+    gameType
 }: {
     color: "w" | "b",
     setShowMessages: React.Dispatch<React.SetStateAction<boolean>>,
@@ -25,24 +26,39 @@ export const SendMessage = memo(({
     sol: "0.01" | "0.05" | "0.1",
     isDevnet: boolean,
     jwt: string,
-    socket: WebSocket
+    socket: WebSocket,
+    gameType: "CUSTOM" | "NORMAL"
 }) => {
     const [message, setMessage] = useState<string>("")
 
     const handleSend = () => {
         if (!message.trim() || !gameId) return;
-        const messageInput: MESSAGE_TYPE_TS = {
-            type: MESSAGE,
-            payload: {
-                from: color,
-                message,
-                gameId,
-                sol,
-                network: isDevnet ? "DEVNET" : "MAINNET",
-                jwt
+        if (gameType == "NORMAL") {
+            const messageInput: MESSAGE_TYPE_TS = {
+                type: MESSAGE,
+                payload: {
+                    from: color,
+                    message,
+                    gameId,
+                    sol,
+                    network: isDevnet ? "DEVNET" : "MAINNET",
+                    jwt
+                }
             }
+            socket.send(JSON.stringify(messageInput))
         }
-        socket.send(JSON.stringify(messageInput))
+        else {
+            const messageInput: MESSAGE_CUSTOM_TYPE_TS = {
+                type: MESSAGE_CUSTOM,
+                payload: {
+                    from: color,
+                    message,
+                    gameId,
+                    jwt
+                }
+            }
+            socket.send(JSON.stringify(messageInput))
+        }
         setMessages(p => [...p, { from: color, message }])
         setMessage("");
     }

@@ -6,10 +6,15 @@ import {
     GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD,
     INIT_GAME,
     INIT_GAME_RESPONSE_PAYLOAD,
+    JOIN_CUSTOM_GAME,
+    JOIN_CUSTOM_GAME_Response_Payload,
     MESSAGE,
+    MESSAGE_CUSTOM,
     message_payload,
     MOVE,
     MOVE_RESPONSE_PAYLOAD,
+    RE_JOIN_CUSTOM_GAME,
+    RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD,
     RE_JOIN_GAME,
     Re_JOIN_GAME_RESPONSE_PAYLOAD,
     TIME_OUT
@@ -20,9 +25,11 @@ import { ConnectingToServer } from '@/src/components/connectingToServer';
 import { GameBet } from '@/src/stores/gameBet';
 import { Audio } from 'expo-av';
 import { useWalletStore } from '@/src/stores/wallet-store';
-import { INIT_GAME_TYPE_TS, Re_JOIN_GAME_TYPE_TS } from '@/src/config/serverInputs';
+import { INIT_GAME_TYPE_TS, JOIN_CUSTOM_GAME_TYPE_TS, Re_JOIN_CUSTOM_GAME_TYPE_TS, Re_JOIN_GAME_TYPE_TS } from '@/src/config/serverInputs';
 import { jwtStore } from '@/src/stores/jwt';
 import { GameBase } from '@/src/components/GameBase';
+import { customGameIdStore, skrStore } from '@/src/stores/customStore';
+import { router } from 'expo-router';
 
 export interface GameOver {
     winner: "b" | "w" | null,
@@ -45,7 +52,6 @@ export default function Game() {
     const [prevFrom, setPrevFrom] = useState<Square | null>(null)
     const [prevTo, setPrevTo] = useState<Square | null>(null)
     const [gameStarted, setGameStarted] = useState(false)
-    const gameIdRef = useRef<string | null>(null)
     const isMountedRef = useRef(true);
     const [messages, setMessages] = useState<Message[]>([])
     const [lastMessage, setLastMessage] = useState<Message>()
@@ -72,8 +78,10 @@ export default function Game() {
 
     const { width } = useWindowDimensions()
 
-    const setSol = GameBet(s => s.setSol)
-    const sol = GameBet(s => s.sol)
+    const setSkr = skrStore(s => s.setSkr)
+    const skr = skrStore(s => s.skr)
+    const gameIdRef = useRef<string | null>(customGameIdStore(s => s.customGameId))
+    const setCustomGameId = customGameIdStore(s => s.setCustomGameId)
 
     const isDevnet = useWalletStore(s => s.isDevnet)
 
@@ -84,14 +92,14 @@ export default function Game() {
     // });
     const fontsLoaded = true;
 
-    const onInitGameResponse = useCallback((payload: INIT_GAME_RESPONSE_PAYLOAD) => {
+    const onJoinCustomGameResponse = useCallback((payload: JOIN_CUSTOM_GAME_Response_Payload) => {
         setColor(payload.color)
         setChess(new Chess(payload.board))
         setGameStarted(true)
         setTimer1(payload.timer1)
         setTimer2(payload.timer2)
         gameIdRef.current = payload.gameId
-        setSol(payload.sol)
+        setSkr(payload.skr)
         setOpponentPubkey(payload.opponentPubkey)
     }, [])
 
@@ -131,48 +139,62 @@ export default function Game() {
         gameOverRef.current = true;
     }, [])
 
-    const onReJoinGameResponse = useCallback((payload: Re_JOIN_GAME_RESPONSE_PAYLOAD) => {
+    const onReJoinCustomGameResponse = useCallback((payload: RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD) => {
         setColor(payload.color)
         setChess(new Chess(payload.board))
         setGameStarted(true)
         setTimer1(payload.timer1)
         setTimer2(payload.timer2)
         gameIdRef.current = payload.gameId
-        setSol(payload.sol)
+        setSkr(payload.skr)
         setOpponentPubkey(payload.opponentPubkey)
     }, [])
 
     const connect = useCallback((isRejoin = false) => {
+
+        if (socket.current?.readyState === WebSocket.CONNECTING ||
+            socket.current?.readyState === WebSocket.OPEN) {
+            console.log("Already connecting/connected, skipping");
+            return;
+        }
+        if (!jwt || !skr) {
+            router.replace("/");
+            return;
+        }
+
         const ws = new WebSocket(WS_URL)
 
         ws.onopen = () => {
-            if (!jwt || !sol) {
-                console.log("here1")
-                ws.close();
+            if (!jwt || !skr) {
+                ;
                 return;
             }
             socket.current = ws
             setConnected(true)
             if (isRejoin && gameIdRef.current) {
                 console.log("here2")
-                const payload: Re_JOIN_GAME_TYPE_TS = {
-                    type: RE_JOIN_GAME,
+                const payload: Re_JOIN_CUSTOM_GAME_TYPE_TS = {
+                    type: RE_JOIN_CUSTOM_GAME,
                     payload: {
                         gameId: gameIdRef.current,
-                        network: isDevnet ? "DEVNET" : "MAINNET",
-                        sol,
                         jwt
                     }
                 }
                 ws.send(JSON.stringify(payload))
             } else {
                 console.log("here3")
-                const payload: INIT_GAME_TYPE_TS = {
-                    type: INIT_GAME,
+                if (!gameIdRef.current) {
+                    console.log("here5")
+                    isMountedRef.current = false
+                    ws.close();
+                    router.replace("/")
+                    return;
+                }
+                const payload: JOIN_CUSTOM_GAME_TYPE_TS = {
+                    type: JOIN_CUSTOM_GAME,
                     payload: {
                         jwt,
-                        network: isDevnet ? "DEVNET" : "MAINNET",
-                        sol
+                        gameId: gameIdRef.current,
                     }
                 }
 
@@ -205,8 +227,8 @@ export default function Game() {
 
             switch (message.type) {
 
-                case INIT_GAME:
-                    onInitGameResponse(payload as INIT_GAME_RESPONSE_PAYLOAD);
+                case JOIN_CUSTOM_GAME:
+                    onJoinCustomGameResponse(payload as JOIN_CUSTOM_GAME_Response_Payload);
                     break;
 
                 case MOVE:
@@ -221,16 +243,16 @@ export default function Game() {
                     onTimeOutResponse(payload as GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD);
                     break;
 
-                case MESSAGE:
+                case MESSAGE_CUSTOM:
                     onMessageResponse(payload as message_payload);
                     break;
 
-                case RE_JOIN_GAME:
-                    onReJoinGameResponse(payload as Re_JOIN_GAME_RESPONSE_PAYLOAD);
+                case RE_JOIN_CUSTOM_GAME:
+                    onReJoinCustomGameResponse(payload as RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD);
                     break;
             }
         }
-    }, [jwt, sol, isDevnet])
+    }, [jwt, skr, isDevnet])
 
     const onMessageResponse = useCallback((payload: message_payload) => {
         setMessages(m => [...m, payload])
@@ -338,7 +360,8 @@ export default function Game() {
             // checkSoundRef.current?.unloadAsync();
             // illegalSoundRef.current?.unloadAsync();
             // lowOnTimeSoundRef.current?.unloadAsync();
-            setSol(null)
+            setSkr(null)
+            setCustomGameId(null)
         };
     }, []);
 
@@ -361,11 +384,11 @@ export default function Game() {
 
     return (
         <View style={{ flex: 1 }}>
-            {(!socket.current || !publicKey || !jwt || !sol || !connected) &&
+            {(!socket.current || !publicKey || !jwt || !skr || !connected) &&
                 <ConnectingToServer message='Connecting to server...' fontsLoaded={fontsLoaded} />
             }
 
-            {(socket.current && publicKey && jwt && sol && connected) &&
+            {(socket.current && publicKey && jwt && skr && connected) &&
                 <GameBase
                     width={width}
                     showMessages={showMessages}
@@ -378,7 +401,7 @@ export default function Game() {
                     jwt={jwt}
                     gameIdRef={gameIdRef}
                     isDevnet={isDevnet}
-                    sol={sol}
+                    sol={"0.01"} // no use
                     chess={chess}
                     fontsLoaded={fontsLoaded}
                     timer1={timer1}
@@ -394,6 +417,10 @@ export default function Game() {
                     playIllegalMoveSound={playIllegalMoveSound}
                     playCheckSound={playCheckSound}
                     lastMessage={lastMessage}
+                    player1Pubkey={publicKey}
+                    player2Pubkey={opponentPubkey}
+                    gameType='CUSTOM'
+                    skr={skr}
                 />
             }
             <TouchableOpacity onPress={() => {

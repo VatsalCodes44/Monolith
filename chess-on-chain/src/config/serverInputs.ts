@@ -43,6 +43,7 @@ export const MOVE_TYPE = z.object({
 export const MESSAGE_TYPE = z.object({
     type: z.literal(MESSAGE),
     payload: z.object({
+        from: z.enum(["w", "b"]),
         message: z.string(),
         gameId: z.string(),
         network: z.enum(["MAINNET", "DEVNET"]),

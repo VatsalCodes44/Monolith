@@ -64,3 +64,23 @@ export type Re_JOIN_GAME_RESPONSE_PAYLOAD = {
     sol: "0.01" | "0.05" | "0.1",
     opponentPubkey: string,
 }
+
+export type JOIN_CUSTOM_GAME_Response_Payload = {
+    color: "b" | "w",
+    board: string,
+    timer1: number,
+    timer2: number,
+    gameId: string,
+    skr: number,
+    opponentPubkey: string,
+}
+
+export type RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD = {
+    color: "b" | "w",
+    board: string,
+    timer1: number,
+    timer2: number,
+    gameId: string,
+    skr: number,
+    opponentPubkey: string,
+}
