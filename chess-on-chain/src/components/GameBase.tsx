@@ -1,0 +1,232 @@
+import { StyleSheet, View, Text, useWindowDimensions, ScrollView, TouchableOpacity } from 'react-native'
+import React from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { ChessBoard } from "@/src/components/ChessBoard"
+import { Chess, Move, Square } from 'chess.js'
+import { Timer } from '@/src/components/Timer'
+import { LastMessage } from '@/src/components/LastMessage'
+import { SendMessage } from '@/src/components/SendMessage'
+import { MoveHistory } from '@/src/components/MoveHistory'
+import { Captured } from '@/src/components/Captured'
+import { ShowMessages } from '@/src/components/ShowMessages'
+import { SolanaDuelHeader } from '@/src/components/SolanaDuelHeader'
+
+export interface GameOver {
+    winner: "b" | "w" | null,
+    gameOverType: "checkmate" | "stalemate" | "draw" | "time_out" | null,
+    isGameOver: boolean
+}
+
+export interface Message {
+    from: "w" | "b",
+    message: string,
+}
+
+function GameBaseComponent({
+    width,
+    showMessages,
+    setShowMessages,
+    messages,
+    scrollRef,
+    color,
+    socket,
+    setMessages,
+    jwt,
+    gameIdRef,
+    isDevnet,
+    sol,
+    chess,
+    fontsLoaded,
+    timer1,
+    timer2,
+    gameStarted,
+    gameover,
+    playLowOnTimeSound,
+    moves,
+    from,
+    prevFrom,
+    setFrom,
+    prevTo,
+    playIllegalMoveSound,
+    playCheckSound,
+    lastMessage,
+}: {
+    width: number,
+    showMessages: boolean,
+    setShowMessages: (value: React.SetStateAction<boolean>) => void,
+    messages: Message[],
+    scrollRef: React.RefObject<ScrollView | null>,
+    color: "b" | "w",
+    socket: React.RefObject<WebSocket | null>,
+    setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+    jwt: string,
+    gameIdRef: React.RefObject<string | null>,
+    isDevnet: boolean,
+    sol: "0.01" | "0.05" | "0.1",
+    chess: Chess,
+    fontsLoaded: boolean,
+    timer1: number,
+    timer2: number,
+    gameStarted: boolean,
+    gameover: GameOver,
+    playLowOnTimeSound: () => Promise<void>,
+    moves: Move[],
+    from: Square | null,
+    prevFrom: Square | null,
+    setFrom: React.Dispatch<React.SetStateAction<Square | null>>,
+    prevTo: Square | null,
+    playIllegalMoveSound: () => Promise<void>,
+    playCheckSound: () => Promise<void>,
+    lastMessage: Message | undefined
+}) {
+    return (
+        <SafeAreaView style={{
+            flex: 1,
+            backgroundColor: "#000000",
+            paddingVertical: 0,
+        }}>
+
+            <ShowMessages
+                width={width * 0.95}
+                isOpen={showMessages}
+                onClose={() => {
+                    setShowMessages(false);
+                }} >
+                {
+                    messages.length > 0 ?
+                        <View style={{ height: 450, gap: 15 }}>
+                            <ScrollView
+                                ref={scrollRef}
+                                style={{ flex: 1 }}
+                                contentContainerStyle={{ paddingBottom: 10 }}
+                                nestedScrollEnabled
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {messages.map((item, index) => (
+                                    <View
+                                        key={index}
+                                        style={{
+                                            width: "100%",
+                                            flexDirection: "row",
+                                            justifyContent: color == item.from ? "flex-end" : "flex-start",
+                                            marginVertical: 8
+                                        }}
+                                    >
+                                        <Text style={{
+                                            color: "#ffffff",
+                                            backgroundColor: color == item.from ? "#3DE3B4" : "#B048C2",
+                                            paddingVertical: 2,
+                                            paddingHorizontal: 8,
+                                            borderRadius: 8,
+                                            fontSize: 18,
+                                            maxWidth: "80%"
+                                        }}>
+                                            {item.message}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </ScrollView>
+                            <SendMessage
+                                socket={socket.current!}
+                                setMessages={setMessages}
+                                color={color}
+                                setShowMessages={setShowMessages}
+                                showMenuIcon={false}
+                                jwt={jwt}
+                                gameId={gameIdRef.current}
+                                isDevnet={isDevnet}
+                                sol={sol}
+                            />
+                        </View> :
+                        <Text style={{ color: "#ffffff", fontSize: 25, textAlign: "center", opacity: .3 }}>
+                            No messages
+                        </Text>
+                }
+            </ShowMessages>
+
+            <SolanaDuelHeader
+                player1Pubkey='ABCDEjecnjc'
+                player2Pubkey='jcnejbnbUYG'
+                turnColor={chess.turn()}
+                myColor={color}
+                stake={`${sol} sol`}
+                fontsLoaded={fontsLoaded}
+            />
+
+            <View style={{ paddingHorizontal: 4 }}>
+                <Timer
+                    fontsLoaded={fontsLoaded}
+                    timer1={timer1}
+                    timer2={timer2}
+                    turn={chess.turn()}
+                    gameStarted={gameStarted}
+                    GameOver={gameover}
+                    playLowOnTimeSound={playLowOnTimeSound}
+                    color={color}
+                />
+            </View>
+            <View style={{
+                height: 60,
+                marginVertical: 4,
+                width: "100%",
+            }}>
+                <Captured moves={moves} color={color} />
+            </View>
+
+            <View style={{
+                justifyContent: "center",
+                alignItems: "center"
+            }}>
+                <View style={{
+                    height: 60,
+                    marginVertical: 4,
+                    width: "100%",
+                }}>
+                    <MoveHistory moves={moves} />
+                </View>
+                <ChessBoard
+                    chess={chess}
+                    from={from}
+                    setFrom={setFrom}
+                    socket={socket.current!}
+                    color={color}
+                    prevFrom={prevFrom}
+                    prevTo={prevTo}
+                    GameOver={gameover}
+                    gameStarted={gameStarted}
+                    playIllegalMoveSound={playIllegalMoveSound}
+                    playCheckSound={playCheckSound}
+                    gameId={gameIdRef.current}
+                    network={isDevnet ? "DEVNET" : "MAINNET"}
+                    sol={sol}
+                    jwt={jwt}
+                />
+            </View>
+
+            <View style={{
+                marginHorizontal: 15,
+                gap: 10,
+                height: 60,
+                justifyContent: "flex-end",
+                flex: 1
+            }}>
+                {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
+                <SendMessage
+                    setMessages={setMessages}
+                    color={color}
+                    setShowMessages={setShowMessages}
+                    showMenuIcon={true}
+                    gameId={gameIdRef.current}
+                    jwt={jwt}
+                    isDevnet={isDevnet}
+                    sol={sol}
+                    socket={socket.current!}
+                />
+            </View>
+        </SafeAreaView>
+    )
+}
+
+const styles = StyleSheet.create({})
+
+export const GameBase = React.memo(GameBaseComponent);
