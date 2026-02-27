@@ -1,4 +1,4 @@
-import { INIT_GAME, RE_JOIN_GAME, MOVE, MESSAGE, INIT_CUSTOM_GAME, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM } from "../Messages.js"
+import { INIT_GAME, RE_JOIN_GAME, MOVE, MESSAGE, INIT_CUSTOM_GAME, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME } from "../Messages.js"
 import z from "zod"
 export interface Message {
     from: "w" | "b",
@@ -15,12 +15,11 @@ export const INIT_GAME_TYPE = z.object({
     })
 })
 
-export const INIT_CUSTOM_GAME_TYPE = z.object({
+export const INIT_CUSTOM_GAME_TYPE = z.object({ // http request (jwt will be in header)
     type: z.literal(INIT_CUSTOM_GAME),
     payload: z.object({
-        gameId: z.string(),
-        jwt: z.string(),
-        skr: z.number()
+        skr: z.number(),
+        opponentPublicKey: z.string(),
     })
 })
 
@@ -82,6 +81,14 @@ export const MESSAGE_CUSTOM_TYPE = z.object({
     payload: z.object({
         from: z.enum(["w", "b"]),
         message: z.string(),
+        gameId: z.string(),
+        jwt: z.string(),
+    })
+})
+
+export const JOIN_CUSTOM_GAME_TYPE = z.object({ // websocket request
+    type: z.literal(JOIN_CUSTOM_GAME),
+    payload: z.object({
         gameId: z.string(),
         jwt: z.string(),
     })

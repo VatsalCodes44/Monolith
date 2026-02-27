@@ -5,7 +5,7 @@ import { Game } from "./Game.js";
 
 export class CustomGame extends Game {
     public skr: number;
-
+    public started = false;
     constructor(
         player1Pubkey: string,
         player2Pubkey: string,
@@ -16,31 +16,6 @@ export class CustomGame extends Game {
         // similarly network variable is of no use
         super(null, null, player1Pubkey, player2Pubkey, "MAINNET", "0.01", gameId, true);
         this.skr = skr;
-        this.player1?.send(JSON.stringify({
-            type: INIT_GAME,
-            payload: {
-                color: "w",
-                board: this.board.fen(),
-                timer1: this.timer1,
-                timer2: this.timer2,
-                gameId,
-                skr: this.skr,
-                opponentPubkey: this.player2Pubkey
-            }
-        }));
-
-        this.player2?.send(JSON.stringify({
-            type: INIT_GAME,
-            payload: {
-                color: "b",
-                board: this.board.fen(),
-                timer1: this.timer1,
-                timer2: this.timer2,
-                gameId,
-                skr: this.skr,
-                opponentPubkey: this.player1Pubkey,
-            }
-        }));
     }
 
     protected async settlePaymentAndGameEnd(gameOverType: "CHECKMATE" | "STALEMATE" | "DRAW" | "TIME_OUT", winner: "w" | "b" | null, gameId: string) {
@@ -166,5 +141,43 @@ export class CustomGame extends Game {
         }
 
         if (maxTries == retries) throw new Error("Failed to settle game after multiple retries");
+    }
+
+    // In the normal game the game only starts when both players have joined the game
+    // But in the custom game the game starts as soon as the first player joins the game
+    // and the timer starts from that moment, to avoid this we will call the start game when 
+    // the second player joins the game.
+    public startGame() {
+        if (this.started) return;
+        if (this.player1 == null || this.player2 == null) return;
+        this.started = true;
+        this.timer1 = 10 * 60 * 1000;
+        this.timer2 = 10 * 60 * 1000;
+        this.lastMoveTimestamp = Date.now();
+        this.player1.send(JSON.stringify({
+            type: INIT_GAME,
+            payload: {
+                color: "w",
+                board: this.board.fen(),
+                timer1: this.timer1,
+                timer2: this.timer2,
+                gameId: this.gameId,
+                skr: this.skr,
+                opponentPubkey: this.player2Pubkey
+            }
+        }));
+
+        this.player2?.send(JSON.stringify({
+            type: INIT_GAME,
+            payload: {
+                color: "b",
+                board: this.board.fen(),
+                timer1: this.timer1,
+                timer2: this.timer2,
+                gameId: this.gameId,
+                skr: this.skr,
+                opponentPubkey: this.player1Pubkey,
+            }
+        }));
     }
 }

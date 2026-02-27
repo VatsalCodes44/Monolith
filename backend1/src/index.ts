@@ -5,19 +5,19 @@ import { GameManager } from './GameManager.js';
 import { prisma } from "./lib/prisma.js"
 import nacl from "tweetnacl";
 import z from "zod";
-import { Connection } from "@solana/web3.js";
 import { verifySolTransfer } from "./lib/verifySolTransfer.js";
 import { verifySeekerTransfer } from "./lib/verifySeekerTransfer.js";
 import jwt from "jsonwebtoken";
-import { login, deposit, verifyLogin, getBalance } from "./types/type.js";
+import { login, deposit, verifyLogin, getBalance, INIT_CUSTOM_GAME_TYPE } from "./types/type.js";
 import { jwtVerification } from "./middlewares/jwtVerification.js";
+import { CUSTOM_CREATED, INSUFFICIENT_FUNDS } from "./Messages.js";
+import bs58 from "bs58";
 
 const app = express();
 const PORT = 8080;
 const server = http.createServer(app);
 const gameManager = new GameManager();
-const mainnetConnection = new Connection(process.env.MAINNET_RPC_URL!)
-const devnetConnection = new Connection(process.env.DEVNET_RPC_URL!)
+const message = "Chess on chain wants you to sign this message: ";
 
 const loginHandler: Map<string, string> = new Map();
 
@@ -60,46 +60,46 @@ app.post('/getBalance', jwtVerification, async (req, res) => {
     });
 })
 
-app.post("/getGames", jwtVerification, async (req, res) => {
-    const result = z.object({
-        publicKey: z.string(),
-        signature: z.string(),
-        network: z.enum(["MAINNET", "DEVNET"]),
-    }).safeParse(req.body);
+// app.post("/getGames", jwtVerification, async (req, res) => {
+//     const result = z.object({
+//         publicKey: z.string(),
+//         signature: z.string(),
+//         network: z.enum(["MAINNET", "DEVNET"]),
+//     }).safeParse(req.body);
 
-    if (!result.success) {
-        return res.status(400).json({ error: "Invalid request" });
-    }
+//     if (!result.success) {
+//         return res.status(400).json({ error: "Invalid request" });
+//     }
 
-    const { publicKey, signature, network } = result.data;
+//     const { publicKey, signature, network } = result.data;
 
-    const verify = nacl.sign.detached.verify(Buffer.from(publicKey), Buffer.from(signature), Buffer.from(publicKey));
-    if (!verify) {
-        return res.status(400).json({ error: "Invalid signature" });
-    }
+//     const verify = nacl.sign.detached.verify(Buffer.from(publicKey), Buffer.from(signature), Buffer.from(publicKey));
+//     if (!verify) {
+//         return res.status(400).json({ error: "Invalid signature" });
+//     }
 
-    const games = await prisma.game.findMany({
-        where: {
-            OR: [
-                { player1PublicKey: publicKey },
-                { player2PublicKey: publicKey }
-            ],
-            network,
-        },
-        select: {
-            lamports: true,
-            status: true,
-            fen: true,
-            history: true,
-            winner: true,
-            player1PublicKey: true,
-            player2PublicKey: true,
-            timer1: true,
-            timer2: true,
-        }
-    })
-    res.json({ games });
-})
+//     const games = await prisma.game.findMany({
+//         where: {
+//             OR: [
+//                 { player1PublicKey: publicKey },
+//                 { player2PublicKey: publicKey }
+//             ],
+//             network,
+//         },
+//         select: {
+//             lamports: true,
+//             status: true,
+//             fen: true,
+//             history: true,
+//             winner: true,
+//             player1PublicKey: true,
+//             player2PublicKey: true,
+//             timer1: true,
+//             timer2: true,
+//         }
+//     })
+//     res.json({ games });
+// })
 
 app.post("/deposit", jwtVerification, async (req, res) => {
     const parsed = deposit.safeParse(req.body);
@@ -243,9 +243,9 @@ app.post("/login", async (req, res) => {
         res.status(400).json({ error: "error occured" })
         return;
     }
-    const nonce = `Chess on chain wants you to sign this message: ${Math.floor(Math.random() * 10000000000)}`;
+    const nonce = `${Math.floor(Math.random() * 10000000000)}`;
     loginHandler.set(publicKey, nonce);
-    res.status(200).json({ nonce });
+    res.status(200).json({ nonce: `${message}${nonce}` });
 })
 
 app.post("/verifyLogin", async (req, res) => {
@@ -256,12 +256,127 @@ app.post("/verifyLogin", async (req, res) => {
     console.log("verifyLogin")
     const { publicKey, signature, nonce } = parsed.data;
     const storedNonce = loginHandler.get(publicKey);
-    if (!storedNonce || storedNonce !== nonce) {
+    if (!storedNonce || `${message}${storedNonce}` !== nonce) {
         return res.status(400).json({ error: "Invalid nonce" });
     }
-    loginHandler.delete(publicKey);
-    const token = jwt.sign({ publicKey }, process.env.JWT_SECRET!);
-    res.json({ token });
+    try {
+        const message = new TextEncoder().encode(nonce);
+        const sig = bs58.decode(signature);
+        const pubKey = bs58.decode(publicKey);
+
+        const isValid = nacl.sign.detached.verify(message, sig, pubKey);
+
+        if (!isValid) {
+            return res.status(400).json({ error: "Invalid signature" });
+        }
+
+        loginHandler.delete(publicKey);
+
+        const token = jwt.sign(
+            { publicKey },
+            process.env.JWT_SECRET!,
+        );
+
+        return res.json({ token });
+
+    } catch {
+        return res.status(400).json({ error: "Signature verification failed" });
+    }
+})
+
+app.post("/deployCustom", jwtVerification, async (req, res) => {
+    const parsed = INIT_CUSTOM_GAME_TYPE.safeParse(req.body);
+    if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request" });
+    }
+    console.log("deployingCustom")
+    const { payload, type } = parsed.data;
+    const { skr, opponentPublicKey } = payload;
+    const userPublicKey = (req as any).user.publicKey as string;
+    let gameId = null;
+    let maxTries = 3;
+    let retries = 0
+
+    while (maxTries > retries) {
+        try {
+            const tx = await prisma.$transaction(async (tx) => {
+                const result1 = await tx.player.updateMany({
+                    where: {
+                        publicKey: userPublicKey,
+                        skr: {
+                            gte: skr
+                        }
+                    },
+                    data: {
+                        skr: {
+                            decrement: skr
+                        }
+                    }
+                })
+                if (result1.count == 0) {
+                    throw new Error("insufficient_balance");
+                }
+
+                const game = await tx.game.create({
+                    data: {
+                        player1PublicKey: userPublicKey,
+                        player2PublicKey: opponentPublicKey,
+                        customGame: true,
+                        skr,
+                        fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                        status: "IN_PROGRESS",
+                        network: "MAINNET",
+                    },
+                    select: {
+                        id: true
+                    }
+                })
+
+                return game
+
+            }, {
+                isolationLevel: "Serializable",
+                maxWait: 10000,
+                timeout: 10000,
+            })
+
+            gameId = tx.id;
+            break;
+        }
+        catch (err) {
+            console.error("Database error creating game:", err);
+            if (err instanceof Error && (err.message == "insufficient_balance")) {
+                res.send({
+                    type: INSUFFICIENT_FUNDS,
+                    payload: {
+                        publicKey: userPublicKey
+                    }
+                });
+                return;
+            }
+            retries++;
+        }
+    }
+
+    if (!gameId) {
+        res.send({
+            type: "ERROR",
+            payload: {}
+        });
+        return;
+    }
+    res.send({
+        type: CUSTOM_CREATED,
+        payload: {
+            gameId,
+            publicKey: userPublicKey,
+            opponentPublicKey,
+            skr,
+            network: "MAINNET",
+        }
+    })
+    return;
+
 })
 
 server.listen(PORT, "0.0.0.0", () => {
