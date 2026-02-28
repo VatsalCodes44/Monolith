@@ -84,3 +84,20 @@ export type RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD = {
     skr: number,
     opponentPubkey: string,
 }
+
+export type GET_GAMES_RESPONSE_PAYLOAD = {
+    games: {
+        lamports: number,
+        status: string,
+        fen: string,
+        history: Move[],
+        winner: "w" | "b" | null,
+        player1PublicKey: string,
+        player2PublicKey: string,
+        timer1: number,
+        timer2: number,
+        customGame: boolean,
+        skr: number,
+        id: string,
+    }[],
+}

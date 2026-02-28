@@ -16,7 +16,7 @@ export class Game {
     sol;
     ispaymentSettling = false;
     gameEnded = false;
-    constructor(player1, player2, player1Pubkey, player2Pubkey, network, sol, gameId) {
+    constructor(player1, player2, player1Pubkey, player2Pubkey, network, sol, gameId, customGame) {
         this.player1 = player1;
         this.player2 = player2;
         this.player1Pubkey = player1Pubkey;
@@ -29,7 +29,9 @@ export class Game {
         this.lastMoveTimestamp = Date.now();
         this.gameId = gameId;
         this.messages = [];
-        this.player1.send(JSON.stringify({
+        if (customGame)
+            return;
+        this.player1?.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
                 color: "w",
@@ -42,7 +44,7 @@ export class Game {
                 opponentPubkey: this.player2Pubkey
             }
         }));
-        this.player2.send(JSON.stringify({
+        this.player2?.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
                 color: "b",
@@ -256,9 +258,7 @@ export class Game {
                         const result = await tx.game.updateMany({
                             where: {
                                 id: gameId,
-                                status: {
-                                    in: ["IN_PROGRESS"]
-                                }
+                                status: "IN_PROGRESS"
                             },
                             data: {
                                 status: gameOverType,

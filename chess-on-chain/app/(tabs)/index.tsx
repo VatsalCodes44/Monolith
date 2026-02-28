@@ -35,6 +35,11 @@ export default function Index() {
   const skr = gameBalance(s => s.skr);
   const jwt = jwtStore(s => s.jwt);
   const setJwt = jwtStore(s => s.setJwt);
+  const disabled = () => {
+    if (!wallet.publicKey) return true;
+    if (!jwt) return true;
+    return false;
+  }
   const stakeOptions = [
     {
       amount: 0.01,
@@ -58,14 +63,15 @@ export default function Index() {
 
   const fetchBalance = useCallback(async (
     publicKey: string | null,
-    jwt: string | null
+    jwt: string | null,
+    isDevnet: boolean
   ) => {
     console.log("🔥 fetchBalance called");
     console.log(publicKey, "2222222222222222", jwt)
     if (!publicKey || !jwt) return;
     try {
       const payload: GET_BALANCE_TYPE_TS = {
-        network: wallet.isDevnet ? "DEVNET" : "MAINNET",
+        network: isDevnet ? "DEVNET" : "MAINNET",
       };
       const res = await axios.post(`${REST_URL}/getBalance`, payload, {
         headers: { Authorization: `Bearer ${jwt}` },
@@ -78,7 +84,7 @@ export default function Index() {
     } catch (e) {
       console.log(e);
     }
-  }, [wallet.isDevnet]); // re-creates when isDevnet changes
+  }, []);
 
   return (
     <TopContainer>
@@ -90,12 +96,12 @@ export default function Index() {
         tagline='Instant Deposit. Instant Withdraw.'
         showSol={true}
         fetchbalance={async () => {
-          fetchBalance(wallet.publicKey, jwt)
+          fetchBalance(wallet.publicKey, jwt, wallet.isDevnet)
         }}
         onPress={async () => {
           if (!wallet.publicKey) return;
           setIsDevnet(!wallet.isDevnet)
-          await fetchBalance(wallet.publicKey, jwt)
+          await fetchBalance(wallet.publicKey, jwt, !wallet.isDevnet)
         }}
         lamports={lamports}
         skr={skr}
@@ -147,6 +153,7 @@ export default function Index() {
                 }}
                 text="ENTER ARENA"
                 fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
+                disabled={disabled()}
               />
             </View>
           </LinearGradient>
@@ -159,6 +166,7 @@ export default function Index() {
         <View style={styles.dualButtonRow}>
           <GradientButton
             text="DEPLOY CUSTOM"
+            disabled={disabled()}
             onPress={() => {
               router.push("/DeployCustom")
             }}
@@ -167,6 +175,7 @@ export default function Index() {
 
           <GradientButton
             text="JOIN OPEN ARENA"
+            disabled={disabled()}
             onPress={() => {
             }}
             fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}

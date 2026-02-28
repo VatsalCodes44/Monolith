@@ -4,7 +4,6 @@ import http from "http";
 import { GameManager } from './GameManager.js';
 import { prisma } from "./lib/prisma.js"
 import nacl from "tweetnacl";
-import z from "zod";
 import { verifySolTransfer } from "./lib/verifySolTransfer.js";
 import { verifySeekerTransfer } from "./lib/verifySeekerTransfer.js";
 import jwt from "jsonwebtoken";
@@ -18,16 +17,17 @@ const PORT = 8080;
 const server = http.createServer(app);
 const gameManager = new GameManager();
 const message = "Chess on chain wants you to sign this message: ";
-
+let count = 0;
 const loginHandler: Map<string, string> = new Map();
 
 app.use(express.json());
 
 const wss = new WebSocketServer({ server }, () => {
-    console.log(`Server started on port ${PORT}`);
 });
 
 wss.on('connection', function connection(socket) {
+    count++;
+    console.log(count);
     gameManager.addUser(socket);
     socket.on('error', console.error);
 
@@ -44,15 +44,17 @@ app.post('/getBalance', jwtVerification, async (req, res) => {
 
     const { network } = req.body;
     const userPublicKey = (req as any).user.publicKey;
-
+    console.log(network)
     const user = await prisma.player.findUnique({
         where: { publicKey: userPublicKey }
     })
     if (!user) {
         return res.status(404).json({ error: "User not found" });
     }
-
-    console.log(user)
+    console.log(({
+        lamports: network === "MAINNET" ? user.mainnetLamports.toString() : user.devnetLamports.toString(),
+        skr: user.skr.toString(),
+    }))
 
     res.json({
         lamports: network === "MAINNET" ? user.mainnetLamports.toString() : user.devnetLamports.toString(),
@@ -60,51 +62,37 @@ app.post('/getBalance', jwtVerification, async (req, res) => {
     });
 })
 
-// app.post("/getGames", jwtVerification, async (req, res) => {
-//     const result = z.object({
-//         publicKey: z.string(),
-//         signature: z.string(),
-//         network: z.enum(["MAINNET", "DEVNET"]),
-//     }).safeParse(req.body);
+app.post("/getGames", jwtVerification, async (req, res) => {
+    const publicKey = (req as any).user.publicKey as string;
 
-//     if (!result.success) {
-//         return res.status(400).json({ error: "Invalid request" });
-//     }
-
-//     const { publicKey, signature, network } = result.data;
-
-//     const verify = nacl.sign.detached.verify(Buffer.from(publicKey), Buffer.from(signature), Buffer.from(publicKey));
-//     if (!verify) {
-//         return res.status(400).json({ error: "Invalid signature" });
-//     }
-
-//     const games = await prisma.game.findMany({
-//         where: {
-//             OR: [
-//                 { player1PublicKey: publicKey },
-//                 { player2PublicKey: publicKey }
-//             ],
-//             network,
-//         },
-//         select: {
-//             lamports: true,
-//             status: true,
-//             fen: true,
-//             history: true,
-//             winner: true,
-//             player1PublicKey: true,
-//             player2PublicKey: true,
-//             timer1: true,
-//             timer2: true,
-//         }
-//     })
-//     res.json({ games });
-// })
+    const games = await prisma.game.findMany({
+        where: {
+            OR: [
+                { player1PublicKey: publicKey },
+                { player2PublicKey: publicKey }
+            ],
+        },
+        select: {
+            lamports: true,
+            status: true,
+            fen: true,
+            history: true,
+            winner: true,
+            player1PublicKey: true,
+            player2PublicKey: true,
+            timer1: true,
+            timer2: true,
+            customGame: true,
+            skr: true,
+            id: true,
+        }
+    })
+    res.json({ games });
+})
 
 app.post("/deposit", jwtVerification, async (req, res) => {
     const parsed = deposit.safeParse(req.body);
 
-    console.log("deposit")
 
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
@@ -113,7 +101,6 @@ app.post("/deposit", jwtVerification, async (req, res) => {
     const { signature, network, asset } = parsed.data;
     const userPublicKey = (req as any).user.publicKey;
 
-    console.log(parsed.data)
 
     try {
         // Verify on-chain first
@@ -225,7 +212,6 @@ app.post("/login", async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
     }
-    console.log("login")
     const { publicKey } = parsed.data;
     try {
         const user = await prisma.player.upsert({
@@ -253,7 +239,6 @@ app.post("/verifyLogin", async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
     }
-    console.log("verifyLogin")
     const { publicKey, signature, nonce } = parsed.data;
     const storedNonce = loginHandler.get(publicKey);
     if (!storedNonce || `${message}${storedNonce}` !== nonce) {
@@ -261,7 +246,7 @@ app.post("/verifyLogin", async (req, res) => {
     }
     try {
         const message = new TextEncoder().encode(nonce);
-        const sig = bs58.decode(signature);
+        const sig = Buffer.from(signature, "base64");
         const pubKey = bs58.decode(publicKey);
 
         const isValid = nacl.sign.detached.verify(message, sig, pubKey);
@@ -276,10 +261,9 @@ app.post("/verifyLogin", async (req, res) => {
             { publicKey },
             process.env.JWT_SECRET!,
         );
-
         return res.json({ token });
 
-    } catch {
+    } catch (e) {
         return res.status(400).json({ error: "Signature verification failed" });
     }
 })
@@ -289,7 +273,6 @@ app.post("/deployCustom", jwtVerification, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
     }
-    console.log("deployingCustom")
     const { payload, type } = parsed.data;
     const { skr, opponentPublicKey } = payload;
     const userPublicKey = (req as any).user.publicKey as string;

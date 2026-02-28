@@ -5,15 +5,22 @@ export function GradientButton({
   text,
   children,
   onPress,
-  fontFamily
+  fontFamily,
+  disabled
 }: {
   text?: string,
   children?: React.ReactNode,
   onPress?: () => void,
-  fontFamily?: string
+  fontFamily?: string,
+  disabled: boolean
 }) {
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={styles.button}>
+    <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={[
+      styles.button,
+      {
+        opacity: disabled ? 0.5 : 1
+      }
+    ]} disabled={disabled}>
       <LinearGradient
         colors={['#B048C2', '#9082DB', '#3DE3B4']}
         start={{ x: 0, y: 0 }}

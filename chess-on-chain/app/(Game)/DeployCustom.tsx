@@ -3,37 +3,100 @@ import {
     Text,
     View,
     TextInput,
-    ActivityIndicator,
+    TouchableOpacity,
 } from "react-native";
-import React, { useCallback, useRef, useState } from "react";
+import Clipboard from "@react-native-clipboard/clipboard";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { TopContainer } from "@/src/components/TopContainer";
 import { GradientButton } from "@/src/components/GradientButton";
 import { Ionicons } from "@expo/vector-icons";
 import { HeroSection } from "@/src/components/HeroSection";
-import { useWallet } from "@/src/hooks/useWallet";
 import { gameBalance } from "@/src/stores/gameBalance";
 import { isValidPublicKey } from "@/src/utils/isvalidPublicKey";
 import { useWalletStore } from "@/src/stores/wallet-store";
+import { GET_BALANCE_TYPE_TS, INIT_CUSTOM_GAME_TYPE_TS } from "@/src/config/serverInputs";
+import { REST_URL } from "@/src/config/config";
+import axios from "axios";
+import { jwtStore } from "@/src/stores/jwt";
+import { INIT_CUSTOM_GAME } from "@/src/config/serverResponds";
+import { customGameIdStore, skrStore } from "@/src/stores/customStore";
 
 export default function DeployCustom() {
-    // 1. All useRef calls
-    const opponentKey = useRef<string>("");
-    const skrAmount = useRef<number>(0);
-
-    // 2. All useState calls  
+    const [opponentKey, setOpponentKey] = useState<string>("");
     const [isValidPubKey, setIsValidPubKey] = useState(true);
+    const minSkr = 50;
+    const [skrAmount, setSkrAmount] = useState<string>("0");
     const [loading, setLoading] = useState(false);
-
-    const handleDeploy = useCallback(async () => { }, []);
-
-    // 3. Custom hooks (these internally call hooks too)
     const publicKey = useWalletStore(s => s.publicKey)
     const isDevnet = useWalletStore(s => s.isDevnet)
+    const setIsDevnet = useWalletStore(s => s.setIsDevnet)
     const lamports = gameBalance(s => s.lamports)
+    const setLamports = gameBalance(s => s.setLamports)
+    const setSkr = gameBalance(s => s.setSkr)
     const skr = gameBalance(s => s.skr)
+    const jwt = jwtStore(s => s.jwt)
+    const [customState, setCustomState] = useState<"DEPLOY MATCH" | "DEPLOYING" | "DEPLOYED" | "ERROR IN DEPLOYING" | "INSUFFICIENT SKR">("DEPLOY MATCH")
+    const [gameId, setGameId] = useState<string | null>(null)
 
-    // 4. useCallback/useMemo
+    useEffect(() => {
+        if (isDevnet) {
+            setIsDevnet(false)
+            fetchBalance(publicKey, jwt, false)
+        }
+    }, [])
+
+    const fetchBalance = useCallback(async (
+        publicKey: string | null,
+        jwt: string | null,
+        isDevnet: boolean
+    ) => {
+        console.log("🔥 fetchBalance called");
+        console.log(publicKey, "2222222222222222", jwt)
+        if (!publicKey || !jwt) return;
+        try {
+            const payload: GET_BALANCE_TYPE_TS = {
+                network: isDevnet ? "DEVNET" : "MAINNET",
+            };
+            const res = await axios.post(`${REST_URL}/getBalance`, payload, {
+                headers: { Authorization: `Bearer ${jwt}` },
+            });
+            const data = res.data;
+            console.log("RAW DATA:", data.lamports, "-----------", data.skr);
+            setLamports(Number(data.lamports));
+            setSkr(Number(data.skr));
+            console.log("STORE STATE:", gameBalance.getState().lamports);
+        } catch (e) {
+            console.log(e);
+        }
+    }, []);
+
+    const disabled = () => {
+        if (parseFloat(skrAmount) < minSkr) return true;
+        if (!isValidPubKey) return true;
+        return false;
+    }
+
+    const deployCustom = async () => {
+        setCustomState("DEPLOYING");
+        const body: INIT_CUSTOM_GAME_TYPE_TS = {
+            type: INIT_CUSTOM_GAME,
+            payload: {
+                skr: parseFloat(skrAmount) * 1000000,
+                opponentPublicKey: opponentKey,
+            }
+        }
+        const res = await axios.post(`${REST_URL}/deployCustom`, body, {
+            headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (res.status == 200) {
+            setGameId(res.data.gameId);
+            setCustomState("DEPLOYED");
+        }
+        else {
+            setCustomState("ERROR IN DEPLOYING");
+        }
+    }
 
     return (
         <TopContainer>
@@ -45,9 +108,10 @@ export default function DeployCustom() {
                 title="DEPLOY CUSTOM ARENA"
                 tagline="Private duel. Zero platform tax. Pure on-chain execution."
                 fetchbalance={async () => {
-                    // await wallet.getBalance();
+                    fetchBalance(publicKey, jwt, !isDevnet)
                 }}
-                onPress={() => { }}
+                onPress={async () => {
+                }}
                 lamports={lamports}
                 skr={skr}
             />
@@ -75,14 +139,15 @@ export default function DeployCustom() {
                         <TextInput
                             placeholder="Enter Solana wallet address…"
                             placeholderTextColor="#6B7280"
+                            value={opponentKey}
                             onChangeText={(text) => {
-                                // if (text != "") {
-                                //     setIsValidPubKey(isValidPublicKey(text));
-                                // }
-                                // else {
-                                //     setIsValidPubKey(true)
-                                // }
-                                opponentKey.current = text;
+                                if (text != "") {
+                                    setIsValidPubKey(isValidPublicKey(text));
+                                }
+                                else {
+                                    setIsValidPubKey(true)
+                                }
+                                setOpponentKey(text);
                             }}
                             style={styles.input}
                             cursorColor="#B048C2"
@@ -121,32 +186,67 @@ export default function DeployCustom() {
                         <TextInput
                             placeholder="Enter SKR amount"
                             placeholderTextColor="#6B7280"
-                            // value={skrAmount.current.toString()}
+                            value={skrAmount.toString()}
                             onChangeText={(text) => {
-                                skrAmount.current = parseFloat(text);
+                                // Normalize comma to dot
+                                const normalized = text.replace(",", ".");
+
+                                // Allow:
+                                // "", "0", "0.", ".5", "1.23"
+                                if (/^\d*\.?\d*$/.test(normalized)) {
+                                    setSkrAmount(normalized);
+                                }
                             }}
-                            keyboardType="numbers-and-punctuation"
+                            keyboardType="number-pad"
                             style={styles.input}
                             cursorColor="#3DE3B4"
                         />
                     </View>
 
-                    <Text style={styles.helperText}>
-                        Custom matches are exclusively settled in SKR.
+                    <Text style={[
+                        styles.helperText,
+                        {
+                            color: parseFloat(skrAmount) > 0 && parseFloat(skrAmount) < minSkr ? "#dc4949ae" : "#6B7280"
+                        }
+                    ]}>
+                        {parseFloat(skrAmount) > 0 && parseFloat(skrAmount) < minSkr
+                            ? `Minimum amount is ${minSkr} SKR`
+                            : "Custom matches are exclusively settled in SKR."}
                     </Text>
 
-                    <View style={{ marginTop: 26 }}>
+                    <View style={{
+                        marginTop: 26,
+                        gap: 10,
+                        opacity: disabled() ? .5 : 1
+                    }}>
                         <GradientButton
-                            text={loading ? "Deploying on-chain..." : "DEPLOY MATCH"}
-                            onPress={handleDeploy}
+                            text={customState}
+                            onPress={async () => {
+                                if (parseFloat(skrAmount) > skr) {
+                                    setCustomState("INSUFFICIENT SKR")
+                                    return;
+                                }
+                                await deployCustom();
+                            }}
                             fontFamily="Orbitron_900Black"
+                            disabled={disabled()}
                         />
-                        {loading && (
-                            <ActivityIndicator
-                                size="small"
-                                color="#3DE3B4"
-                                style={{ marginTop: 14 }}
-                            />
+
+                        {gameId && (
+                            <TouchableOpacity
+                                style={styles.helperText}
+                                onPress={() => {
+                                    Clipboard.setString(gameId)
+                                }}
+                            >
+                                Game ID: {gameId}
+                                <Ionicons
+                                    name="copy-outline"
+                                    size={18}
+                                    color="#6B7280"
+                                    style={{ marginLeft: 10 }}
+                                />
+                            </TouchableOpacity>
                         )}
                     </View>
                 </View>

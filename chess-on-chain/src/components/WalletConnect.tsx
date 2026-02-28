@@ -16,11 +16,12 @@ export function WalletConnect({
     fontsLoaded?: boolean,
     setJwt: (jwt: string | null) => void,
     jwt: string | null,
-    fetchBalance: (publicKey: string | null, jwt: string | null) => Promise<void>
+    fetchBalance: (publicKey: string | null, jwt: string | null, isDevnet: boolean) => Promise<void>
 }) {
     const [jwtLogin, setJwtLogin] = useState(false);
     return (
         <GradientButton
+            disabled={false}
             onPress={async () => {
                 try {
 
@@ -43,7 +44,7 @@ export function WalletConnect({
                         setJwtLogin(false);
                         setJwt(verifyRes.data.token);
                         setJwtLogin(true);
-                        await fetchBalance(pubKey, verifyRes.data.token);
+                        await fetchBalance(pubKey, verifyRes.data.token, wallet.isDevnet);
                         console.log("----------------------------------")
                         console.log(verifyRes.data.token)
                     }
