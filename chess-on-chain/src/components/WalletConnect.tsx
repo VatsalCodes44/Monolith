@@ -2,20 +2,21 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { GradientButton } from './GradientButton'
-import { Wallet } from '../hooks/useWallet'
+import { Wallet } from '@/src/hooks/useWallet'
 import axios from 'axios'
-import { REST_URL } from '../config/config'
-import { jwt } from 'zod'
+import { REST_URL } from '@/src/config/config'
 export function WalletConnect({
     wallet,
     fontsLoaded,
     setJwt,
     jwt,
+    fetchBalance
 }: {
     wallet: Wallet,
     fontsLoaded?: boolean,
     setJwt: (jwt: string | null) => void,
     jwt: string | null,
+    fetchBalance: (publicKey: string | null, jwt: string | null) => Promise<void>
 }) {
     const [jwtLogin, setJwtLogin] = useState(false);
     return (
@@ -42,6 +43,7 @@ export function WalletConnect({
                         setJwtLogin(false);
                         setJwt(verifyRes.data.token);
                         setJwtLogin(true);
+                        await fetchBalance(pubKey, verifyRes.data.token);
                         console.log("----------------------------------")
                         console.log(verifyRes.data.token)
                     }

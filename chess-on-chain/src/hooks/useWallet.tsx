@@ -18,9 +18,9 @@ import {
   createTransferInstruction,
   createAssociatedTokenAccountInstruction,
 } from "@solana/spl-token";
-import { useWalletStore } from "../stores/wallet-store";
+import { useWalletStore } from "@/src/stores/wallet-store";
 import { Account } from "@solana-mobile/mobile-wallet-adapter-protocol";
-import { PUBLIC_KEY, SEEKER_MINT } from "../config/config";
+import { PUBLIC_KEY, SEEKER_MINT } from "@/src/config/config";
 
 const APP_IDENTITY = {
   name: "chess-native",
@@ -50,7 +50,6 @@ export function useWallet(): Wallet {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [connecting, setConnecting] = useState(false);
   const [sending, setSending] = useState(false);
-  const [signing, setSigning] = useState(false);
   const isDevnet = useWalletStore(s => s.isDevnet);
   const publicKey = useWalletStore(s => s.publicKey);
   const setPublicKey = useWalletStore(s => s.setPublicKey)
@@ -235,7 +234,6 @@ export function useWallet(): Wallet {
 
   const signMessage = useCallback(
     async (message: string, pubKey: string) => {
-      setSigning(true);
       try {
         const signature = await transact(
           async (wallet: Web3MobileWallet) => {
@@ -255,7 +253,6 @@ export function useWallet(): Wallet {
 
         return signature;
       } finally {
-        setSigning(false);
       }
     },
     [publicKey, cluster]

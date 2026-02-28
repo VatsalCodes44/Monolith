@@ -3,8 +3,8 @@ import React, { memo, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import FontAwesome5 from '@expo/vector-icons/Ionicons'
 import { Message } from '@/app/(Game)/Game'
-import { MESSAGE_CUSTOM_TYPE_TS, MESSAGE_TYPE_TS } from '../config/serverInputs'
-import { MESSAGE, MESSAGE_CUSTOM } from '../config/serverResponds'
+import { MESSAGE_CUSTOM_TYPE_TS, MESSAGE_TYPE_TS } from '@/src/config/serverInputs'
+import { MESSAGE, MESSAGE_CUSTOM } from '@/src/config/serverResponds'
 
 export const SendMessage = memo(({
     color,

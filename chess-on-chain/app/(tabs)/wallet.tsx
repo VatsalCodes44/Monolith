@@ -180,8 +180,8 @@ export default function Wallet() {
     <TopContainer>
 
       <HeroSection
-        wallet={wallet}
-        lamports={lamports}
+        publicKey={wallet.publicKey}
+        isDevnet={wallet.isDevnet}
         fontsLoaded={fontsLoaded}
         fetchbalance={fetchBlance}
         onPress={() => {

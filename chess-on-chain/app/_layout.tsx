@@ -6,13 +6,7 @@ import { useColorScheme } from 'react-native'
 export default function () {
     const colorScheme = useColorScheme()
 
-    return (
-        <>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <Stack screenOptions={{ headerShown: false }} />
-            </ThemeProvider>
-        </>
-    )
+    return <Stack screenOptions={{ headerShown: false }} />
 }
 
 const styles = StyleSheet.create({})

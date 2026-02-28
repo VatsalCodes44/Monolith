@@ -5,7 +5,7 @@ import {
     TextInput,
     ActivityIndicator,
 } from "react-native";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { TopContainer } from "@/src/components/TopContainer";
 import { GradientButton } from "@/src/components/GradientButton";
@@ -13,29 +13,43 @@ import { Ionicons } from "@expo/vector-icons";
 import { HeroSection } from "@/src/components/HeroSection";
 import { useWallet } from "@/src/hooks/useWallet";
 import { gameBalance } from "@/src/stores/gameBalance";
+import { isValidPublicKey } from "@/src/utils/isvalidPublicKey";
+import { useWalletStore } from "@/src/stores/wallet-store";
 
 export default function DeployCustom() {
-    const wallet = useWallet();
-    const lamports = gameBalance((s) => s.lamports);
+    // 1. All useRef calls
+    const opponentKey = useRef<string>("");
+    const skrAmount = useRef<number>(0);
 
-    const [opponentKey, setOpponentKey] = useState("");
-    const [skrAmount, setSkrAmount] = useState("");
+    // 2. All useState calls  
+    const [isValidPubKey, setIsValidPubKey] = useState(true);
     const [loading, setLoading] = useState(false);
 
-    const handleDeploy = useCallback(async () => {
-        ;
-    }, []);
+    const handleDeploy = useCallback(async () => { }, []);
+
+    // 3. Custom hooks (these internally call hooks too)
+    const publicKey = useWalletStore(s => s.publicKey)
+    const isDevnet = useWalletStore(s => s.isDevnet)
+    const lamports = gameBalance(s => s.lamports)
+    const skr = gameBalance(s => s.skr)
+
+    // 4. useCallback/useMemo
 
     return (
         <TopContainer>
             <HeroSection
-                wallet={wallet}
-                lamports={lamports}
-                fontsLoaded={false}
+                publicKey={publicKey}
+                isDevnet={isDevnet}
+                fontsLoaded={true}
+                showSol={false}
                 title="DEPLOY CUSTOM ARENA"
                 tagline="Private duel. Zero platform tax. Pure on-chain execution."
-                fetchbalance={() => { }}
+                fetchbalance={async () => {
+                    // await wallet.getBalance();
+                }}
                 onPress={() => { }}
+                lamports={lamports}
+                skr={skr}
             />
 
             <LinearGradient
@@ -45,53 +59,75 @@ export default function DeployCustom() {
                 <View style={styles.cardInner}>
                     <Text style={styles.label}>OPPONENT PUBLIC KEY</Text>
 
-                    <View style={styles.inputContainer}>
+                    <View style={[
+                        styles.inputContainer,
+                        {
+                            borderColor: "#B048C2",
+                            borderWidth: 1,
+                        }
+                    ]}>
                         <Ionicons
                             name="wallet-outline"
                             size={18}
-                            color="#3DE3B4"
+                            color="#B048C2"
                             style={{ marginRight: 10 }}
                         />
                         <TextInput
                             placeholder="Enter Solana wallet address…"
                             placeholderTextColor="#6B7280"
-                            value={opponentKey}
                             onChangeText={(text) => {
-                                setOpponentKey(text);
+                                // if (text != "") {
+                                //     setIsValidPubKey(isValidPublicKey(text));
+                                // }
+                                // else {
+                                //     setIsValidPubKey(true)
+                                // }
+                                opponentKey.current = text;
                             }}
                             style={styles.input}
-                            cursorColor="#3DE3B4"
+                            cursorColor="#B048C2"
                             autoCorrect={false}
                             autoCapitalize="none"
                             autoComplete="off"
                         />
                     </View>
 
-                    <Text style={styles.helperText}>
-                        If no player joins the custom game within five minutes of its creation, the game will be automatically deleted.
+                    <Text style={[
+                        styles.helperText,
+                        {
+                            color: !isValidPubKey ? "#dc4949ae" : "#6B7280"
+                        }
+                    ]}>
+                        {!isValidPubKey ? "Please enter only valid PublicKey" : "If no player joins the custom game within five minutes of its creation, the game will be automatically deleted."}
                     </Text>
 
                     <View style={styles.divider} />
 
                     <Text style={styles.label}>STAKE IN SEEKER (SKR)</Text>
 
-                    <View style={styles.inputContainer}>
+                    <View style={[
+                        styles.inputContainer,
+                        {
+                            borderColor: "#3DE3B4",
+                            borderWidth: 1,
+                        }
+                    ]}>
                         <Ionicons
                             name="flash-outline"
                             size={18}
-                            color="#B048C2"
+                            color="#3DE3B4"
                             style={{ marginRight: 10 }}
                         />
                         <TextInput
                             placeholder="Enter SKR amount"
                             placeholderTextColor="#6B7280"
-                            value={skrAmount}
+                            // value={skrAmount.current.toString()}
                             onChangeText={(text) => {
-                                setSkrAmount(text);
+                                skrAmount.current = parseFloat(text);
                             }}
-                            keyboardType="numeric"
+                            keyboardType="numbers-and-punctuation"
                             style={styles.input}
-                            cursorColor="#B048C2"
+                            cursorColor="#3DE3B4"
                         />
                     </View>
 
@@ -103,7 +139,7 @@ export default function DeployCustom() {
                         <GradientButton
                             text={loading ? "Deploying on-chain..." : "DEPLOY MATCH"}
                             onPress={handleDeploy}
-                            fontFamily="System"
+                            fontFamily="Orbitron_900Black"
                         />
                         {loading && (
                             <ActivityIndicator

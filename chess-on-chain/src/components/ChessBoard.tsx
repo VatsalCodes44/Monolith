@@ -2,9 +2,9 @@ import { FlatList, StyleSheet, Text, View, useWindowDimensions, ImageBackground,
 import React, { useEffect, useState } from 'react'
 import { Chess, Color, Move, PieceSymbol, Square } from 'chess.js';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MOVE, MOVE_CUSTOM } from '../config/serverResponds';
+import { MOVE, MOVE_CUSTOM } from "@/src/config/serverResponds";
 import { Piece } from './Piece';
-import { MOVE_CUSTOM_TYPE_TS, MOVE_TYPE_TS } from '../config/serverInputs';
+import { MOVE_CUSTOM_TYPE_TS, MOVE_TYPE_TS } from "@/src/config/serverInputs";
 import { GameOver } from '@/app/(Game)/Game';
 
 type Piece = ({

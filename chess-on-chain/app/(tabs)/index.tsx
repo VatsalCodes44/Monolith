@@ -1,5 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,9 +29,10 @@ export default function Index() {
   const wallet = useWallet();
   const setIsDevnet = useWalletStore(s => s.setIsDevnet)
   const setSol = GameBet(s => s.setSol)
-  const lamports = gameBalance(s => s.lamports);
   const setLamports = gameBalance(s => s.setLamports);
+  const lamports = gameBalance(s => s.lamports);
   const setSkr = gameBalance(s => s.setSkr);
+  const skr = gameBalance(s => s.skr);
   const jwt = jwtStore(s => s.jwt);
   const setJwt = jwtStore(s => s.setJwt);
   const stakeOptions = [
@@ -55,44 +56,49 @@ export default function Index() {
     }
   ];
 
-  const fetchBlance = async () => {
-    if (!wallet.publicKey || !jwt) return;
+  const fetchBalance = useCallback(async (
+    publicKey: string | null,
+    jwt: string | null
+  ) => {
+    console.log("🔥 fetchBalance called");
+    console.log(publicKey, "2222222222222222", jwt)
+    if (!publicKey || !jwt) return;
     try {
       const payload: GET_BALANCE_TYPE_TS = {
         network: wallet.isDevnet ? "DEVNET" : "MAINNET",
-      }
+      };
       const res = await axios.post(`${REST_URL}/getBalance`, payload, {
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
-      })
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
       const data = res.data;
-      console.log(data)
-      setLamports(parseInt(data.lamports));
-      setSkr(parseInt(data.skr));
+      console.log("RAW DATA:", data.lamports, "-----------", data.skr);
+      setLamports(Number(data.lamports));
+      setSkr(Number(data.skr));
+      console.log("STORE STATE:", gameBalance.getState().lamports);
+    } catch (e) {
+      console.log(e);
     }
-    catch (e) {
-      console.log(e)
-    }
-  }
-
-  useEffect(() => {
-    fetchBlance()
-  }, [wallet.publicKey, wallet.isDevnet])
+  }, [wallet.isDevnet]); // re-creates when isDevnet changes
 
   return (
     <TopContainer>
       <HeroSection
-        wallet={wallet}
-        lamports={lamports}
+        publicKey={wallet.publicKey}
+        isDevnet={wallet.isDevnet}
         fontsLoaded={fontsLoaded}
         title='CHESS on CHAIN'
         tagline='Instant Deposit. Instant Withdraw.'
-        fetchbalance={fetchBlance}
-        onPress={() => {
+        showSol={true}
+        fetchbalance={async () => {
+          fetchBalance(wallet.publicKey, jwt)
+        }}
+        onPress={async () => {
           if (!wallet.publicKey) return;
           setIsDevnet(!wallet.isDevnet)
+          await fetchBalance(wallet.publicKey, jwt)
         }}
+        lamports={lamports}
+        skr={skr}
       />
 
       <View style={styles.stakeSection}>
@@ -173,6 +179,7 @@ export default function Index() {
           fontsLoaded={fontsLoaded}
           setJwt={setJwt}
           jwt={jwt}
+          fetchBalance={fetchBalance}
         />
       </View>
     </TopContainer>
