@@ -1,6 +1,6 @@
-import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME, CUSTOM_NOT_FOUND, ENTERED_ARENA } from "./Messages.js";
+import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME, CUSTOM_NOT_FOUND, ENTERED_ARENA, SPECTATE } from "./Messages.js";
 import { Game } from "./Game.js";
-import { INIT_GAME_TYPE, JOIN_CUSTOM_GAME_TYPE, MESSAGE_CUSTOM_TYPE, MESSAGE_TYPE, MOVE_CUSTOM_TYPE, MOVE_TYPE, Re_JOIN_CUSTOM_GAME_TYPE, Re_JOIN_GAME_TYPE } from "./types/type.js";
+import { INIT_GAME_TYPE, JOIN_CUSTOM_GAME_TYPE, MESSAGE_CUSTOM_TYPE, MESSAGE_TYPE, MOVE_CUSTOM_TYPE, MOVE_TYPE, Re_JOIN_CUSTOM_GAME_TYPE, Re_JOIN_GAME_TYPE, SEPCTATE_GAME } from "./types/type.js";
 import { prisma } from "./lib/prisma.js";
 import jwt from "jsonwebtoken";
 import { CustomGame } from "./CustomGame.js";
@@ -41,6 +41,16 @@ export class GameManager {
             try {
                 const message = JSON.parse(data.toString());
                 console.log(message);
+                // only custom games can be spectated
+                if (message.type == SPECTATE) {
+                    const result = SEPCTATE_GAME.safeParse(message);
+                    if (!result.success) {
+                        return;
+                    }
+                    const { gameId } = result.data.payload;
+                    this.customGames.get(gameId)?.spectators.push(socket);
+                    return;
+                }
                 if (message.type === INIT_GAME) {
                     const result = INIT_GAME_TYPE.safeParse(message);
                     if (!result.success) {

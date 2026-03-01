@@ -1,4 +1,4 @@
-import { INIT_GAME, RE_JOIN_GAME, MOVE, MESSAGE, INIT_CUSTOM_GAME, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME } from "../Messages.js";
+import { INIT_GAME, RE_JOIN_GAME, MOVE, MESSAGE, INIT_CUSTOM_GAME, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME, SPECTATE } from "../Messages.js";
 import z from "zod";
 export const INIT_GAME_TYPE = z.object({
     type: z.literal(INIT_GAME),
@@ -98,4 +98,10 @@ export const verifyJwt = z.object({
 });
 export const getBalance = z.object({
     network: z.enum(["MAINNET", "DEVNET"]),
+});
+export const SEPCTATE_GAME = z.object({
+    type: z.literal(SPECTATE),
+    payload: z.object({
+        gameId: z.string(),
+    })
 });

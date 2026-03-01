@@ -26,6 +26,7 @@ import { INIT_GAME_TYPE_TS, JOIN_CUSTOM_GAME_TYPE_TS, Re_JOIN_CUSTOM_GAME_TYPE_T
 import { jwtStore } from '@/src/stores/jwt';
 import { GameBase } from '@/src/components/GameBase';
 import { router, useLocalSearchParams } from 'expo-router';
+import { GAME_STATE } from '@/src/config/game';
 
 export interface GameOver {
     winner: "b" | "w" | null,
@@ -46,103 +47,122 @@ export default function CustomGame() {
     const { gameId} = useLocalSearchParams<{ gameId: string}>();
     const gameIdRef = useRef<string | null>(gameId)
     const [skr, setSkr] = useState <number>(0);
-    const socket = useRef<WebSocket | null>(null)
-    const [chess, setChess] = useState(new Chess())
-    const [color, setColor] = useState<"w" | "b">("w")
-    const [from, setFrom] = useState<Square | null>(null)
-    const [prevFrom, setPrevFrom] = useState<Square | null>(null)
-    const [prevTo, setPrevTo] = useState<Square | null>(null)
+    const [gameState, setGameState] = useState<GAME_STATE>({
+        chess: new Chess(),
+        color: "w",
+        from: null,
+        prevFrom: null,
+        prevTo: null,
+        moves: [],
+        timer1: 10 * 60 * 1000,
+        timer2: 10 * 60 * 1000,
+        opponentPubkey: null,
+        gameover: {
+            winner: null,
+            gameOverType: null,
+            isGameOver: false
+        }
+    })
+    const socket = useRef<WebSocket | null>(null);
     const [gameStarted, setGameStarted] = useState(false)
     const isMountedRef = useRef(true);
-    const [messages, setMessages] = useState<Message[]>([])
     const [lastMessage, setLastMessage] = useState<Message>()
-    const [moves, setMoves] = useState<Move[]>([])
     const [showMessages, setShowMessages] = useState(false)
+    const [messages, setMessages] = useState<Message[]>([]);
     const [connected, setConnected] = useState(false)
-    const [timer1, setTimer1] = useState(10 * 60 * 1000)
-    const [timer2, setTimer2] = useState(10 * 60 * 1000)
-    const [opponentPubkey, setOpponentPubkey] = useState<string | null>(null)
-
-    const [gameover, setGameOver] = useState<GameOver>({
-        winner: null,
-        gameOverType: null,
-        isGameOver: false
-    })
     const gameOverRef = useRef(false)
     const reconnectTimeoutRef = useRef<number | null>(null)
     const scrollRef = useRef<ScrollView>(null);
-
     const { width } = useWindowDimensions()
-
     const isDevnet = useWalletStore(s => s.isDevnet)
-
     const jwt = jwtStore(s => s.jwt)
     const publicKey = useWalletStore(s => s.publicKey)
 
     const onJoinCustomGameResponse = useCallback((payload: JOIN_CUSTOM_GAME_Response_Payload) => {
-        setColor(payload.color)
-        setChess(new Chess(payload.board))
-        setGameStarted(true)
-        setTimer1(payload.timer1)
-        setTimer2(payload.timer2)
+        setGameState(p => ({
+            ...p,
+            color: payload.color,
+            chess: new Chess(payload.board),
+            timer1: payload.timer1,
+            timer2: payload.timer2,
+            opponentPubkey: payload.opponentPubkey
+        }));
+        setGameStarted(true);
         gameIdRef.current = payload.gameId
-        setOpponentPubkey(payload.opponentPubkey)
         setSkr(payload.skr)
     }, [])
     
     const onEnterArenaResponse = useCallback((payload: ENTER_ARENA_PAYLOAD) => {
-        setColor(payload.color);
+        setGameState(p => ({
+            ...p,
+            chess: new Chess(payload.board),
+            timer1: payload.timer1,
+            timer2: payload.timer2,
+        }))
         setSkr(payload.skr);
-        setChess(new Chess(payload.board));
         setGameStarted(false);
-        setTimer1(payload.timer1)
-        setTimer2(payload.timer2)
     }, []);
 
     const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
-        let newChess = new Chess(payload.board)
-        setChess(newChess);
-        setPrevFrom(payload.move.from);
-        setPrevTo(payload.move.to);
-        setTimer1(payload.timer1);
-        setTimer2(payload.timer2);
-        setMoves(payload.history)
+        setGameState(p => ({
+            ...p,
+            chess: new Chess(payload.board),
+            prevFrom: payload.move.from,
+            prevTo: payload.move.to,
+            timer1: payload.timer1,
+            timer2: payload.timer2,
+            moves: payload.history,
+        }));
     }, [])
 
     const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
-        setChess(new Chess(payload.board))
-        setPrevFrom(payload.move.from)
-        setPrevTo(payload.move.to)
-        setMoves(payload.history)
-        setGameOver({
-            winner: payload.winner,
-            gameOverType: payload.gameOverType,
-            isGameOver: true
-        })
+        setGameState(p => ({
+            ...p,
+            chess: new Chess(payload.board),
+            prevFrom: payload.move.from,
+            prevTo: payload.move.to,
+            moves: payload.history,
+            gameover: {
+                winner: payload.winner,
+                gameOverType: payload.gameOverType,
+                isGameOver: true
+            }
+        }));
         gameOverRef.current = true;
     }, [])
 
     const onTimeOutResponse = useCallback((payload: GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD) => {
-        setPrevFrom(payload.move.from)
-        setPrevTo(payload.move.to)
-        setMoves(payload.history)
-        setGameOver({
-            winner: payload.winner,
-            gameOverType: payload.gameOverType,
-            isGameOver: true
-        })
+        setGameState(p => ({
+            ...p,
+            prevFrom: payload.move.from,
+            prevTo: payload.move.to,
+            gameover: {
+                winner: payload.winner,
+                gameOverType: payload.gameOverType,
+                isGameOver: true
+            },
+            moves: payload.history
+        }));
         gameOverRef.current = true;
     }, [])
 
     const onReJoinCustomGameResponse = useCallback((payload: RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD) => {
-        setColor(payload.color)
-        setChess(new Chess(payload.board))
+        setGameState(p => ({
+            ...p,
+            color: payload.color,
+            chess: new Chess(payload.board),
+            timer1: payload.timer1,
+            timer2: payload.timer2,
+            opponentPubkey: payload.opponentPubkey,
+        }));
         setGameStarted(true)
-        setTimer1(payload.timer1)
-        setTimer2(payload.timer2)
         gameIdRef.current = payload.gameId
-        setOpponentPubkey(payload.opponentPubkey)
         setSkr(payload.skr)
+    }, [])
+
+    const onMessageResponse = useCallback((payload: message_payload) => {
+        setMessages(m => [...m, payload])
+        setLastMessage(payload)
     }, [])
 
     const connect = useCallback((isRejoin = false) => {
@@ -251,11 +271,6 @@ export default function CustomGame() {
         }
     }, [jwt, isDevnet])
 
-    const onMessageResponse = useCallback((payload: message_payload) => {
-        setMessages(m => [...m, payload])
-        setLastMessage(payload)
-    }, [])
-
     useEffect(() => {
         if (showMessages && messages.length > 0) {
             // slight delay because modal animation + layout timing
@@ -302,29 +317,20 @@ export default function CustomGame() {
                     setShowMessages={setShowMessages}
                     messages={messages}
                     scrollRef={scrollRef}
-                    color={color}
                     socket={socket}
                     setMessages={setMessages}
                     jwt={jwt}
                     gameIdRef={gameIdRef}
                     isDevnet={isDevnet}
                     sol={"0.01"} // no use
-                    chess={chess}
                     fontsLoaded={fontsLoaded}
-                    timer1={timer1}
-                    timer2={timer2}
                     gameStarted={gameStarted}
-                    gameover={gameover}
-                    moves={moves}
-                    from={from}
-                    prevFrom={prevFrom}
-                    setFrom={setFrom}
-                    prevTo={prevTo}
                     lastMessage={lastMessage}
                     player1Pubkey={publicKey}
-                    player2Pubkey={opponentPubkey}
                     gameType='CUSTOM'
                     skr={skr}
+                    gameState={gameState}
+                    setGameState={setGameState}
                 />
             }
             <TouchableOpacity onPress={() => {

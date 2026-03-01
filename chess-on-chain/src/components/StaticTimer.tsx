@@ -1,5 +1,3 @@
-import { GameOver } from "@/app/(Game)/Game";
-import { useEffect, useState, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export function StaticTimer({

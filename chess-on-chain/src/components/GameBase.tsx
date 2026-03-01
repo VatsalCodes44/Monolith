@@ -11,76 +11,49 @@ import { Captured } from '@/src/components/Captured'
 import { ShowMessages } from '@/src/components/ShowMessages'
 import { SolanaDuelHeader } from '@/src/components/SolanaDuelHeader'
 import { Audio } from 'expo-av'
-export interface GameOver {
-    winner: "b" | "w" | null,
-    gameOverType: "checkmate" | "stalemate" | "draw" | "time_out" | null,
-    isGameOver: boolean
-}
-
-export interface Message {
-    from: "w" | "b",
-    message: string,
-}
+import { GAME_STATE, Message } from '../config/game'
 
 function GameBaseComponent({
     width,
     showMessages,
     setShowMessages,
-    messages,
     scrollRef,
-    color,
     socket,
-    setMessages,
     jwt,
     gameIdRef,
     isDevnet,
     sol,
-    chess,
     fontsLoaded,
-    timer1,
-    timer2,
     gameStarted,
-    gameover,
-    moves,
-    from,
-    prevFrom,
-    setFrom,
-    prevTo,
     lastMessage,
     player1Pubkey,
-    player2Pubkey,
     gameType,
     spectator,
+    gameState,
+    setGameState,
+    messages,
+    setMessages
 }: {
     width: number,
     showMessages: boolean,
     setShowMessages: (value: React.SetStateAction<boolean>) => void,
-    messages: Message[],
     scrollRef: React.RefObject<ScrollView | null>,
-    color: "b" | "w",
     socket: React.RefObject<WebSocket | null>,
-    setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
     jwt: string,
     gameIdRef: React.RefObject<string | null>,
     isDevnet: boolean,
     sol: "0.01" | "0.05" | "0.1",
-    chess: Chess,
     fontsLoaded: boolean,
-    timer1: number,
-    timer2: number,
     gameStarted: boolean,
-    gameover: GameOver,
-    moves: Move[],
-    from: Square | null,
-    prevFrom: Square | null,
-    setFrom: React.Dispatch<React.SetStateAction<Square | null>>,
-    prevTo: Square | null,
     lastMessage: Message | undefined,
     player1Pubkey: string | null,
-    player2Pubkey: string | null,
     gameType: "NORMAL" | "CUSTOM",
     skr?: number,
-    spectator: boolean
+    spectator: boolean,
+    gameState: GAME_STATE,
+    setGameState: React.Dispatch<React.SetStateAction<GAME_STATE>>,
+    messages: Message[],
+    setMessages: React.Dispatch<React.SetStateAction<Message[]>>
 }) {
 
     const moveSoundRef = useRef<Audio.Sound | null>(null);
@@ -89,51 +62,51 @@ function GameBaseComponent({
     const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
 
     const playMoveSound = async () => {
-    if (!moveSoundRef.current) return;
+        if (!moveSoundRef.current) return;
 
-    try {
-        await moveSoundRef.current.stopAsync();
-        await moveSoundRef.current.setPositionAsync(0);
-        await moveSoundRef.current.playAsync();
-    } catch (err) {
-        console.log("Move sound error:", err);
-    }
+        try {
+            await moveSoundRef.current.stopAsync();
+            await moveSoundRef.current.setPositionAsync(0);
+            await moveSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Move sound error:", err);
+        }
     };
 
     const playCheckSound = async () => {
-    if (!checkSoundRef.current) return;
+        if (!checkSoundRef.current) return;
 
-    try {
-        await checkSoundRef.current.stopAsync();
-        await checkSoundRef.current.setPositionAsync(0);
-        await checkSoundRef.current.playAsync();
-    } catch (err) {
-        console.log("Check sound error:", err);
-    }
+        try {
+            await checkSoundRef.current.stopAsync();
+            await checkSoundRef.current.setPositionAsync(0);
+            await checkSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Check sound error:", err);
+        }
     };
 
     const playIllegalMoveSound = async () => {
-    if (!illegalSoundRef.current) return;
+        if (!illegalSoundRef.current) return;
 
-    try {
-        await illegalSoundRef.current.stopAsync();
-        await illegalSoundRef.current.setPositionAsync(0);
-        await illegalSoundRef.current.playAsync();
-    } catch (err) {
-        console.log("Check sound error:", err);
-    }
+        try {
+            await illegalSoundRef.current.stopAsync();
+            await illegalSoundRef.current.setPositionAsync(0);
+            await illegalSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Check sound error:", err);
+        }
     };
 
     const playLowOnTimeSound = async () => {
-    if (!lowOnTimeSoundRef.current) return;
+        if (!lowOnTimeSoundRef.current) return;
 
-    try {
-        await lowOnTimeSoundRef.current.stopAsync();
-        await lowOnTimeSoundRef.current.setPositionAsync(0);
-        await lowOnTimeSoundRef.current.playAsync();
-    } catch (err) {
-        console.log("Check sound error:", err);
-    }
+        try {
+            await lowOnTimeSoundRef.current.stopAsync();
+            await lowOnTimeSoundRef.current.setPositionAsync(0);
+            await lowOnTimeSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Check sound error:", err);
+        }
     };
 
     useEffect(() => {
@@ -181,7 +154,7 @@ function GameBaseComponent({
             // illegalSoundRef.current?.unloadAsync();
             // lowOnTimeSoundRef.current?.unloadAsync();
         };
-        }, []);
+    }, []);
 
     return (
         <SafeAreaView style={{
@@ -212,13 +185,13 @@ function GameBaseComponent({
                                         style={{
                                             width: "100%",
                                             flexDirection: "row",
-                                            justifyContent: color == item.from ? "flex-end" : "flex-start",
+                                            justifyContent: gameState.color == item.from ? "flex-end" : "flex-start",
                                             marginVertical: 8
                                         }}
                                     >
                                         <Text style={{
                                             color: "#ffffff",
-                                            backgroundColor: color == item.from ? "#3DE3B4" : "#B048C2",
+                                            backgroundColor: gameState.color == item.from ? "#3DE3B4" : "#B048C2",
                                             paddingVertical: 2,
                                             paddingHorizontal: 8,
                                             borderRadius: 8,
@@ -233,7 +206,7 @@ function GameBaseComponent({
                             <SendMessage
                                 socket={socket.current!}
                                 setMessages={setMessages}
-                                color={color}
+                                color={gameState.color}
                                 setShowMessages={setShowMessages}
                                 showMenuIcon={false}
                                 jwt={jwt}
@@ -251,9 +224,9 @@ function GameBaseComponent({
 
             <SolanaDuelHeader
                 player1Pubkey={player1Pubkey}
-                player2Pubkey={player2Pubkey}
-                turnColor={chess.turn()}
-                myColor={color}
+                player2Pubkey={gameState.opponentPubkey}
+                turnColor={gameState.chess.turn()}
+                myColor={gameState.color}
                 stake={`${sol} sol`}
                 fontsLoaded={fontsLoaded}
             />
@@ -261,13 +234,13 @@ function GameBaseComponent({
             <View style={{ paddingHorizontal: 4 }}>
                 <Timer
                     fontsLoaded={fontsLoaded}
-                    timer1={timer1}
-                    timer2={timer2}
-                    turn={chess.turn()}
+                    timer1={gameState.timer1}
+                    timer2={gameState.timer2}
+                    turn={gameState.chess.turn()}
                     gameStarted={gameStarted}
-                    GameOver={gameover}
+                    GameOver={gameState.gameover}
                     playLowOnTimeSound={playLowOnTimeSound}
-                    color={color}
+                    color={gameState.color}
                 />
             </View>
             <View style={{
@@ -275,7 +248,7 @@ function GameBaseComponent({
                 marginVertical: 4,
                 width: "100%",
             }}>
-                <Captured moves={moves} color={color} />
+                <Captured moves={gameState.moves} color={gameState.color} />
             </View>
 
             <View style={{
@@ -287,18 +260,11 @@ function GameBaseComponent({
                     marginVertical: 4,
                     width: "100%",
                 }}>
-                    <MoveHistory moves={moves} />
+                    <MoveHistory moves={gameState.moves} />
                 </View>
                 <ChessBoard
                     spectator={spectator}
-                    chess={chess}
-                    from={from}
-                    setFrom={setFrom}
                     socket={socket.current!}
-                    color={color}
-                    prevFrom={prevFrom}
-                    prevTo={prevTo}
-                    GameOver={gameover}
                     gameStarted={gameStarted}
                     playIllegalMoveSound={playIllegalMoveSound}
                     playCheckSound={playCheckSound}
@@ -308,6 +274,8 @@ function GameBaseComponent({
                     jwt={jwt}
                     gameType={gameType}
                     playMoveSound={playMoveSound}
+                    gameState={gameState}
+                    setGameState={setGameState}
                 />
             </View>
 
@@ -318,10 +286,10 @@ function GameBaseComponent({
                 justifyContent: "flex-end",
                 flex: 1
             }}>
-                {lastMessage && <LastMessage color={color} lastMessage={lastMessage} width={width} />}
+                {lastMessage && <LastMessage color={gameState.color} lastMessage={lastMessage} width={width} />}
                 <SendMessage
                     setMessages={setMessages}
-                    color={color}
+                    color={gameState.color}
                     setShowMessages={setShowMessages}
                     showMenuIcon={true}
                     gameId={gameIdRef.current}

@@ -15,4 +15,5 @@ export const CUSTOM_CREATED = "custom_created";
 export const CUSTOM_NOT_FOUND = "custom_not_found";
 export const ENTERED_ARENA = "entered_arena";
 export const CANNOT_JOIN_CUSTOM = "cannot_join_custom";
+export const SPECTATE = "spectate";
 // add its response too in the frontend types see from the addCustomeGame message in the GameManager.tsx

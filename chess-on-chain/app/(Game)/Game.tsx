@@ -25,250 +25,251 @@ import { INIT_GAME_TYPE_TS, Re_JOIN_GAME_TYPE_TS } from '@/src/config/serverInpu
 import { jwtStore } from '@/src/stores/jwt'
 import { GameBase } from '@/src/components/GameBase'
 import { router } from 'expo-router'
-
-export interface GameOver {
-  winner: "b" | "w" | null,
-  gameOverType: "checkmate" | "stalemate" | "draw" | "time_out" | null,
-  isGameOver: boolean
-}
-
-export interface Message {
-  from: "w" | "b",
-  message: string,
-}
+import { GAME_STATE, Message } from '@/src/config/game'
 
 export default function Game() {
   
-  // const [fontsLoaded] = useFonts({
-  //   Orbitron_900Black,
-  // });
-  const fontsLoaded = true;
-  const socket = useRef<WebSocket | null>(null)
-  const [chess, setChess] = useState(new Chess())
-  const [color, setColor] = useState<"w" | "b">("w")
-  const [from, setFrom] = useState<Square | null>(null)
-  const [prevFrom, setPrevFrom] = useState<Square | null>(null)
-  const [prevTo, setPrevTo] = useState<Square | null>(null)
-  const [gameStarted, setGameStarted] = useState(false)
-  const gameIdRef = useRef<string | null>(null)
-  const isMountedRef = useRef(true);
-  const [messages, setMessages] = useState<Message[]>([])
-  const [lastMessage, setLastMessage] = useState<Message>()
-  const [moves, setMoves] = useState<Move[]>([])
-  const [showMessages, setShowMessages] = useState(false)
-  const [connected, setConnected] = useState(false)
-
-  const [timer1, setTimer1] = useState(10 * 60 * 1000)
-  const [timer2, setTimer2] = useState(10 * 60 * 1000)
-  const [opponentPubkey, setOpponentPubkey] = useState<string | null>(null)
-
-  const [gameover, setGameOver] = useState<GameOver>({
-    winner: null,
-    gameOverType: null,
-    isGameOver: false
-  })
-  const gameOverRef = useRef(false)
-  const reconnectTimeoutRef = useRef<number | null>(null)
-  const scrollRef = useRef<ScrollView>(null);
-
-  const { width } = useWindowDimensions()
-
-  const setSol = GameBet(s => s.setSol)
-  const sol = GameBet(s => s.sol)
-
-  const isDevnet = useWalletStore(s => s.isDevnet)
-
-  const jwt = jwtStore(s => s.jwt)
-  const publicKey = useWalletStore(s => s.publicKey)
-
-  const onInitGameResponse = useCallback((payload: INIT_GAME_RESPONSE_PAYLOAD) => {
-    setColor(payload.color)
-    setChess(new Chess(payload.board))
-    setGameStarted(true)
-    setTimer1(payload.timer1)
-    setTimer2(payload.timer2)
-    gameIdRef.current = payload.gameId
-    setOpponentPubkey(payload.opponentPubkey)
-  }, [])
-
-  const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
-    let newChess = new Chess(payload.board)
-    setChess(newChess);
-    setPrevFrom(payload.move.from);
-    setPrevTo(payload.move.to);
-    setTimer1(payload.timer1);
-    setTimer2(payload.timer2);
-    setMoves(payload.history)
-    // playMoveSound()
-  }, [])
-
-  const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
-    setChess(new Chess(payload.board))
-    setPrevFrom(payload.move.from)
-    setPrevTo(payload.move.to)
-    setMoves(payload.history)
-    setGameOver({
-      winner: payload.winner,
-      gameOverType: payload.gameOverType,
-      isGameOver: true
-    })
-    gameOverRef.current = true;
-  }, [])
-
-  const onTimeOutResponse = useCallback((payload: GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD) => {
-    setPrevFrom(payload.move.from)
-    setPrevTo(payload.move.to)
-    setMoves(payload.history)
-    setGameOver({
-      winner: payload.winner,
-      gameOverType: payload.gameOverType,
-      isGameOver: true
-    })
-    gameOverRef.current = true;
-  }, [])
-
-  const onReJoinGameResponse = useCallback((payload: Re_JOIN_GAME_RESPONSE_PAYLOAD) => {
-    setColor(payload.color)
-    setChess(new Chess(payload.board))
-    setGameStarted(true)
-    setTimer1(payload.timer1)
-    setTimer2(payload.timer2)
-    gameIdRef.current = payload.gameId
-    setSol(payload.sol)
-    setOpponentPubkey(payload.opponentPubkey)
-  }, [])
-
-  const connect = useCallback((isRejoin = false) => {
-    if (socket.current?.readyState === WebSocket.CONNECTING ||
-      socket.current?.readyState === WebSocket.OPEN) {
-      console.log("Already connecting/connected, skipping");
-      return;
-    }
-    if (!jwt || !sol) {
-      router.replace("/");
-      return;
-    }
-    const ws = new WebSocket(WS_URL)
-
-    ws.onopen = () => {
-      if (!jwt || !sol) {
-        console.log("here1")
-        ws.close();
-        return;
-      }
-      socket.current = ws
-      setConnected(true)
-      if (isRejoin && gameIdRef.current) {
-        console.log("here2")
-        const payload: Re_JOIN_GAME_TYPE_TS = {
-          type: RE_JOIN_GAME,
-          payload: {
-            gameId: gameIdRef.current,
-            network: isDevnet ? "DEVNET" : "MAINNET",
-            sol,
-            jwt
-          }
+    // const [fontsLoaded] = useFonts({
+        //   Orbitron_900Black,
+    // });
+    const fontsLoaded = true;
+    const [gameState, setGameState] = useState<GAME_STATE>({
+        chess: new Chess(),
+        color: "w",
+        from: null,
+        prevFrom: null,
+        prevTo: null,
+        moves: [],
+        timer1: 10 * 60 * 1000,
+        timer2: 10 * 60 * 1000,
+        opponentPubkey: null,
+        gameover: {
+            winner: null,
+            gameOverType: null,
+            isGameOver: false
         }
-        ws.send(JSON.stringify(payload))
-      } else {
-        console.log("here3")
-        const payload: INIT_GAME_TYPE_TS = {
-          type: INIT_GAME,
-          payload: {
-            jwt,
-            network: isDevnet ? "DEVNET" : "MAINNET",
-            sol
-          }
+    })
+    const socket = useRef<WebSocket | null>(null);
+    const [gameStarted, setGameStarted] = useState(false)
+    const gameIdRef = useRef<string | null>(null)
+    const isMountedRef = useRef(true);
+    const [lastMessage, setLastMessage] = useState<Message>()
+    const [showMessages, setShowMessages] = useState(false)
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [connected, setConnected] = useState(false)
+    const gameOverRef = useRef(false)
+    const reconnectTimeoutRef = useRef<number | null>(null)
+    const scrollRef = useRef<ScrollView>(null);
+    const { width } = useWindowDimensions()
+    const setSol = GameBet(s => s.setSol)
+    const sol = GameBet(s => s.sol)
+    const isDevnet = useWalletStore(s => s.isDevnet)
+    const jwt = jwtStore(s => s.jwt)
+    const publicKey = useWalletStore(s => s.publicKey)
+
+    const onInitGameResponse = useCallback((payload: INIT_GAME_RESPONSE_PAYLOAD) => {
+        setGameState(p => ({
+            ...p,
+            color: payload.color,
+            chess: new Chess(payload.board),
+            timer1: payload.timer1,
+            timer2: payload.timer2,
+            opponentPubkey: payload.opponentPubkey
+        }))
+        setGameStarted(true)
+        gameIdRef.current = payload.gameId
+    }, [])
+
+    const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
+        setGameState(p => ({
+            ...p,
+            chess: new Chess(payload.board),
+            prevFrom: payload.move.from,
+            prevTo: payload.move.to,
+            timer1: payload.timer1,
+            timer2: payload.timer2,
+            moves: payload.history,
+        }))
+    }, [])
+
+    const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
+        setGameState(p => ({
+            ...p,
+            chess: new Chess(payload.board),
+            prevFrom: payload.move.from,
+            prevTo: payload.move.to,
+            moves: payload.history,
+            gameover: {
+                winner: payload.winner,
+                gameOverType: payload.gameOverType,
+                isGameOver: true
+            }
+        }));
+        gameOverRef.current = true;
+    }, [])
+
+    const onTimeOutResponse = useCallback((payload: GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD) => {
+        setGameState(p => ({
+            ...p,
+            prevFrom: payload.move.from,
+            prevTo: payload.move.to,
+            gameover: {
+                winner: payload.winner,
+                gameOverType: payload.gameOverType,
+                isGameOver: true
+            },
+            moves: payload.history
+        }));
+        gameOverRef.current = true;
+    }, [])
+
+    const onReJoinGameResponse = useCallback((payload: Re_JOIN_GAME_RESPONSE_PAYLOAD) => {
+        setGameState(p => ({
+            ...p,
+            color: payload.color,
+            chess: new Chess(payload.board),
+            timer1: payload.timer1,
+            timer2: payload.timer2,
+            opponentPubkey: payload.opponentPubkey,
+        }));
+        setGameStarted(true)
+        gameIdRef.current = payload.gameId
+        setSol(payload.sol)
+    }, [])
+
+    const onMessageResponse = useCallback((payload: message_payload) => {
+        setMessages(p => [...p, payload]);
+        setLastMessage(payload)
+    }, [])
+
+    const connect = useCallback((isRejoin = false) => {
+        if (socket.current?.readyState === WebSocket.CONNECTING ||
+            socket.current?.readyState === WebSocket.OPEN) {
+            console.log("Already connecting/connected, skipping");
+            return;
+        }
+        if (!jwt || !sol) {
+            router.replace("/");
+            return;
+        }
+        const ws = new WebSocket(WS_URL)
+
+        ws.onopen = () => {
+            if (!jwt || !sol) {
+                console.log("here1")
+                ws.close();
+                return;
+            }
+            socket.current = ws
+            setConnected(true)
+            if (isRejoin && gameIdRef.current) {
+                console.log("here2")
+                const payload: Re_JOIN_GAME_TYPE_TS = {
+                    type: RE_JOIN_GAME,
+                    payload: {
+                        gameId: gameIdRef.current,
+                        network: isDevnet ? "DEVNET" : "MAINNET",
+                        sol,
+                        jwt
+                    }
+                }
+                ws.send(JSON.stringify(payload))
+            } 
+            else {
+                console.log("here3")
+                const payload: INIT_GAME_TYPE_TS = {
+                    type: INIT_GAME,
+                    payload: {
+                        jwt,
+                        network: isDevnet ? "DEVNET" : "MAINNET",
+                        sol
+                    }
+                }
+
+                ws.send(JSON.stringify(payload))
+            }
         }
 
-        ws.send(JSON.stringify(payload))
-      }
-    }
+        ws.onclose = () => {
+            if (gameOverRef.current || !isMountedRef.current) {
+                console.log("here4")
+                return;
+            };
+            if (reconnectTimeoutRef.current) return;
+            console.log("WebSocket closed")
+            socket.current = null
+            setConnected(false)
+            reconnectTimeoutRef.current = setTimeout(() => {
+                connect(true)
+                reconnectTimeoutRef.current = null
+            }, 2000)
+        }
 
-    ws.onclose = () => {
-      if (gameOverRef.current || !isMountedRef.current) {
-        console.log("here4")
-        return;
-      };
-      if (reconnectTimeoutRef.current) return;
-      console.log("WebSocket closed")
-      socket.current = null
-      setConnected(false)
-      reconnectTimeoutRef.current = setTimeout(() => {
-        connect(true)
-        reconnectTimeoutRef.current = null
-      }, 2000)
-    }
+        ws.onerror = (err) => {
+            console.log("WebSocket error", err)
+        }
 
-    ws.onerror = (err) => {
-      console.log("WebSocket error", err)
-    }
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data)
+            const payload = message.payload
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data)
-      const payload = message.payload
+            switch (message.type) {
 
-      switch (message.type) {
+                case INIT_GAME:
+                onInitGameResponse(payload as INIT_GAME_RESPONSE_PAYLOAD);
+                break;
 
-        case INIT_GAME:
-          onInitGameResponse(payload as INIT_GAME_RESPONSE_PAYLOAD);
-          break;
+                case MOVE:
+                onMoveResponse(payload as MOVE_RESPONSE_PAYLOAD);
+                break;
 
-        case MOVE:
-          onMoveResponse(payload as MOVE_RESPONSE_PAYLOAD);
-          break;
+                case GAME_OVER:
+                onGameOver(payload as GAME_OVER_RESPONSE_PAYLOAD);
+                break;
 
-        case GAME_OVER:
-          onGameOver(payload as GAME_OVER_RESPONSE_PAYLOAD);
-          break;
+                case TIME_OUT:
+                onTimeOutResponse(payload as GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD);
+                break;
 
-        case TIME_OUT:
-          onTimeOutResponse(payload as GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD);
-          break;
+                case MESSAGE:
+                onMessageResponse(payload as message_payload);
+                break;
 
-        case MESSAGE:
-          onMessageResponse(payload as message_payload);
-          break;
-
-        case RE_JOIN_GAME:
-          onReJoinGameResponse(payload as Re_JOIN_GAME_RESPONSE_PAYLOAD);
-          break;
-      }
-    }
-  }, [jwt, isDevnet])
-
-  const onMessageResponse = useCallback((payload: message_payload) => {
-    setMessages(m => [...m, payload])
-    setLastMessage(payload)
-  }, [])
-
-  
-
-  useEffect(() => {
-    if (showMessages && messages.length > 0) {
-      // slight delay because modal animation + layout timing
-      setTimeout(() => {
-        scrollRef.current?.scrollToEnd({ animated: false });
-      }, 100);
-    }
-  }, [showMessages, messages]);
+                case RE_JOIN_GAME:
+                onReJoinGameResponse(payload as Re_JOIN_GAME_RESPONSE_PAYLOAD);
+                break;
+            }
+        }
+    }, [jwt, isDevnet])
 
 
-  useEffect(() => {
-    connect();
-    return () => {
-      isMountedRef.current = false;
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current)
-      }
-      if (socket.current) {
-        socket.current.onclose = null;
-        socket.current.close();
-        socket.current = null;
-      }
-      setSol(null)
-    }
-  }, [])
+    
+
+    useEffect(() => {
+        if (showMessages && messages.length > 0) {
+        // slight delay because modal animation + layout timing
+        setTimeout(() => {
+            scrollRef.current?.scrollToEnd({ animated: false });
+        }, 100);
+        }
+    }, [showMessages, messages]);
+
+
+    useEffect(() => {
+        connect();
+        return () => {
+            isMountedRef.current = false;
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current)
+            }
+            if (socket.current) {
+                socket.current.onclose = null;
+                socket.current.close();
+                socket.current = null;
+            }
+            setSol(null)
+        }
+    }, [])
 
 
 
@@ -284,30 +285,21 @@ export default function Game() {
           width={width}
           showMessages={showMessages}
           setShowMessages={setShowMessages}
-          messages={messages}
           scrollRef={scrollRef}
-          color={color}
           socket={socket}
-          setMessages={setMessages}
           jwt={jwt}
           gameIdRef={gameIdRef}
           isDevnet={isDevnet}
           sol={sol}
-          chess={chess}
           fontsLoaded={fontsLoaded}
-          timer1={timer1}
-          timer2={timer2}
           gameStarted={gameStarted}
-          gameover={gameover}
-          moves={moves}
-          from={from}
-          prevFrom={prevFrom}
-          setFrom={setFrom}
-          prevTo={prevTo}
           lastMessage={lastMessage}
           player1Pubkey={publicKey}
-          player2Pubkey={opponentPubkey}
           gameType='NORMAL'
+          messages={messages}
+          setMessages={setMessages}
+          gameState={gameState}
+          setGameState={setGameState}
         />
       }
       <TouchableOpacity onPress={() => {

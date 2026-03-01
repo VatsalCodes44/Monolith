@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MOVE, MOVE_CUSTOM } from "@/src/config/serverResponds";
 import { Piece } from './Piece';
 import { MOVE_CUSTOM_TYPE_TS, MOVE_TYPE_TS } from "@/src/config/serverInputs";
-import { GameOver } from '@/app/(Game)/Game';
+import { GAME_STATE } from '../config/game';
 
 type Piece = ({
   square: Square;
@@ -14,14 +14,8 @@ type Piece = ({
 } | null)
 
 export function ChessBoard(
-  { chess,
+  {
     socket,
-    from,
-    setFrom,
-    color,
-    prevFrom,
-    prevTo,
-    GameOver,
     gameStarted,
     playIllegalMoveSound,
     playCheckSound,
@@ -31,16 +25,11 @@ export function ChessBoard(
     jwt,
     gameType,
     playMoveSound,
-    spectator
+    spectator,
+    gameState,
+    setGameState
   }: {
-    chess: Chess,
     socket: WebSocket,
-    from: Square | null,
-    setFrom: React.Dispatch<React.SetStateAction<Square | null>>,
-    color: "w" | "b",
-    prevFrom: Square | null,
-    prevTo: Square | null,
-    GameOver: GameOver,
     gameStarted: boolean,
     playIllegalMoveSound: () => Promise<void>,
     playCheckSound: () => Promise<void>,
@@ -50,7 +39,9 @@ export function ChessBoard(
     jwt: string | null,
     gameType: "NORMAL" | "CUSTOM",
     playMoveSound: () => Promise<void>,
-    spectator: boolean
+    spectator: boolean,
+    gameState: GAME_STATE,
+    setGameState: React.Dispatch<React.SetStateAction<GAME_STATE>>,
   }) {
   const { width, height } = useWindowDimensions();
   const [showPromotionOptions, setShowPromotionOptions] = useState(false)
@@ -61,9 +52,9 @@ export function ChessBoard(
 
   useEffect(() => {
     if (spectator) return;
-    if (from) {
-      const moves = chess.moves({
-        square: from,
+    if (gameState.from) {
+      const moves = gameState.chess.moves({
+        square: gameState.from,
         verbose: true
       });
 
@@ -72,28 +63,28 @@ export function ChessBoard(
     } else {
       setPossibleMoves(null);
     }
-  }, [from]);
+  }, [gameState.from]);
 
   const onPress = (piece: Piece, rowIdx: number, colIdx: number) => {
     if (spectator) return;
-    if (GameOver.isGameOver || !gameStarted || !gameId || !jwt) return;
-    if (chess.turn() != color) return;
-    if (!piece && !from) return;
-    if (!from && piece) {
-      setFrom(piece.square);
+    if (gameState.gameover.isGameOver || !gameStarted || !gameId || !jwt) return;
+    if (gameState.chess.turn() != gameState.color) return;
+    if (!piece && !gameState.from) return;
+    if (!gameState.from && piece) {
+      setGameState(p => ({...p, from: piece.square}));
       return;
     }
 
     const moveTo = String.fromCharCode('a'.charCodeAt(0) + colIdx) + (8 - rowIdx) as Square;
 
-    if (chess.get(moveTo)?.color == color) {
-      setFrom(moveTo);
+    if (gameState.chess.get(moveTo)?.color == gameState.color) {
+      setGameState(p => ({...p, from: moveTo}))
       return;
     }
 
     try {
-      let newChess = new Chess(chess.fen())
-      let fromPiece = newChess.get(from!)
+      let newChess = new Chess(gameState.chess.fen())
+      let fromPiece = newChess.get(gameState.from!)
 
       // checking for pawn promotion
       const isPromotion =
@@ -101,20 +92,20 @@ export function ChessBoard(
         ((fromPiece.color === "w" && moveTo[1] === "8") ||
           (fromPiece.color === "b" && moveTo[1] === "1"));
       if (isPromotion && !showPromotionOptions) {
-        setPendingPromotionMove({ from: from!, to: moveTo });
+        setPendingPromotionMove({ from: gameState.from!, to: moveTo });
         setShowPromotionOptions(true);
         return;
       }
       const move = isPromotion ?
-        newChess.move({ from: from!, to: moveTo, promotion: promotionPiece }) :
-        newChess.move({ from: from!, to: moveTo });
+        newChess.move({ from: gameState.from!, to: moveTo, promotion: promotionPiece }) :
+        newChess.move({ from: gameState.from!, to: moveTo });
 
-      if (!from) return;
+      if (!gameState.from) return;
       if (gameType == "NORMAL") {
         const moveObj: MOVE_TYPE_TS = {
           type: MOVE,
           payload: {
-            from: from,
+            from: gameState.from,
             to: moveTo,
             sol,
             network,
@@ -129,7 +120,7 @@ export function ChessBoard(
         const moveObj: MOVE_CUSTOM_TYPE_TS = {
           type: MOVE_CUSTOM,
           payload: {
-            from: from,
+            from: gameState.from,
             to: moveTo,
             jwt,
             gameId,
@@ -139,15 +130,14 @@ export function ChessBoard(
         socket.send(JSON.stringify(moveObj))
       }
 
-      setFrom(null)
+      setGameState(p => ({...p, from: null}));
       setShowPromotionOptions(false)
       return;
 
     } catch {
 
-      playIllegalMoveSound()
-      setFrom(moveTo);
-      setFrom(null);
+      playIllegalMoveSound()      
+      setGameState(p => ({...p, from: null}));
     }
   }
 
@@ -173,7 +163,7 @@ export function ChessBoard(
     // Clean up state
     setShowPromotionOptions(false);
     setPendingPromotionMove(null);
-    setFrom(null);
+    setGameState(p => ({...p, from: null}));
   }
 
   return (
@@ -184,17 +174,17 @@ export function ChessBoard(
           height: boardSize,
           maxWidth: 642,
           maxHeight: 642,
-          transform: [{ rotate: color == "b" ? "180deg" : "0deg" }]
+          transform: [{ rotate: gameState.color == "b" ? "180deg" : "0deg" }]
         }}>
           <LinearGradient
-            colors={color == "w" ? ["#B048C2", "#9082DB", "#3DE3B4"] : ["#3DE3B4", "#9082DB", "#B048C2"]}
+            colors={gameState.color == "w" ? ["#B048C2", "#9082DB", "#3DE3B4"] : ["#3DE3B4", "#9082DB", "#B048C2"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradient}
           >
 
             <FlatList
-              data={chess.board()}
+              data={gameState.chess.board()}
               keyExtractor={(_, rowIdx) => rowIdx.toString()}
               scrollEnabled={false}
               renderItem={({ item: row, index: rowIdx }) => (
@@ -208,38 +198,38 @@ export function ChessBoard(
                     const squareName = String.fromCharCode("a".charCodeAt(0) + colIdx) +
                       (8 - rowIdx);
 
-                    if (squareName === prevFrom || squareName === prevTo) {
+                    if (squareName === gameState.prevFrom || squareName === gameState.prevTo) {
                       return (
                         <PreviousTurn
                           playMoveSound={playMoveSound}
                           width={width}
                           piece={piece}
                           onPress={onPress}
-                          prevFrom={prevFrom}
+                          prevFrom={gameState.prevFrom}
                           colIdx={colIdx}
                           rowIdx={rowIdx}
-                          color={color}
+                          color={gameState.color}
                           squareName={squareName}
                         />
                       )
                     }
 
-                    const loser = GameOver.winner === "w" ? "b" : "w";
+                    const loser = gameState.gameover.winner === "w" ? "b" : "w";
 
                     const isKingInDanger =
                       piece?.type === "k" &&
                       (
                         // CHECKMATE
-                        (GameOver.isGameOver &&
-                          GameOver.gameOverType === "checkmate" &&
-                          piece.color === chess.turn())
+                        (gameState.gameover.isGameOver &&
+                          gameState.gameover.gameOverType === "checkmate" &&
+                          piece.color === gameState.chess.turn())
 
                         ||
 
                         // NORMAL CHECK
-                        (!GameOver.isGameOver &&
-                          chess.inCheck() &&
-                          piece.color === chess.turn())
+                        (!gameState.gameover.isGameOver &&
+                          gameState.chess.inCheck() &&
+                          piece.color === gameState.chess.turn())
                       );
 
                     if (isKingInDanger) {
@@ -249,14 +239,14 @@ export function ChessBoard(
                           width={width}
                           onPress={onPress}
                           piece={piece}
-                          color={color}
+                          color={gameState.color}
                           colIdx={colIdx}
                           rowIdx={rowIdx}
                         />
                       );
                     }
                     return (
-                      <Block color={color}
+                      <Block color={gameState.color}
                         rowIdx={rowIdx}
                         colIdx={colIdx}
                         isLight={isLight}
@@ -354,10 +344,10 @@ export function ChessBoard(
                         <Piece
                           piece={{
                             type: item.value as any,
-                            color: color,
+                            color: gameState.color,
                           }}
                           width={pieceSize}
-                          color={color}
+                          color={gameState.color}
                           rotation={"0deg"}
                         />
                       </Pressable>

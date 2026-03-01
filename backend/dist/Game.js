@@ -16,6 +16,7 @@ export class Game {
     sol;
     ispaymentSettling = false;
     gameEnded = false;
+    spectators;
     constructor(player1, player2, player1Pubkey, player2Pubkey, network, sol, gameId, customGame) {
         this.player1 = player1;
         this.player2 = player2;
@@ -29,6 +30,7 @@ export class Game {
         this.lastMoveTimestamp = Date.now();
         this.gameId = gameId;
         this.messages = [];
+        this.spectators = [];
         if (customGame)
             return;
         this.player1?.send(JSON.stringify({
@@ -148,6 +150,12 @@ export class Game {
                 payload: finalPayload
             }));
             this.gameEnded = true;
+            this.spectators.forEach(s => {
+                s.send(JSON.stringify({
+                    type: GAME_OVER,
+                    payload: finalPayload
+                }));
+            });
             await this.syncDb();
             try {
                 if (!this.ispaymentSettling) {
@@ -169,6 +177,12 @@ export class Game {
             type: MOVE,
             payload
         }));
+        this.spectators.forEach(s => {
+            s.send(JSON.stringify({
+                type: MOVE,
+                payload
+            }));
+        });
         await this.syncDb();
     }
     async syncDb() {
