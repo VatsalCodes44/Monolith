@@ -64,13 +64,17 @@ app.post('/getBalance', jwtVerification, async (req, res) => {
 
 app.post("/getGames", jwtVerification, async (req, res) => {
     const publicKey = (req as any).user.publicKey as string;
-
+    console.log("hii")
     const games = await prisma.game.findMany({
         where: {
             OR: [
                 { player1PublicKey: publicKey },
                 { player2PublicKey: publicKey }
             ],
+        },
+        take: 10,
+        orderBy: {
+            createdAt: "desc"
         },
         select: {
             lamports: true,
@@ -85,9 +89,19 @@ app.post("/getGames", jwtVerification, async (req, res) => {
             customGame: true,
             skr: true,
             id: true,
+            network: true
         }
     })
-    res.json({ games });
+
+    const payload = games.map(g => ({
+        ...g,
+        lamports: Number(g.lamports),
+        skr: Number(g.skr),
+        timer1: Number(g.timer1),
+        timer2: Number(g.timer2),
+    }));
+    console.log(payload)
+    res.json({ games: payload });
 })
 
 app.post("/deposit", jwtVerification, async (req, res) => {

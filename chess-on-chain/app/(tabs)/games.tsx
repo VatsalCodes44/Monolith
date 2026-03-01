@@ -1,211 +1,481 @@
 import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  ScrollView,
+    StyleSheet,
+    Text,
+    View,
+    TextInput,
+    TouchableOpacity,
+    FlatList,
 } from "react-native";
-import React, { useState } from "react";
-import { LinearGradient } from "expo-linear-gradient";
-import { useFonts, Orbitron_900Black } from "@expo-google-fonts/orbitron";
-import { Move } from "chess.js";
-
-import { HeroSection } from "@/src/components/HeroSection";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { TopContainer } from "@/src/components/TopContainer";
 import { GradientButton } from "@/src/components/GradientButton";
+import { Ionicons } from "@expo/vector-icons";
+import { gameBalance } from "@/src/stores/gameBalance";
+import { isValidPublicKey } from "@/src/utils/isvalidPublicKey";
+import { useWalletStore } from "@/src/stores/wallet-store";
+import { GET_BALANCE_TYPE_TS, INIT_CUSTOM_GAME_TYPE_TS } from "@/src/config/serverInputs";
+import { REST_URL } from "@/src/config/config";
+import axios from "axios";
+import { jwtStore } from "@/src/stores/jwt";
+import { GET_GAMES_RESPONSE_PAYLOAD, INIT_CUSTOM_GAME } from "@/src/config/serverResponds";
+import { useWallet } from "@/src/hooks/useWallet";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Header } from "@/src/components/Header";
+import GradientCard2 from "@/src/components/GradientCard2";
+import { router } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 
-export type GET_GAMES_RESPONSE_PAYLOAD = {
-  games: {
-    lamports: number;
-    status: string;
-    fen: string;
-    history: Move[];
-    winner: "w" | "b" | null;
-    player1PublicKey: string;
-    player2PublicKey: string;
-    timer1: number;
-    timer2: number;
-    customGame: boolean;
-    skr: number;
-    id: string;
-  }[];
-};
 
-interface Props {
-  data: GET_GAMES_RESPONSE_PAYLOAD | null;
-}
 
-export default function GamesTab({ data }: Props) {
-  const [fontsLoaded] = useFonts({
-    Orbitron_900Black,
-  });
+export default function Wallet() {
+    const fontsLoaded = true;
+    const wallet = useWallet()
+    const [opponentKey, setOpponentKey] = useState<string>("");
+    const [isValidPubKey, setIsValidPubKey] = useState(true);
+    const minSkr = 50;
+    const [skrAmount, setSkrAmount] = useState<string>("0");
+    const [loading, setLoading] = useState(false);
+    const publicKey = useWalletStore(s => s.publicKey)
+    const isDevnet = useWalletStore(s => s.isDevnet)
+    const setIsDevnet = useWalletStore(s => s.setIsDevnet)
+    const lamports = gameBalance(s => s.lamports)
+    const setLamports = gameBalance(s => s.setLamports)
+    const setSkr = gameBalance(s => s.setSkr)
+    const skr = gameBalance(s => s.skr)
+    const jwt = jwtStore(s => s.jwt)
+    const [customState, setCustomState] = useState<"DEPLOY MATCH" | "DEPLOYING" | "DEPLOYED" | "ERROR IN DEPLOYING" | "INSUFFICIENT SKR">("DEPLOY MATCH")
+    const [gameId, setGameId] = useState<string | null>(null)
+    const [games, setGames] = useState<GET_GAMES_RESPONSE_PAYLOAD[]>([])
+    const isFocused = useIsFocused()
+    useEffect(() => {
+        if (isDevnet && isFocused) {
+            setIsDevnet(false)
+            fetchBalance(publicKey, jwt, false)
+        }
+        if (jwt && isFocused) {
+            getGames();
+        }
+    }, [isFocused])
 
-  const [gameId, setGameId] = useState("");
+    const fetchBalance = async (
+        publicKey: string | null,
+        jwt: string | null,
+        isDevnet: boolean
+    ) => {}
 
-  return (
-    <TopContainer>
-      {/* HERO SECTION (EMPTY FUNCTIONS) */}
-      <HeroSection
-        publicKey={null}
-        isDevnet={false}
-        fontsLoaded={fontsLoaded}
-        title="LIVE ARENAS"
-        tagline="Watch. Join. Conquer."
-        showSol={false}
-        fetchbalance={async () => { }}
-        onPress={() => { }}
-        lamports={0}
-        skr={0}
-      />
+    const disabled = () => {
+        if (parseFloat(skrAmount) < minSkr) return true;
+        if (!isValidPubKey) return true;
+        return false;
+    }
 
-      {/* INPUT + FIXED BUTTONS */}
-      <View style={styles.inputSection}>
-        <TextInput
-          placeholder="Enter Game ID..."
-          placeholderTextColor="#6B7280"
-          value={gameId}
-          onChangeText={setGameId}
-          style={styles.input}
-        />
+    const deployCustom = async () => {}
 
-        <View style={styles.buttonRow}>
-          <GradientButton
-            text="SPECTATE"
-            disabled={false}
-            onPress={() => {
-              console.log("Spectate:", gameId);
-            }}
-            fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
-          />
+    const getGames = useCallback(async () => {
+        const res = await axios.post(`${REST_URL}/getGames`, {}, {
+            headers: { Authorization: `Bearer ${jwt}` },
+        })
+        console.log(res.data)
+        setGames(res.data.games)
+    }, [jwt, publicKey])
 
-          <GradientButton
-            text="JOIN CUSTOM"
-            disabled={false}
-            onPress={() => {
-              console.log("Join Custom:", gameId);
-            }}
-            fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
-          />
-        </View>
-      </View>
-
-      {/* GAMES LIST */}
-      <ScrollView contentContainerStyle={styles.gamesContainer}>
-        {data?.games?.map((game, index) => (
-          <LinearGradient
-            key={game.id}
-            colors={["#B048C2", "#9082DB", "#3DE3B4"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cardBorderGradient}
-          >
-            <View style={styles.cardInner}>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.gameTitle,
+    return (
+        <TopContainer>
+            <View style={styles.statusContainer}>
+                <View style={styles.statusBar}>
+                    <TouchableOpacity style={
                     {
-                      fontFamily: fontsLoaded
-                        ? "Orbitron_900Black"
-                        : "Roboto",
-                    },
-                  ]}
-                >
-                  {game.customGame ? "CUSTOM ARENA" : "OPEN ARENA"}
-                </Text>
-
-                <Text style={styles.subText}>
-                  Stake: {game.lamports / 1e9} SOL
-                </Text>
-
-                <Text style={styles.subText}>
-                  Status: {game.status}
-                </Text>
-
-                <Text style={styles.subText}>
-                  Timer: {game.timer1}s vs {game.timer2}s
-                </Text>
-
-                {game.winner && (
-                  <Text style={styles.winnerText}>
-                    Winner: {game.winner === "w" ? "White" : "Black"}
-                  </Text>
-                )}
-              </View>
-
-              <GradientButton
-                text="VIEW"
-                onPress={() => {
-                  console.log("Open Game:", game.id);
-                }}
-                fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
-                disabled={false}
-              />
+                        backgroundColor: wallet.publicKey
+                            ? (wallet.isDevnet
+                                ? "#12372c91"
+                                : "#391e3ca8")
+                            : "#4f19196e",
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        borderColor: '#2A2A30',
+                    }} 
+                    onPress={async () => {
+                        if (!wallet.publicKey) return;
+                        setIsDevnet(!wallet.isDevnet)
+                        await fetchBalance(wallet.publicKey, jwt, !wallet.isDevnet)
+                    }}>
+                        <View style={styles.statusItem}>
+                            <View style={[
+                                styles.statusDot,
+                                {
+                                    backgroundColor: wallet.publicKey ? (wallet.isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
+                                }
+                            ]} />
+                            <Text style={[
+                                styles.statusText,
+                                {
+                                    color: wallet.publicKey ? (wallet.isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
+                                }
+                            ]}>
+                                {wallet.publicKey ? (wallet.isDevnet ? "DEVNET" : "MAINNET") : "WALLET NOT CONNECTED"}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={async () => {
+                        await fetchBalance(wallet.publicKey, jwt, wallet.isDevnet)
+                    }} style={styles.balanceBadge}>
+                        <Text style={[
+                            styles.balanceText,
+                            { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                        ]}>
+                            {`◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol`}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
             </View>
-          </LinearGradient>
-        ))}
-      </ScrollView>
-    </TopContainer>
-  );
+            <View style={{
+                marginTop: 40
+            }}>
+                <Header title={'LIVE ARENAS'} tagline={'Watch. Join. Conquer.'} fontsLoaded={fontsLoaded} />
+            </View>
+
+            <GradientCard2 padding={20}>
+                <View style={styles.cardInner}>
+
+                    <View style={[
+                        styles.inputContainer,
+                        {
+                            borderColor: "#B048C2",
+                            borderWidth: 1,
+                        }
+                    ]}>
+                        <Ionicons
+                            name="game-controller-outline"
+                            size={18}
+                            color="#B048C2"
+                            style={{ marginRight: 10 }}
+                        />
+                        <TextInput
+                            placeholder="Game Id..."
+                            placeholderTextColor="#6B7280"
+                            value={opponentKey}
+                            onChangeText={(text) => {
+                                if (text != "") {
+                                    setIsValidPubKey(isValidPublicKey(text));
+                                }
+                                else {
+                                    setIsValidPubKey(true)
+                                }
+                                setOpponentKey(text);
+                            }}
+                            style={styles.input}
+                            cursorColor="#B048C2"
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                            autoComplete="off"
+                        />
+                    </View>
+
+                    <View style={{
+                        marginTop: 26,
+                        gap: 10,
+                        opacity: disabled() ? .5 : 1,
+                        flexDirection: "row",
+                        justifyContent: "space-between"
+                    }}>
+                        <GradientButton
+                            text={"JOIN ARENA"}
+                            onPress={async () => {
+                                if (parseFloat(skrAmount) > skr) {
+                                    setCustomState("INSUFFICIENT SKR")
+                                    return;
+                                }
+                                await deployCustom();
+                            }}
+                            fontFamily="Orbitron_900Black"
+                            disabled={disabled()}
+                        />
+                        <GradientButton
+                            text={"SPECTATE"}
+                            onPress={async () => {
+                                if (parseFloat(skrAmount) > skr) {
+                                    setCustomState("INSUFFICIENT SKR")
+                                    return;
+                                }
+                                await deployCustom();
+                            }}
+                            fontFamily="Orbitron_900Black"
+                            disabled={disabled()}
+                        />
+                    </View>
+                </View>
+            </GradientCard2>
+
+            <View style={{
+                flex: 1,
+            }}>
+                <Text style={{
+                    fontFamily: "Orbitron_900Black",
+                    fontSize: 18,
+                    color: "#ffffff",
+                }}>
+                    GAMES
+                </Text>
+                <View style={styles.divider} />
+                <FlatList 
+                    data={games}
+                    keyExtractor={(game) => game.id}
+                    scrollEnabled={true}
+                    showsVerticalScrollIndicator={false}
+                    style={{
+                        flex: 1, 
+                        paddingTop: 15,
+                    }}
+                    renderItem={({ item }) => {
+                    const IN_PROGRESS = item.status === "IN_PROGRESS";
+
+                    let statusColor: string;
+                    if (item.status == "IN_PROGRESS") statusColor = "#12372c91";
+                    else if (item.status == "CHECKMATE") statusColor = "#4f19196e";
+                    else statusColor = "#391e3ca8";
+
+                    let statusTextColor: string;
+                    if (item.status == "IN_PROGRESS") statusTextColor = "#3DE3B4";
+                    else if (item.status == "CHECKMATE") statusTextColor = "#f54444";
+                    else statusTextColor = "#B048C2";
+
+                    const stakeText = item.customGame
+                        ? `${(item.skr * 2) / 1_000_000} SKR`
+                        : `${(item.lamports * 2) / LAMPORTS_PER_SOL} SOL`;
+
+                    return (
+                        <GradientCard2 padding={20}>
+                            <View style={styles.gameCardInner}>
+                                <View style={styles.gameHeaderRow}>
+                                    <Text style={styles.gameTitle}>
+                                        {item.customGame ? "CUSTOM ARENA" : "OPEN ARENA"}
+                                    </Text>
+
+                                    <View style={[
+                                        styles.statusBadge,
+                                        { backgroundColor: item.network == "MAINNET" ? "#391e3ca8" : "#12372c91"}
+                                    ]}>
+                                        <Text style={[
+                                            styles.statusBadgeText,
+                                            { color: item.network == "MAINNET" ? "#B048C2" : "#3DE3B4"}
+                                        ]}>
+                                            {item.network}
+                                        </Text>
+                                    </View>
+
+                                    <View style={[
+                                        styles.statusBadge,
+                                        { backgroundColor: statusColor }
+                                    ]}>
+                                        <Text style={[
+                                            styles.statusBadgeText,
+                                            { color: statusTextColor}
+                                        ]}>
+                                            {item.status}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={{
+                                    flexDirection: "row",
+                                    gap: 10,
+                                    alignItems: "center"
+                                }}>
+                                    <Text style={styles.stakeText}>
+                                    ◎ {stakeText}
+                                    </Text>
+
+                                    {item.winner && (
+                                    <Text style={[
+                                        styles.winnerText,
+                                        {
+                                            color: item.winner == "w" && item.player1PublicKey == publicKey ? "#3DE3B4" : "#f54444"
+                                        }
+                                    ]}>
+                                        {item.winner == "w" && item.player1PublicKey == publicKey ? "Victory" : "DEFEAT"}
+                                    </Text>
+                                    )}
+                                </View>
+
+                                {/* CTA */}
+                                <View style={{ marginTop: 14 }}>
+                                <GradientButton
+                                    text={ IN_PROGRESS ? "JOIN MATCH" : "VIEW FINAL POSITION"}
+                                    onPress={() => {
+                                        if (!IN_PROGRESS) {
+                                            router.push({
+                                                pathname: "/spectate/[gameId]",
+                                                params: {gameId: item.id},
+                                            });
+                                        }
+                                    }}
+                                    fontFamily="Orbitron_900Black"
+                                    disabled={false}
+                                />
+                                </View>
+
+                            </View>
+                        </GradientCard2>
+                    );
+                    }}
+                />
+            </View>
+        </TopContainer>
+    )
 }
+
 
 const styles = StyleSheet.create({
-  inputSection: {
-    marginBottom: 24,
-    gap: 12,
-  },
+    cardBorder: {
+        padding: 1.5,
+        borderRadius: 18,
+        marginBottom: 28,
+    },
 
-  input: {
-    backgroundColor: "#16161A",
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#2A2A30",
-    color: "#FFFFFF",
-    fontSize: 14,
-  },
+    cardInner: {
+        backgroundColor: "#16161A",
+        borderRadius: 16,
+    },
 
-  buttonRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
+    inputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#1F1F24",
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        height: 52,
+        borderWidth: 1,
+        borderColor: "#2A2A30",
+    },
+    input: {
+        flex: 1,
+        color: "#FFFFFF",
+        fontSize: 14,
+        letterSpacing: 1,
+    },
 
-  gamesContainer: {
-    gap: 16,
-    paddingBottom: 40,
-  },
+    statusContainer: {
+        alignItems: "center",
+        width: "100%",
+    },
+    
+    statusBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
+        paddingHorizontal: 4,
+        maxHeight: 40,
+        backgroundColor: "#ffffff0"
+    },
 
-  cardBorderGradient: {
-    padding: 1.5,
-    borderRadius: 16,
-  },
+    statusItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
 
-  cardInner: {
-    backgroundColor: "#16161A",
-    borderRadius: 14.5,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
 
-  gameTitle: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
+    statusText: {
+        color: '#9CA3AF',
+        fontSize: 12,
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+    },
 
-  subText: {
-    color: "#9CA3AF",
-    fontSize: 12,
-    marginBottom: 2,
-  },
+    balanceBadge: {
+        backgroundColor: '#1F1F24',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#2A2A30',
+    },
 
-  winnerText: {
-    color: "#3DE3B4",
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: "600",
-  },
+    balanceText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        letterSpacing: 1,
+    },
+
+    scrollContent: {
+        paddingBottom: 32,
+    },
+
+    gameCardInner: {
+        backgroundColor: "#16161A",
+        borderRadius: 16,
+        padding: 0,
+    },
+
+    gameHeaderRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+
+    gameTitle: {
+        fontFamily: "Orbitron_900Black",
+        fontSize: 13,
+        letterSpacing: 1.5,
+        color: "#FFFFFF",
+    },
+
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+
+    statusBadgeText: {
+        fontSize: 10,
+        fontWeight: "600",
+        letterSpacing: 1,
+    },
+
+    stakeText: {
+        color: "#B048C2",
+        fontSize: 14,
+    },
+
+    playersRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+
+    playerText: {
+        color: "#FFFFFF",
+        fontSize: 12,
+    },
+
+    vsText: {
+        color: "#6B7280",
+        fontSize: 11,
+    },
+
+    timerText: {
+        color: "#9CA3AF",
+        fontSize: 11,
+        marginTop: 6,
+    },
+
+    winnerText: {
+        fontSize: 12,
+    },
+
+    divider: {
+        height: 1,
+        backgroundColor: "#2A2A30",
+        marginTop: 10,
+    },
 });
