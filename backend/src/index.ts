@@ -100,7 +100,6 @@ app.post("/getGames", jwtVerification, async (req, res) => {
         timer1: Number(g.timer1),
         timer2: Number(g.timer2),
     }));
-    console.log(payload)
     res.json({ games: payload });
 })
 

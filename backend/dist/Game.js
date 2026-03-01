@@ -148,6 +148,7 @@ export class Game {
                 payload: finalPayload
             }));
             this.gameEnded = true;
+            await this.syncDb();
             try {
                 if (!this.ispaymentSettling) {
                     this.ispaymentSettling = true;
@@ -168,6 +169,9 @@ export class Game {
             type: MOVE,
             payload
         }));
+        await this.syncDb();
+    }
+    async syncDb() {
         try {
             await prisma.game.update({
                 where: {
@@ -214,7 +218,8 @@ export class Game {
                             }
                         });
                         if (result.count == 0) {
-                            throw new Error("Game not found or already settled");
+                            console.log("Game already settled or not in progress");
+                            return;
                         }
                         // stake by each player
                         const stake = this.sol == "0.01" ?
@@ -342,8 +347,8 @@ export class Game {
             winner,
             gameOverType: "TIME_OUT",
             board: this.board.fen(),
-            timer1: this.timer1,
-            timer2: this.timer2,
+            timer1: this.timer1 <= 0 ? 0 : this.timer1,
+            timer2: this.timer2 <= 0 ? 0 : this.timer2,
             history: this.board.history({ verbose: true }),
         };
         this.player1?.send(JSON.stringify({ type: TIME_OUT, payload }));

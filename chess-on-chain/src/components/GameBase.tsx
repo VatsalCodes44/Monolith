@@ -50,6 +50,7 @@ function GameBaseComponent({
     player1Pubkey,
     player2Pubkey,
     gameType,
+    spectator,
 }: {
     width: number,
     showMessages: boolean,
@@ -78,7 +79,8 @@ function GameBaseComponent({
     player1Pubkey: string | null,
     player2Pubkey: string | null,
     gameType: "NORMAL" | "CUSTOM",
-    skr?: number
+    skr?: number,
+    spectator: boolean
 }) {
 
     const moveSoundRef = useRef<Audio.Sound | null>(null);
@@ -288,6 +290,7 @@ function GameBaseComponent({
                     <MoveHistory moves={moves} />
                 </View>
                 <ChessBoard
+                    spectator={spectator}
                     chess={chess}
                     from={from}
                     setFrom={setFrom}

@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import { INIT_GAME } from "./Messages.js";
+import { ENTERED_ARENA, INIT_GAME } from "./Messages.js";
 import { prisma } from "./lib/prisma.js"
 import { Game } from "./Game.js";
 

@@ -19,6 +19,7 @@ export class Game {
     public sol: "0.01" | "0.05" | "0.1";
     public ispaymentSettling: boolean = false;
     public gameEnded: boolean = false;
+    public spectators: WebSocket[];
 
     constructor(
         player1: WebSocket | null,
@@ -42,6 +43,7 @@ export class Game {
         this.lastMoveTimestamp = Date.now();
         this.gameId = gameId
         this.messages = [];
+        this.spectators = [];
 
         if (customGame) return;
 
@@ -177,6 +179,14 @@ export class Game {
             }));
 
             this.gameEnded = true;
+
+            this.spectators.forEach(s => {
+                s.send(JSON.stringify({
+                    type: GAME_OVER,
+                    payload: finalPayload
+                }));
+            })
+
             await this.syncDb()
             try {
                 if (!this.ispaymentSettling) {
@@ -200,6 +210,13 @@ export class Game {
             type: MOVE,
             payload
         }));
+
+        this.spectators.forEach(s => {
+            s.send(JSON.stringify({
+                type: MOVE,
+                payload
+            }));
+        })
         
         await this.syncDb()
     }
@@ -255,7 +272,8 @@ export class Game {
                         })
 
                         if (result.count == 0) {
-                            throw new Error("Game not found or already settled");
+                            console.log("Game already settled or not in progress");
+                            return;
                         }
 
                         // stake by each player

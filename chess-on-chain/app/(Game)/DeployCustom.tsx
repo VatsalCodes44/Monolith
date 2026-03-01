@@ -96,7 +96,7 @@ export default function DeployCustom() {
 
         });
         if (res.status == 200) {
-            setGameId(res.data.gameId);
+            setGameId(res.data.payload.gameId);
             setCustomState("DEPLOYED");
         }
         else {
@@ -283,12 +283,21 @@ export default function DeployCustom() {
 
                             {gameId && (
                                 <TouchableOpacity
-                                    style={styles.helperText}
+                                    style={{
+                                        flexDirection: "row",
+                                        gap: 5,
+                                        marginTop: 6 
+                                    }}
                                     onPress={() => {
                                         Clipboard.setString(gameId)
                                     }}
                                 >
-                                    Game ID: {gameId}
+                                    <Text style={{
+                                        fontSize: 12, 
+                                        color: "#6B7280"                                      
+                                    }}>
+                                        Game ID: {gameId}
+                                    </Text>
                                     <Ionicons
                                         name="copy-outline"
                                         size={18}

@@ -1,9 +1,8 @@
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
-import React, { useRef, useState } from 'react'
+import { StyleSheet, View } from 'react-native'
+import React from 'react'
 
 import { Redirect, useLocalSearchParams } from "expo-router";
 import { gamesStore } from '@/src/stores/gamesStore';
-import { GameOver, Message } from '../Game';
 import { useWalletStore } from '@/src/stores/wallet-store';
 import { FinalPosition } from '@/src/components/FinalPosition';
 import { Chess, Move } from 'chess.js';

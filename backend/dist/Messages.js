@@ -13,4 +13,6 @@ export const MOVE_CUSTOM = "move_custom";
 export const MESSAGE_CUSTOM = "message_custom";
 export const CUSTOM_CREATED = "custom_created";
 export const CUSTOM_NOT_FOUND = "custom_not_found";
-// add its response too in the frontent types see from the addCustomeGame message in the GameManager.tsx
+export const ENTERED_ARENA = "entered_arena";
+export const CANNOT_JOIN_CUSTOM = "cannot_join_custom";
+// add its response too in the frontend types see from the addCustomeGame message in the GameManager.tsx

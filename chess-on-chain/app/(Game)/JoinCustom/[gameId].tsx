@@ -1,6 +1,8 @@
 import { StyleSheet, View, Text, useWindowDimensions, ScrollView, TouchableOpacity } from 'react-native'
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
+    ENTER_ARENA_PAYLOAD,
+    ENTERED_ARENA,
     GAME_OVER,
     GAME_OVER_RESPONSE_PAYLOAD,
     GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD,
@@ -43,7 +45,7 @@ export default function CustomGame() {
     const fontsLoaded = true;
     const { gameId} = useLocalSearchParams<{ gameId: string}>();
     const gameIdRef = useRef<string | null>(gameId)
-    const [skr, setSkr] = useState <null | number>(null);
+    const [skr, setSkr] = useState <number>(0);
     const socket = useRef<WebSocket | null>(null)
     const [chess, setChess] = useState(new Chess())
     const [color, setColor] = useState<"w" | "b">("w")
@@ -87,6 +89,15 @@ export default function CustomGame() {
         setOpponentPubkey(payload.opponentPubkey)
         setSkr(payload.skr)
     }, [])
+    
+    const onEnterArenaResponse = useCallback((payload: ENTER_ARENA_PAYLOAD) => {
+        setColor(payload.color);
+        setSkr(payload.skr);
+        setChess(new Chess(payload.board));
+        setGameStarted(false);
+        setTimer1(payload.timer1)
+        setTimer2(payload.timer2)
+    }, []);
 
     const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
         let newChess = new Chess(payload.board)
@@ -131,6 +142,7 @@ export default function CustomGame() {
         setTimer2(payload.timer2)
         gameIdRef.current = payload.gameId
         setOpponentPubkey(payload.opponentPubkey)
+        setSkr(payload.skr)
     }, [])
 
     const connect = useCallback((isRejoin = false) => {
@@ -140,7 +152,7 @@ export default function CustomGame() {
             console.log("Already connecting/connected, skipping");
             return;
         }
-        if (!jwt || !skr) {
+        if (!jwt) {
             router.replace("/");
             return;
         }
@@ -148,8 +160,7 @@ export default function CustomGame() {
         const ws = new WebSocket(WS_URL)
 
         ws.onopen = () => {
-            if (!jwt || !skr) {
-                ;
+            if (!jwt) {
                 return;
             }
             socket.current = ws
@@ -209,6 +220,9 @@ export default function CustomGame() {
             const payload = message.payload
 
             switch (message.type) {
+                case ENTERED_ARENA:
+                    onEnterArenaResponse(payload as ENTER_ARENA_PAYLOAD);
+                    break;
 
                 case JOIN_CUSTOM_GAME:
                     onJoinCustomGameResponse(payload as JOIN_CUSTOM_GAME_Response_Payload);
@@ -235,7 +249,7 @@ export default function CustomGame() {
                     break;
             }
         }
-    }, [jwt, skr, isDevnet])
+    }, [jwt, isDevnet])
 
     const onMessageResponse = useCallback((payload: message_payload) => {
         setMessages(m => [...m, payload])
@@ -266,16 +280,23 @@ export default function CustomGame() {
         }
     }, [])
 
-
+    const isReady =
+        socket.current &&
+        publicKey &&
+        jwt &&
+        skr > 0 &&
+        connected;
+        console.log(isReady)
 
     return (
         <View style={{ flex: 1 }}>
-            {(!socket.current || !publicKey || !jwt || !skr || !connected) &&
+            {!isReady &&
                 <ConnectingToServer message='Connecting to server...' fontsLoaded={fontsLoaded} />
             }
 
-            {(socket.current && publicKey && jwt && skr && connected) &&
+            {isReady &&
                 <GameBase
+                    spectator={false}
                     width={width}
                     showMessages={showMessages}
                     setShowMessages={setShowMessages}

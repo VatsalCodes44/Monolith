@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { INIT_GAME, CHECK, GAME_OVER, MESSAGE, MOVE, TIME_OUT, RE_JOIN_GAME, INIT_CUSTOM_GAME, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME } from "./serverResponds"
+import { INIT_GAME, CHECK, GAME_OVER, MESSAGE, MOVE, TIME_OUT, RE_JOIN_GAME, INIT_CUSTOM_GAME, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME, SPECTATE } from "./serverResponds"
 
 
 export interface Message {
@@ -105,6 +105,13 @@ export const JOIN_CUSTOM_GAME_TYPE = z.object({ // websocket request
     })
 })
 
+export const SEPCTATE_GAME = z.object({
+    type: z.literal(SPECTATE),
+    payload: z.object({
+        gameId: z.string(),
+    })
+})
+
 export type INIT_GAME_TYPE_TS = z.infer<typeof INIT_GAME_TYPE>;
 export type INIT_GAME_TYPE_PAYLOAD_TS = z.infer<typeof INIT_GAME_TYPE>["payload"];
 export type Re_JOIN_GAME_TYPE_TS = z.infer<typeof Re_JOIN_GAME_TYPE>;
@@ -117,3 +124,4 @@ export type Re_JOIN_CUSTOM_GAME_TYPE_TS = z.infer<typeof Re_JOIN_CUSTOM_GAME_TYP
 export type MOVE_CUSTOM_TYPE_TS = z.infer<typeof MOVE_CUSTOM_TYPE>;
 export type MESSAGE_CUSTOM_TYPE_TS = z.infer<typeof MESSAGE_CUSTOM_TYPE>;
 export type JOIN_CUSTOM_GAME_TYPE_TS = z.infer<typeof JOIN_CUSTOM_GAME_TYPE>;
+export type SEPCTATE_GAME_TS = z.infer<typeof SEPCTATE_GAME>;

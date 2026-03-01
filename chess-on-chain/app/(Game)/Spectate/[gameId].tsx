@@ -1,11 +1,11 @@
 import { StyleSheet, View, Text, useWindowDimensions, ScrollView, TouchableOpacity } from 'react-native'
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
+    ENTER_ARENA_PAYLOAD,
+    ENTERED_ARENA,
     GAME_OVER,
     GAME_OVER_RESPONSE_PAYLOAD,
     GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD,
-    INIT_GAME,
-    INIT_GAME_RESPONSE_PAYLOAD,
     JOIN_CUSTOM_GAME,
     JOIN_CUSTOM_GAME_Response_Payload,
     MESSAGE,
@@ -15,21 +15,18 @@ import {
     MOVE_RESPONSE_PAYLOAD,
     RE_JOIN_CUSTOM_GAME,
     RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD,
-    RE_JOIN_GAME,
-    Re_JOIN_GAME_RESPONSE_PAYLOAD,
+    SPECTATE,
     TIME_OUT
 } from '@/src/config/serverResponds';
 import { Chess, Move, Square } from 'chess.js';
 import { WS_URL } from '@/src/config/config';
 import { ConnectingToServer } from '@/src/components/connectingToServer';
-import { GameBet } from '@/src/stores/gameBet';
 import { Audio } from 'expo-av';
 import { useWalletStore } from '@/src/stores/wallet-store';
-import { INIT_GAME_TYPE_TS, JOIN_CUSTOM_GAME_TYPE_TS, Re_JOIN_CUSTOM_GAME_TYPE_TS, Re_JOIN_GAME_TYPE_TS } from '@/src/config/serverInputs';
+import { SEPCTATE_GAME_TS } from '@/src/config/serverInputs';
 import { jwtStore } from '@/src/stores/jwt';
 import { GameBase } from '@/src/components/GameBase';
-import { customGameIdStore, skrStore } from '@/src/stores/customStore';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 export interface GameOver {
     winner: "b" | "w" | null,
@@ -42,9 +39,14 @@ export interface Message {
     message: string,
 }
 
-export default function Game() {
-
-    // ---------------- STATE ----------------
+export default function CustomGame() {
+    // const [fontsLoaded] = useFonts({
+    //   Orbitron_900Black,
+    // });
+    const fontsLoaded = true;
+    const { gameId} = useLocalSearchParams<{ gameId: string}>();
+    const gameIdRef = useRef<string | null>(gameId)
+    const [skr, setSkr] = useState <number>(0);
     const socket = useRef<WebSocket | null>(null)
     const [chess, setChess] = useState(new Chess())
     const [color, setColor] = useState<"w" | "b">("w")
@@ -58,11 +60,6 @@ export default function Game() {
     const [moves, setMoves] = useState<Move[]>([])
     const [showMessages, setShowMessages] = useState(false)
     const [connected, setConnected] = useState(false)
-
-    const moveSoundRef = useRef<Audio.Sound | null>(null);
-    const checkSoundRef = useRef<Audio.Sound | null>(null);
-    const illegalSoundRef = useRef<Audio.Sound | null>(null);
-    const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
     const [timer1, setTimer1] = useState(10 * 60 * 1000)
     const [timer2, setTimer2] = useState(10 * 60 * 1000)
     const [opponentPubkey, setOpponentPubkey] = useState<string | null>(null)
@@ -78,19 +75,10 @@ export default function Game() {
 
     const { width } = useWindowDimensions()
 
-    const setSkr = skrStore(s => s.setSkr)
-    const skr = skrStore(s => s.skr)
-    const gameIdRef = useRef<string | null>(customGameIdStore(s => s.customGameId))
-    const setCustomGameId = customGameIdStore(s => s.setCustomGameId)
-
     const isDevnet = useWalletStore(s => s.isDevnet)
 
     const jwt = jwtStore(s => s.jwt)
     const publicKey = useWalletStore(s => s.publicKey)
-    // const [fontsLoaded] = useFonts({
-    //   Orbitron_900Black,
-    // });
-    const fontsLoaded = true;
 
     const onJoinCustomGameResponse = useCallback((payload: JOIN_CUSTOM_GAME_Response_Payload) => {
         setColor(payload.color)
@@ -99,9 +87,18 @@ export default function Game() {
         setTimer1(payload.timer1)
         setTimer2(payload.timer2)
         gameIdRef.current = payload.gameId
-        setSkr(payload.skr)
         setOpponentPubkey(payload.opponentPubkey)
+        setSkr(payload.skr)
     }, [])
+    
+    const onEnterArenaResponse = useCallback((payload: ENTER_ARENA_PAYLOAD) => {
+        setColor(payload.color);
+        setSkr(payload.skr);
+        setChess(new Chess(payload.board));
+        setGameStarted(true);
+        setTimer1(payload.timer1)
+        setTimer2(payload.timer2)
+    }, []);
 
     const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
         let newChess = new Chess(payload.board)
@@ -110,8 +107,8 @@ export default function Game() {
         setPrevTo(payload.move.to);
         setTimer1(payload.timer1);
         setTimer2(payload.timer2);
+        setGameStarted(true)
         setMoves(payload.history)
-        playMoveSound()
     }, [])
 
     const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
@@ -119,6 +116,7 @@ export default function Game() {
         setPrevFrom(payload.move.from)
         setPrevTo(payload.move.to)
         setMoves(payload.history)
+        setGameStarted(true)
         setGameOver({
             winner: payload.winner,
             gameOverType: payload.gameOverType,
@@ -131,6 +129,7 @@ export default function Game() {
         setPrevFrom(payload.move.from)
         setPrevTo(payload.move.to)
         setMoves(payload.history)
+        setGameStarted(true)
         setGameOver({
             winner: payload.winner,
             gameOverType: payload.gameOverType,
@@ -146,8 +145,8 @@ export default function Game() {
         setTimer1(payload.timer1)
         setTimer2(payload.timer2)
         gameIdRef.current = payload.gameId
-        setSkr(payload.skr)
         setOpponentPubkey(payload.opponentPubkey)
+        setSkr(payload.skr)
     }, [])
 
     const connect = useCallback((isRejoin = false) => {
@@ -157,7 +156,7 @@ export default function Game() {
             console.log("Already connecting/connected, skipping");
             return;
         }
-        if (!jwt || !skr) {
+        if (!jwt) {
             router.replace("/");
             return;
         }
@@ -165,41 +164,18 @@ export default function Game() {
         const ws = new WebSocket(WS_URL)
 
         ws.onopen = () => {
-            if (!jwt || !skr) {
-                ;
+            if (!jwt) {
                 return;
             }
             socket.current = ws
             setConnected(true)
-            if (isRejoin && gameIdRef.current) {
-                console.log("here2")
-                const payload: Re_JOIN_CUSTOM_GAME_TYPE_TS = {
-                    type: RE_JOIN_CUSTOM_GAME,
-                    payload: {
-                        gameId: gameIdRef.current,
-                        jwt
-                    }
+            const payload: SEPCTATE_GAME_TS = {
+                type: SPECTATE,
+                payload: {
+                    gameId
                 }
-                ws.send(JSON.stringify(payload))
-            } else {
-                console.log("here3")
-                if (!gameIdRef.current) {
-                    console.log("here5")
-                    isMountedRef.current = false
-                    ws.close();
-                    router.replace("/")
-                    return;
-                }
-                const payload: JOIN_CUSTOM_GAME_TYPE_TS = {
-                    type: JOIN_CUSTOM_GAME,
-                    payload: {
-                        jwt,
-                        gameId: gameIdRef.current,
-                    }
-                }
-
-                ws.send(JSON.stringify(payload))
             }
+            socket.current.send(JSON.stringify(payload));
         }
 
         ws.onclose = () => {
@@ -226,6 +202,9 @@ export default function Game() {
             const payload = message.payload
 
             switch (message.type) {
+                case ENTERED_ARENA:
+                    onEnterArenaResponse(payload as ENTER_ARENA_PAYLOAD);
+                    break;
 
                 case JOIN_CUSTOM_GAME:
                     onJoinCustomGameResponse(payload as JOIN_CUSTOM_GAME_Response_Payload);
@@ -252,60 +231,12 @@ export default function Game() {
                     break;
             }
         }
-    }, [jwt, skr, isDevnet])
+    }, [jwt, isDevnet])
 
     const onMessageResponse = useCallback((payload: message_payload) => {
         setMessages(m => [...m, payload])
         setLastMessage(payload)
     }, [])
-
-    const playMoveSound = async () => {
-        if (!moveSoundRef.current) return;
-
-        try {
-            await moveSoundRef.current.stopAsync();
-            await moveSoundRef.current.setPositionAsync(0);
-            await moveSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Move sound error:", err);
-        }
-    };
-
-    const playCheckSound = async () => {
-        if (!checkSoundRef.current) return;
-
-        try {
-            await checkSoundRef.current.stopAsync();
-            await checkSoundRef.current.setPositionAsync(0);
-            await checkSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Check sound error:", err);
-        }
-    };
-
-    const playIllegalMoveSound = async () => {
-        if (!illegalSoundRef.current) return;
-
-        try {
-            await illegalSoundRef.current.stopAsync();
-            await illegalSoundRef.current.setPositionAsync(0);
-            await illegalSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Check sound error:", err);
-        }
-    };
-
-    const playLowOnTimeSound = async () => {
-        if (!lowOnTimeSoundRef.current) return;
-
-        try {
-            await lowOnTimeSoundRef.current.stopAsync();
-            await lowOnTimeSoundRef.current.setPositionAsync(0);
-            await lowOnTimeSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Check sound error:", err);
-        }
-    };
 
     useEffect(() => {
         if (showMessages && messages.length > 0) {
@@ -315,55 +246,6 @@ export default function Game() {
             }, 100);
         }
     }, [showMessages, messages]);
-
-    useEffect(() => {
-        const loadSounds = async () => {
-            await Audio.setAudioModeAsync({
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: false,
-                playThroughEarpieceAndroid: true,
-            });
-
-            const moveSound = new Audio.Sound();
-            const checkSound = new Audio.Sound();
-            const illegalSound = new Audio.Sound();
-            const lowOnTimeSound = new Audio.Sound();
-
-            await moveSound.loadAsync(
-                require('../../assets/audios/moveSound.mp3')
-            );
-
-            await checkSound.loadAsync(
-                require('../../assets/audios/checkSound.mp3')
-            );
-
-            await illegalSound.loadAsync(
-                require('../../assets/audios/illegalMoveSound.mp3')
-            );
-
-            await lowOnTimeSound.loadAsync(
-                require('../../assets/audios/lowOnTime.mp3')
-            );
-
-            moveSoundRef.current = moveSound;
-            checkSoundRef.current = checkSound;
-            illegalSoundRef.current = illegalSound;
-            lowOnTimeSoundRef.current = lowOnTimeSound;
-        };
-
-        loadSounds();
-
-        return () => {
-            // Do NOT unload on unmount
-            // Let Expo AV handle destruction.
-            // moveSoundRef.current?.unloadAsync();
-            // checkSoundRef.current?.unloadAsync();
-            // illegalSoundRef.current?.unloadAsync();
-            // lowOnTimeSoundRef.current?.unloadAsync();
-            setSkr(null)
-            setCustomGameId(null)
-        };
-    }, []);
 
     useEffect(() => {
         connect();
@@ -380,16 +262,23 @@ export default function Game() {
         }
     }, [])
 
-
+    const isReady =
+        socket.current &&
+        publicKey &&
+        jwt &&
+        skr > 0 &&
+        connected;
+        console.log(isReady)
 
     return (
         <View style={{ flex: 1 }}>
-            {(!socket.current || !publicKey || !jwt || !skr || !connected) &&
-                <ConnectingToServer message='Connecting to server...' fontsLoaded={fontsLoaded} />
+            {!isReady &&
+                <ConnectingToServer message={connected ? 'Waiting for game to start...' : 'Connecting to server...'} fontsLoaded={fontsLoaded} />
             }
 
-            {(socket.current && publicKey && jwt && skr && connected) &&
+            {isReady &&
                 <GameBase
+                    spectator={true}
                     width={width}
                     showMessages={showMessages}
                     setShowMessages={setShowMessages}
@@ -408,14 +297,11 @@ export default function Game() {
                     timer2={timer2}
                     gameStarted={gameStarted}
                     gameover={gameover}
-                    playLowOnTimeSound={playLowOnTimeSound}
                     moves={moves}
                     from={from}
                     prevFrom={prevFrom}
                     setFrom={setFrom}
                     prevTo={prevTo}
-                    playIllegalMoveSound={playIllegalMoveSound}
-                    playCheckSound={playCheckSound}
                     lastMessage={lastMessage}
                     player1Pubkey={publicKey}
                     player2Pubkey={opponentPubkey}
@@ -431,5 +317,6 @@ export default function Game() {
         </View>
     )
 }
+    
 
 const styles = StyleSheet.create({})

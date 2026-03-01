@@ -16,6 +16,10 @@ export const MESSAGE_CUSTOM = "message_custom";
 export const RE_JOIN_CUSTOM_GAME = "re_join_custom_game";
 export const CUSTOM_CREATED = "custom_created";
 export const CUSTOM_NOT_FOUND = "custom_not_found";
+export const ENTERED_ARENA = "entered_arena";
+export const CANNOT_JOIN_CUSTOM = "cannot_join_custom";
+export const SPECTATE = "spectate";
+
 
 export type INIT_GAME_RESPONSE_PAYLOAD = {
     color: "b" | "w",
@@ -99,4 +103,14 @@ export type GET_GAMES_RESPONSE_PAYLOAD = {
     skr: number,
     id: string,
     network: "MAINNET" | "DEVNET"
+}
+
+export type ENTER_ARENA_PAYLOAD = {
+    skr: number,
+    color: "b" | "w",
+    board: string,
+    timer1: number,
+    timer2: number,
+    gameId: string,
+    opponentPubkey: string,
 }

@@ -1,4 +1,4 @@
-import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME, CUSTOM_NOT_FOUND } from "./Messages.js";
+import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME, CUSTOM_NOT_FOUND, ENTERED_ARENA } from "./Messages.js";
 import { Game } from "./Game.js";
 import { INIT_GAME_TYPE, JOIN_CUSTOM_GAME_TYPE, MESSAGE_CUSTOM_TYPE, MESSAGE_TYPE, MOVE_CUSTOM_TYPE, MOVE_TYPE, Re_JOIN_CUSTOM_GAME_TYPE, Re_JOIN_GAME_TYPE } from "./types/type.js";
 import { prisma } from "./lib/prisma.js";
@@ -67,6 +67,7 @@ export class GameManager {
                     else {
                         this.pendingUsers.set(`${network}-${sol}`, { socket, publicKey });
                     }
+                    return;
                 }
                 if (message.type == RE_JOIN_GAME) {
                     const result = Re_JOIN_GAME_TYPE.safeParse(message);
@@ -135,6 +136,7 @@ export class GameManager {
                         return;
                     }
                     this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.makeMove(socket, { from: payload.from, to: payload.to }, promotion);
+                    return;
                 }
                 if (message.type == MESSAGE) {
                     const result = MESSAGE_TYPE.safeParse(message);
@@ -150,8 +152,10 @@ export class GameManager {
                         return;
                     }
                     this.games.get(this.getGameKey(payload.network, payload.sol))?.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
+                    return;
                 }
                 if (message.type === JOIN_CUSTOM_GAME) {
+                    console.log(JOIN_CUSTOM_GAME);
                     const result = JOIN_CUSTOM_GAME_TYPE.safeParse(message);
                     if (!result.success) {
                         return;
@@ -179,41 +183,78 @@ export class GameManager {
                         }));
                         return;
                     }
-                    // WHEN PLAYER1 JOINS -->
-                    const isGameExisted = this.customGames.get(gameId);
-                    if (fetchGame.player1PublicKey == publicKey) {
-                        if (isGameExisted) {
-                            // if game exists and the websocket of the player1 already exists
-                            if (isGameExisted.player1) {
-                                return; // you have to rejoin the game
+                    const gameExists = this.customGames.get(gameId);
+                    if (gameExists) {
+                        if (gameExists.started) {
+                            console.log("h");
+                            if (fetchGame.player1PublicKey == publicKey) {
+                                gameExists.player1 = socket;
+                                socket.send(JSON.stringify({
+                                    type: ENTERED_ARENA,
+                                    payload: {
+                                        skr: gameExists.skr,
+                                        color: "w",
+                                        board: gameExists.board.fen(),
+                                        timer1: gameExists.timer1,
+                                        timer2: gameExists.timer2,
+                                        gameId,
+                                        opponentPubkey: gameExists.player2Pubkey,
+                                    }
+                                }));
+                                return;
                             }
-                            // if game exists and the websocket of the player1 does not exist
-                            // player2 has joined the game first
-                            else {
-                                isGameExisted.player1 = socket;
-                                isGameExisted.startGame();
+                            else if (fetchGame.player2PublicKey == publicKey) {
+                                gameExists.player2 = socket;
+                                socket.send(JSON.stringify({
+                                    type: ENTERED_ARENA,
+                                    payload: {
+                                        skr: gameExists.skr,
+                                        color: "b",
+                                        board: gameExists.board.fen(),
+                                        timer1: gameExists.timer1,
+                                        timer2: gameExists.timer2,
+                                        gameId,
+                                        opponentPubkey: gameExists.player1Pubkey,
+                                    }
+                                }));
+                                return;
                             }
                         }
                         else {
-                            // if game does not exist and player 1 joined first
-                            const createCustom = this.customGames.set(gameId, new CustomGame(fetchGame.player1PublicKey, fetchGame.player2PublicKey, gameId, Number(fetchGame.skr)));
-                            this.customGames.get(gameId).player1 = socket;
-                        }
-                    }
-                    // WHEN PLAYER2 JOINS -->
-                    else if (fetchGame.player2PublicKey == publicKey) {
-                        if (isGameExisted) {
-                            // if game exists and the websocket of the player2 already exists
-                            if (isGameExisted.player2) {
-                                return; // you have to rejoin the game to avoid double money deduction
+                            if (fetchGame.player1PublicKey == publicKey) {
+                                gameExists.player1 = socket;
+                                socket.send(JSON.stringify({
+                                    type: ENTERED_ARENA,
+                                    payload: {
+                                        skr: gameExists.skr,
+                                        color: "w",
+                                        board: gameExists.board.fen(),
+                                        timer1: gameExists.timer1,
+                                        timer2: gameExists.timer2,
+                                        gameId,
+                                        opponentPubkey: gameExists.player2Pubkey,
+                                    }
+                                }));
+                                gameExists.startGame();
+                                return;
                             }
-                            // if game exists and the websocket of the player2 does not exist
-                            // player1 has joined the game first
-                            else {
+                            else if (fetchGame.player2PublicKey == publicKey) {
                                 const result = await this.deductSkr(publicKey, fetchGame.skr);
                                 if (result.success) {
-                                    isGameExisted.player2 = socket;
-                                    isGameExisted.startGame();
+                                    gameExists.player2 = socket;
+                                    socket.send(JSON.stringify({
+                                        type: ENTERED_ARENA,
+                                        payload: {
+                                            skr: gameExists.skr,
+                                            color: "b",
+                                            board: gameExists.board.fen(),
+                                            timer1: gameExists.timer1,
+                                            timer2: gameExists.timer2,
+                                            gameId,
+                                            opponentPubkey: gameExists.player1Pubkey,
+                                        }
+                                    }));
+                                    gameExists.startGame();
                                 }
                                 else {
                                     socket.send(JSON.stringify({
@@ -224,21 +265,49 @@ export class GameManager {
                                 }
                             }
                         }
-                        else {
-                            // if game does not exist and player 2 joined first  
+                    }
+                    else {
+                        if (fetchGame.player1PublicKey == publicKey) {
+                            const createCustom = this.customGames.set(gameId, new CustomGame(fetchGame.player1PublicKey, fetchGame.player2PublicKey, gameId, Number(fetchGame.skr)));
+                            const newGame = this.customGames.get(gameId);
+                            newGame.player1 = socket;
+                            socket.send(JSON.stringify({
+                                type: ENTERED_ARENA,
+                                payload: {
+                                    skr: newGame.skr,
+                                    color: "w",
+                                    board: newGame.board.fen(),
+                                    timer1: newGame.timer1,
+                                    timer2: newGame.timer2,
+                                    gameId,
+                                    opponentPubkey: newGame.player2Pubkey,
+                                }
+                            }));
+                        }
+                        else if (fetchGame.player2PublicKey == publicKey) {
                             const result = await this.deductSkr(publicKey, fetchGame.skr);
                             if (result.success) {
-                                // if game does not exist and player 2 joined first
                                 const createCustom = this.customGames.set(gameId, new CustomGame(fetchGame.player1PublicKey, fetchGame.player2PublicKey, gameId, Number(fetchGame.skr)));
-                                this.customGames.get(gameId).player2 = socket;
-                                this.customGames.get(gameId).startGame();
+                                const newGame = this.customGames.get(gameId);
+                                newGame.player2 = socket;
+                                socket.send(JSON.stringify({
+                                    type: ENTERED_ARENA,
+                                    payload: {
+                                        skr: newGame.skr,
+                                        color: "b",
+                                        board: newGame.board.fen(),
+                                        timer1: newGame.timer1,
+                                        timer2: newGame.timer2,
+                                        gameId,
+                                        opponentPubkey: newGame.player2Pubkey,
+                                    }
+                                }));
                             }
                             else {
                                 socket.send(JSON.stringify({
                                     type: INSUFFICIENT_FUNDS,
                                     payload: {}
                                 }));
-                                return;
                             }
                         }
                     }
@@ -324,6 +393,7 @@ export class GameManager {
                         return;
                     }
                     this.customGames.get(payload.gameId)?.addMessage(socket, { from: payload.from, message: payload.message });
+                    return;
                 }
             }
             catch (error) {

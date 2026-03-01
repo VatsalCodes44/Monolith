@@ -30,7 +30,8 @@ export function ChessBoard(
     gameId,
     jwt,
     gameType,
-    playMoveSound
+    playMoveSound,
+    spectator
   }: {
     chess: Chess,
     socket: WebSocket,
@@ -48,7 +49,8 @@ export function ChessBoard(
     gameId: string | null,
     jwt: string | null,
     gameType: "NORMAL" | "CUSTOM",
-    playMoveSound: () => Promise<void>
+    playMoveSound: () => Promise<void>,
+    spectator: boolean
   }) {
   const { width, height } = useWindowDimensions();
   const [showPromotionOptions, setShowPromotionOptions] = useState(false)
@@ -58,6 +60,7 @@ export function ChessBoard(
   const boardSize = Math.min(width, 642);
 
   useEffect(() => {
+    if (spectator) return;
     if (from) {
       const moves = chess.moves({
         square: from,
@@ -72,6 +75,7 @@ export function ChessBoard(
   }, [from]);
 
   const onPress = (piece: Piece, rowIdx: number, colIdx: number) => {
+    if (spectator) return;
     if (GameOver.isGameOver || !gameStarted || !gameId || !jwt) return;
     if (chess.turn() != color) return;
     if (!piece && !from) return;
@@ -148,6 +152,7 @@ export function ChessBoard(
   }
 
   const handlePromotionSelect = (selectedPiece: "q" | "r" | "b" | "k") => {
+    if (spectator) return;
     if (!pendingPromotionMove || !gameId || !jwt) return;
 
     // Make the move with the selected promotion piece
@@ -433,7 +438,7 @@ function PreviousTurn({
   color,
   squareName,
   prevFrom,
-  playMoveSound
+  playMoveSound,
 }: {
   width: number;
   onPress: (piece: Piece, rowIdx: number, colIdx: number) => void;
@@ -443,7 +448,7 @@ function PreviousTurn({
   color: "b" | "w";
   squareName: string;
   prevFrom: Square | null;
-  playMoveSound: () => Promise<void>
+  playMoveSound: () => Promise<void>;
 }) {
   playMoveSound()
   const squareSize = Math.min(width, 640) / 8;

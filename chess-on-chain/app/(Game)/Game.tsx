@@ -280,6 +280,7 @@ export default function Game() {
 
       {(socket.current && publicKey && jwt && sol && connected) &&
         <GameBase
+          spectator={false}
           width={width}
           showMessages={showMessages}
           setShowMessages={setShowMessages}
