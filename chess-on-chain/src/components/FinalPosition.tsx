@@ -9,7 +9,7 @@ import { StaticChessBoard } from './StaticChessboard'
 import { Chess, Move } from 'chess.js'
 import { StaticTimer } from './StaticTimer'
 
-export function Spectate({
+export function FinalPosition({
     chess,
     player1Pubkey,
     player2Pubkey,

@@ -1,5 +1,5 @@
 import { StyleSheet, View, Text, useWindowDimensions, ScrollView, TouchableOpacity } from 'react-native'
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChessBoard } from "@/src/components/ChessBoard"
 import { Chess, Move, Square } from 'chess.js'
@@ -10,7 +10,7 @@ import { MoveHistory } from '@/src/components/MoveHistory'
 import { Captured } from '@/src/components/Captured'
 import { ShowMessages } from '@/src/components/ShowMessages'
 import { SolanaDuelHeader } from '@/src/components/SolanaDuelHeader'
-
+import { Audio } from 'expo-av'
 export interface GameOver {
     winner: "b" | "w" | null,
     gameOverType: "checkmate" | "stalemate" | "draw" | "time_out" | null,
@@ -41,14 +41,11 @@ function GameBaseComponent({
     timer2,
     gameStarted,
     gameover,
-    playLowOnTimeSound,
     moves,
     from,
     prevFrom,
     setFrom,
     prevTo,
-    playIllegalMoveSound,
-    playCheckSound,
     lastMessage,
     player1Pubkey,
     player2Pubkey,
@@ -72,20 +69,118 @@ function GameBaseComponent({
     timer2: number,
     gameStarted: boolean,
     gameover: GameOver,
-    playLowOnTimeSound: () => Promise<void>,
     moves: Move[],
     from: Square | null,
     prevFrom: Square | null,
     setFrom: React.Dispatch<React.SetStateAction<Square | null>>,
     prevTo: Square | null,
-    playIllegalMoveSound: () => Promise<void>,
-    playCheckSound: () => Promise<void>,
     lastMessage: Message | undefined,
     player1Pubkey: string | null,
     player2Pubkey: string | null,
     gameType: "NORMAL" | "CUSTOM",
     skr?: number
 }) {
+
+    const moveSoundRef = useRef<Audio.Sound | null>(null);
+    const checkSoundRef = useRef<Audio.Sound | null>(null);
+    const illegalSoundRef = useRef<Audio.Sound | null>(null);
+    const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
+
+    const playMoveSound = async () => {
+    if (!moveSoundRef.current) return;
+
+    try {
+        await moveSoundRef.current.stopAsync();
+        await moveSoundRef.current.setPositionAsync(0);
+        await moveSoundRef.current.playAsync();
+    } catch (err) {
+        console.log("Move sound error:", err);
+    }
+    };
+
+    const playCheckSound = async () => {
+    if (!checkSoundRef.current) return;
+
+    try {
+        await checkSoundRef.current.stopAsync();
+        await checkSoundRef.current.setPositionAsync(0);
+        await checkSoundRef.current.playAsync();
+    } catch (err) {
+        console.log("Check sound error:", err);
+    }
+    };
+
+    const playIllegalMoveSound = async () => {
+    if (!illegalSoundRef.current) return;
+
+    try {
+        await illegalSoundRef.current.stopAsync();
+        await illegalSoundRef.current.setPositionAsync(0);
+        await illegalSoundRef.current.playAsync();
+    } catch (err) {
+        console.log("Check sound error:", err);
+    }
+    };
+
+    const playLowOnTimeSound = async () => {
+    if (!lowOnTimeSoundRef.current) return;
+
+    try {
+        await lowOnTimeSoundRef.current.stopAsync();
+        await lowOnTimeSoundRef.current.setPositionAsync(0);
+        await lowOnTimeSoundRef.current.playAsync();
+    } catch (err) {
+        console.log("Check sound error:", err);
+    }
+    };
+
+    useEffect(() => {
+        const loadSounds = async () => {
+            await Audio.setAudioModeAsync({
+            playsInSilentModeIOS: true,
+            staysActiveInBackground: false,
+            playThroughEarpieceAndroid: true,
+            });
+
+            const moveSound = new Audio.Sound();
+            const checkSound = new Audio.Sound();
+            const illegalSound = new Audio.Sound();
+            const lowOnTimeSound = new Audio.Sound();
+
+            await moveSound.loadAsync(
+            require('../../assets/audios/moveSound.mp3')
+            );
+
+            await checkSound.loadAsync(
+            require('../../assets/audios/checkSound.mp3')
+            );
+
+            await illegalSound.loadAsync(
+            require('../../assets/audios/illegalMoveSound.mp3')
+            );
+
+            await lowOnTimeSound.loadAsync(
+            require('../../assets/audios/lowOnTime.mp3')
+            );
+
+            moveSoundRef.current = moveSound;
+            checkSoundRef.current = checkSound;
+            illegalSoundRef.current = illegalSound;
+            lowOnTimeSoundRef.current = lowOnTimeSound;
+        };
+
+        loadSounds();
+
+        return () => {
+            // Do NOT unload on unmount
+            // Let Expo AV handle destruction.
+            // moveSoundRef.current?.unloadAsync();
+            // checkSoundRef.current?.unloadAsync();
+            // illegalSoundRef.current?.unloadAsync();
+            // lowOnTimeSoundRef.current?.unloadAsync();
+        };
+        }, []);
+
     return (
         <SafeAreaView style={{
             flex: 1,
@@ -209,6 +304,7 @@ function GameBaseComponent({
                     sol={sol}
                     jwt={jwt}
                     gameType={gameType}
+                    playMoveSound={playMoveSound}
                 />
             </View>
 

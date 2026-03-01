@@ -4,8 +4,6 @@ import {
     GAME_OVER,
     GAME_OVER_RESPONSE_PAYLOAD,
     GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD,
-    INIT_GAME,
-    INIT_GAME_RESPONSE_PAYLOAD,
     JOIN_CUSTOM_GAME,
     JOIN_CUSTOM_GAME_Response_Payload,
     MESSAGE,
@@ -15,8 +13,6 @@ import {
     MOVE_RESPONSE_PAYLOAD,
     RE_JOIN_CUSTOM_GAME,
     RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD,
-    RE_JOIN_GAME,
-    Re_JOIN_GAME_RESPONSE_PAYLOAD,
     TIME_OUT
 } from '@/src/config/serverResponds';
 import { Chess, Move, Square } from 'chess.js';
@@ -24,7 +20,7 @@ import { WS_URL } from '@/src/config/config';
 import { ConnectingToServer } from '@/src/components/connectingToServer';
 import { Audio } from 'expo-av';
 import { useWalletStore } from '@/src/stores/wallet-store';
-import { INIT_GAME_TYPE_TS, JOIN_CUSTOM_GAME_TYPE_TS, Re_JOIN_CUSTOM_GAME_TYPE_TS, Re_JOIN_GAME_TYPE_TS } from '@/src/config/serverInputs';
+import { INIT_GAME_TYPE_TS, JOIN_CUSTOM_GAME_TYPE_TS, Re_JOIN_CUSTOM_GAME_TYPE_TS } from '@/src/config/serverInputs';
 import { jwtStore } from '@/src/stores/jwt';
 import { GameBase } from '@/src/components/GameBase';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -45,9 +41,9 @@ export default function CustomGame() {
     //   Orbitron_900Black,
     // });
     const fontsLoaded = true;
-    const { gameId, skr: skrValue } = useLocalSearchParams<{ gameId: string, skr: string }>();
+    const { gameId} = useLocalSearchParams<{ gameId: string}>();
     const gameIdRef = useRef<string | null>(gameId)
-    const skr = parseInt(skrValue)/1_000_000;
+    const [skr, setSkr] = useState <null | number>(null);
     const socket = useRef<WebSocket | null>(null)
     const [chess, setChess] = useState(new Chess())
     const [color, setColor] = useState<"w" | "b">("w")
@@ -61,11 +57,6 @@ export default function CustomGame() {
     const [moves, setMoves] = useState<Move[]>([])
     const [showMessages, setShowMessages] = useState(false)
     const [connected, setConnected] = useState(false)
-
-    const moveSoundRef = useRef<Audio.Sound | null>(null);
-    const checkSoundRef = useRef<Audio.Sound | null>(null);
-    const illegalSoundRef = useRef<Audio.Sound | null>(null);
-    const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
     const [timer1, setTimer1] = useState(10 * 60 * 1000)
     const [timer2, setTimer2] = useState(10 * 60 * 1000)
     const [opponentPubkey, setOpponentPubkey] = useState<string | null>(null)
@@ -94,6 +85,7 @@ export default function CustomGame() {
         setTimer2(payload.timer2)
         gameIdRef.current = payload.gameId
         setOpponentPubkey(payload.opponentPubkey)
+        setSkr(payload.skr)
     }, [])
 
     const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
@@ -104,7 +96,6 @@ export default function CustomGame() {
         setTimer1(payload.timer1);
         setTimer2(payload.timer2);
         setMoves(payload.history)
-        playMoveSound()
     }, [])
 
     const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
@@ -251,54 +242,6 @@ export default function CustomGame() {
         setLastMessage(payload)
     }, [])
 
-    const playMoveSound = async () => {
-        if (!moveSoundRef.current) return;
-
-        try {
-            await moveSoundRef.current.stopAsync();
-            await moveSoundRef.current.setPositionAsync(0);
-            await moveSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Move sound error:", err);
-        }
-    };
-
-    const playCheckSound = async () => {
-        if (!checkSoundRef.current) return;
-
-        try {
-            await checkSoundRef.current.stopAsync();
-            await checkSoundRef.current.setPositionAsync(0);
-            await checkSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Check sound error:", err);
-        }
-    };
-
-    const playIllegalMoveSound = async () => {
-        if (!illegalSoundRef.current) return;
-
-        try {
-            await illegalSoundRef.current.stopAsync();
-            await illegalSoundRef.current.setPositionAsync(0);
-            await illegalSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Check sound error:", err);
-        }
-    };
-
-    const playLowOnTimeSound = async () => {
-        if (!lowOnTimeSoundRef.current) return;
-
-        try {
-            await lowOnTimeSoundRef.current.stopAsync();
-            await lowOnTimeSoundRef.current.setPositionAsync(0);
-            await lowOnTimeSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Check sound error:", err);
-        }
-    };
-
     useEffect(() => {
         if (showMessages && messages.length > 0) {
             // slight delay because modal animation + layout timing
@@ -307,53 +250,6 @@ export default function CustomGame() {
             }, 100);
         }
     }, [showMessages, messages]);
-
-    useEffect(() => {
-        const loadSounds = async () => {
-            await Audio.setAudioModeAsync({
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: false,
-                playThroughEarpieceAndroid: true,
-            });
-
-            const moveSound = new Audio.Sound();
-            const checkSound = new Audio.Sound();
-            const illegalSound = new Audio.Sound();
-            const lowOnTimeSound = new Audio.Sound();
-
-            await moveSound.loadAsync(
-                require('../../assets/audios/moveSound.mp3')
-            );
-
-            await checkSound.loadAsync(
-                require('../../assets/audios/checkSound.mp3')
-            );
-
-            await illegalSound.loadAsync(
-                require('../../assets/audios/illegalMoveSound.mp3')
-            );
-
-            await lowOnTimeSound.loadAsync(
-                require('../../assets/audios/lowOnTime.mp3')
-            );
-
-            moveSoundRef.current = moveSound;
-            checkSoundRef.current = checkSound;
-            illegalSoundRef.current = illegalSound;
-            lowOnTimeSoundRef.current = lowOnTimeSound;
-        };
-
-        loadSounds();
-
-        return () => {
-            // Do NOT unload on unmount
-            // Let Expo AV handle destruction.
-            // moveSoundRef.current?.unloadAsync();
-            // checkSoundRef.current?.unloadAsync();
-            // illegalSoundRef.current?.unloadAsync();
-            // lowOnTimeSoundRef.current?.unloadAsync();
-        };
-    }, []);
 
     useEffect(() => {
         connect();
@@ -398,14 +294,11 @@ export default function CustomGame() {
                     timer2={timer2}
                     gameStarted={gameStarted}
                     gameover={gameover}
-                    playLowOnTimeSound={playLowOnTimeSound}
                     moves={moves}
                     from={from}
                     prevFrom={prevFrom}
                     setFrom={setFrom}
                     prevTo={prevTo}
-                    playIllegalMoveSound={playIllegalMoveSound}
-                    playCheckSound={playCheckSound}
                     lastMessage={lastMessage}
                     player1Pubkey={publicKey}
                     player2Pubkey={opponentPubkey}

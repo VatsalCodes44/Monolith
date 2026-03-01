@@ -5,7 +5,7 @@ import { Redirect, useLocalSearchParams } from "expo-router";
 import { gamesStore } from '@/src/stores/gamesStore';
 import { GameOver, Message } from '../Game';
 import { useWalletStore } from '@/src/stores/wallet-store';
-import { Spectate } from '@/src/components/Spectate';
+import { FinalPosition } from '@/src/components/FinalPosition';
 import { Chess, Move } from 'chess.js';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
@@ -23,7 +23,7 @@ export default function SpectateGame() {
 
     return (
         <View style={{ flex: 1 }}>
-            <Spectate 
+            <FinalPosition 
                 chess={new Chess(game.fen)}
                 color={color}
                 fontsLoaded={fontsLoaded}

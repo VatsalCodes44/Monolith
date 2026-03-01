@@ -30,6 +30,7 @@ export function ChessBoard(
     gameId,
     jwt,
     gameType,
+    playMoveSound
   }: {
     chess: Chess,
     socket: WebSocket,
@@ -47,6 +48,7 @@ export function ChessBoard(
     gameId: string | null,
     jwt: string | null,
     gameType: "NORMAL" | "CUSTOM",
+    playMoveSound: () => Promise<void>
   }) {
   const { width, height } = useWindowDimensions();
   const [showPromotionOptions, setShowPromotionOptions] = useState(false)
@@ -204,6 +206,7 @@ export function ChessBoard(
                     if (squareName === prevFrom || squareName === prevTo) {
                       return (
                         <PreviousTurn
+                          playMoveSound={playMoveSound}
                           width={width}
                           piece={piece}
                           onPress={onPress}
@@ -430,6 +433,7 @@ function PreviousTurn({
   color,
   squareName,
   prevFrom,
+  playMoveSound
 }: {
   width: number;
   onPress: (piece: Piece, rowIdx: number, colIdx: number) => void;
@@ -439,7 +443,9 @@ function PreviousTurn({
   color: "b" | "w";
   squareName: string;
   prevFrom: Square | null;
+  playMoveSound: () => Promise<void>
 }) {
+  playMoveSound()
   const squareSize = Math.min(width, 640) / 8;
   const pieceSize = squareSize * 0.95;
 
