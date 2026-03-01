@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
 import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS, INIT_CUSTOM_GAME, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, CUSTOM_CREATED, JOIN_CUSTOM_GAME, CUSTOM_NOT_FOUND } from "./Messages.js";
 import { Game } from "./Game.js";
-import { INIT_CUSTOM_GAME_TYPE, INIT_GAME_TYPE, JOIN_CUSTOM_GAME_TYPE, Message, MESSAGE_CUSTOM_TYPE, MESSAGE_TYPE, MOVE_CUSTOM_TYPE, MOVE_TYPE, Re_JOIN_CUSTOM_GAME_TYPE, Re_JOIN_GAME_TYPE } from "./types/type.js";
+import { INIT_GAME_TYPE, JOIN_CUSTOM_GAME_TYPE, Message, MESSAGE_CUSTOM_TYPE, MESSAGE_TYPE, MOVE_CUSTOM_TYPE, MOVE_TYPE, Re_JOIN_CUSTOM_GAME_TYPE, Re_JOIN_GAME_TYPE } from "./types/type.js";
 import { prisma } from "./lib/prisma.js"
 import jwt from "jsonwebtoken"
 import { CustomGame } from "./CustomGame.js";
@@ -201,46 +201,30 @@ export class GameManager {
                         return;
                     }
 
-                    // WHEN PLAYER1 JOINS -->
-                    const isGameExisted = this.customGames.get(gameId);
-                    if (fetchGame.player1PublicKey == publicKey) {
-                        if (isGameExisted) {
-                            // if game exists and the websocket of the player1 already exists
-                            if (isGameExisted.player1) {
-                                return; // you have to rejoin the game
+                    const gameExists = this.customGames.get(gameId);
+
+                    if ( gameExists ) {
+                        if (gameExists.started) {
+                            if (fetchGame.player1PublicKey == publicKey) {
+                                gameExists.player1 = socket;
+                                return;
                             }
-                            // if game exists and the websocket of the player1 does not exist
-                            // player2 has joined the game first
-                            else {
-                                isGameExisted.player1 = socket;
-                                isGameExisted.startGame();
+                            else if (fetchGame.player2PublicKey == publicKey) {
+                                gameExists.player2 = socket;
+                                return;
                             }
                         }
                         else {
-                            // if game does not exist and player 1 joined first
-                            const createCustom = this.customGames.set(gameId, new CustomGame(
-                                fetchGame.player1PublicKey,
-                                fetchGame.player2PublicKey,
-                                gameId,
-                                Number(fetchGame.skr),
-                            ))
-                            this.customGames.get(gameId)!.player1 = socket;
-                        }
-                    }
-                    // WHEN PLAYER2 JOINS -->
-                    else if (fetchGame.player2PublicKey == publicKey) {
-                        if (isGameExisted) {
-                            // if game exists and the websocket of the player2 already exists
-                            if (isGameExisted.player2) {
-                                return; // you have to rejoin the game to avoid double money deduction
+                            if (fetchGame.player1PublicKey == publicKey) {
+                                gameExists.player1 = socket;
+                                gameExists.startGame()
+                                return;
                             }
-                            // if game exists and the websocket of the player2 does not exist
-                            // player1 has joined the game first
-                            else {
+                            else if (fetchGame.player1PublicKey == publicKey) {
                                 const result = await this.deductSkr(publicKey, fetchGame.skr)
                                 if (result.success) {
-                                    isGameExisted.player2 = socket;
-                                    isGameExisted.startGame();
+                                    gameExists.player2 = socket;
+                                    gameExists.startGame();
                                 }
                                 else {
                                     socket.send(JSON.stringify({
@@ -249,13 +233,24 @@ export class GameManager {
                                     }))
                                     return;
                                 }
+                                gameExists.player2 = socket;
+                                gameExists.startGame()
                             }
                         }
-                        else {
-                            // if game does not exist and player 2 joined first  
+                    }
+                    else {
+                        if (fetchGame.player1PublicKey == publicKey) {
+                            const createCustom = this.customGames.set(gameId, new CustomGame(
+                                fetchGame.player1PublicKey,
+                                fetchGame.player2PublicKey,
+                                gameId,
+                                Number(fetchGame.skr),
+                            ))
+                            this.customGames.get(gameId)!.player1 = socket;
+                        }
+                        else if (fetchGame.player2PublicKey == publicKey) {
                             const result = await this.deductSkr(publicKey, fetchGame.skr)
                             if (result.success) {
-                                // if game does not exist and player 2 joined first
                                 const createCustom = this.customGames.set(gameId, new CustomGame(
                                     fetchGame.player1PublicKey,
                                     fetchGame.player2PublicKey,
@@ -263,14 +258,12 @@ export class GameManager {
                                     Number(fetchGame.skr),
                                 ))
                                 this.customGames.get(gameId)!.player2 = socket;
-                                this.customGames.get(gameId)!.startGame();
                             }
                             else {
                                 socket.send(JSON.stringify({
                                     type: INSUFFICIENT_FUNDS,
                                     payload: {}
                                 }))
-                                return;
                             }
                         }
                     }

@@ -177,7 +177,7 @@ export class Game {
             }));
 
             this.gameEnded = true;
-
+            await this.syncDb()
             try {
                 if (!this.ispaymentSettling) {
                     this.ispaymentSettling = true;
@@ -200,6 +200,11 @@ export class Game {
             type: MOVE,
             payload
         }));
+        
+        await this.syncDb()
+    }
+
+    public async syncDb () {
         try {
             await prisma.game.update({
                 where: {
@@ -394,8 +399,8 @@ export class Game {
             winner,
             gameOverType: "TIME_OUT",
             board: this.board.fen(),
-            timer1: this.timer1,
-            timer2: this.timer2,
+            timer1: this.timer1 <= 0 ? 0 : this.timer1,
+            timer2: this.timer2 <= 0 ? 0 : this.timer2,
             history: this.board.history({ verbose: true }),
         };
 

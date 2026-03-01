@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import React, { useRef, useState } from 'react'
 
 import { Redirect, useLocalSearchParams } from "expo-router";
@@ -18,9 +18,7 @@ export default function SpectateGame() {
     const color = game && publicKey && game.player1PublicKey == publicKey ? "w" : "b";
     console.log(game)
     if (!game || !publicKey) {
-        console.log(games)
-        console.log(game)
-        return <Text>uerncdcccccccckjbecb</Text>
+        return <Redirect href={"/games"} />
     }
 
     return (

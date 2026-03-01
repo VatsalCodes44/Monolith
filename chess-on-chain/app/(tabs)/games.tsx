@@ -25,17 +25,13 @@ import { Header } from "@/src/components/Header";
 import GradientCard2 from "@/src/components/GradientCard2";
 import { router } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
+import { gamesStore } from "@/src/stores/gamesStore";
 
 
 
 export default function Wallet() {
     const fontsLoaded = true;
-    const wallet = useWallet()
-    const [opponentKey, setOpponentKey] = useState<string>("");
-    const [isValidPubKey, setIsValidPubKey] = useState(true);
-    const minSkr = 50;
-    const [skrAmount, setSkrAmount] = useState<string>("0");
-    const [loading, setLoading] = useState(false);
+    const [showSol, setShowSol] = useState(true)
     const publicKey = useWalletStore(s => s.publicKey)
     const isDevnet = useWalletStore(s => s.isDevnet)
     const setIsDevnet = useWalletStore(s => s.setIsDevnet)
@@ -44,9 +40,8 @@ export default function Wallet() {
     const setSkr = gameBalance(s => s.setSkr)
     const skr = gameBalance(s => s.skr)
     const jwt = jwtStore(s => s.jwt)
-    const [customState, setCustomState] = useState<"DEPLOY MATCH" | "DEPLOYING" | "DEPLOYED" | "ERROR IN DEPLOYING" | "INSUFFICIENT SKR">("DEPLOY MATCH")
-    const [gameId, setGameId] = useState<string | null>(null)
-    const [games, setGames] = useState<GET_GAMES_RESPONSE_PAYLOAD[]>([])
+    const setGames = gamesStore(s => s.setGames)
+    const games = gamesStore(s => s.games)
     const isFocused = useIsFocused()
     useEffect(() => {
         if (isDevnet && isFocused) {
@@ -58,19 +53,31 @@ export default function Wallet() {
         }
     }, [isFocused])
 
-    const fetchBalance = async (
+    const fetchBalance = useCallback(async (
         publicKey: string | null,
         jwt: string | null,
         isDevnet: boolean
-    ) => {}
+    ) => {
+        console.log("🔥 fetchBalance called");
+        console.log(publicKey, "2222222222222222", jwt)
+        if (!publicKey || !jwt) return;
+        try {
+            const payload: GET_BALANCE_TYPE_TS = {
+                network: isDevnet ? "DEVNET" : "MAINNET",
+            };
+            const res = await axios.post(`${REST_URL}/getBalance`, payload, {
+                headers: { Authorization: `Bearer ${jwt}` },
+            });
+            const data = res.data;
+            console.log("RAW DATA:", data.lamports, "-----------", data.skr);
+            setLamports(Number(data.lamports));
+            setSkr(Number(data.skr));
+            console.log("STORE STATE:", gameBalance.getState().lamports);
+        } catch (e) {
+            console.log(e);
+        }
+    }, []);
 
-    const disabled = () => {
-        if (parseFloat(skrAmount) < minSkr) return true;
-        if (!isValidPubKey) return true;
-        return false;
-    }
-
-    const deployCustom = async () => {}
 
     const getGames = useCallback(async () => {
         const res = await axios.post(`${REST_URL}/getGames`, {}, {
@@ -86,8 +93,8 @@ export default function Wallet() {
                 <View style={styles.statusBar}>
                     <TouchableOpacity style={
                     {
-                        backgroundColor: wallet.publicKey
-                            ? (wallet.isDevnet
+                        backgroundColor: publicKey
+                            ? (isDevnet
                                 ? "#12372c91"
                                 : "#391e3ca8")
                             : "#4f19196e",
@@ -98,29 +105,29 @@ export default function Wallet() {
                         borderColor: '#2A2A30',
                     }} 
                     onPress={async () => {
-                        if (!wallet.publicKey) return;
-                        setIsDevnet(!wallet.isDevnet)
-                        await fetchBalance(wallet.publicKey, jwt, !wallet.isDevnet)
+                        if (!publicKey) return;
+                        setIsDevnet(!isDevnet)
+                        await fetchBalance(publicKey, jwt, !isDevnet)
                     }}>
                         <View style={styles.statusItem}>
                             <View style={[
                                 styles.statusDot,
                                 {
-                                    backgroundColor: wallet.publicKey ? (wallet.isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
+                                    backgroundColor: publicKey ? (isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
                                 }
                             ]} />
                             <Text style={[
                                 styles.statusText,
                                 {
-                                    color: wallet.publicKey ? (wallet.isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
+                                    color: publicKey ? (isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
                                 }
                             ]}>
-                                {wallet.publicKey ? (wallet.isDevnet ? "DEVNET" : "MAINNET") : "WALLET NOT CONNECTED"}
+                                {publicKey ? (isDevnet ? "DEVNET" : "MAINNET") : "WALLET NOT CONNECTED"}
                             </Text>
                         </View>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={async () => {
-                        await fetchBalance(wallet.publicKey, jwt, wallet.isDevnet)
+                    <TouchableOpacity onPress={() => {
+                        setShowSol(p => !p);
                     }} style={styles.balanceBadge}>
                         <Text style={[
                             styles.balanceText,
@@ -156,16 +163,8 @@ export default function Wallet() {
                         <TextInput
                             placeholder="Game Id..."
                             placeholderTextColor="#6B7280"
-                            value={opponentKey}
-                            onChangeText={(text) => {
-                                if (text != "") {
-                                    setIsValidPubKey(isValidPublicKey(text));
-                                }
-                                else {
-                                    setIsValidPubKey(true)
-                                }
-                                setOpponentKey(text);
-                            }}
+                            value={''}
+                            onChangeText={() => {}}
                             style={styles.input}
                             cursorColor="#B048C2"
                             autoCorrect={false}
@@ -177,33 +176,21 @@ export default function Wallet() {
                     <View style={{
                         marginTop: 26,
                         gap: 10,
-                        opacity: disabled() ? .5 : 1,
+                        opacity: false ? .5 : 1,
                         flexDirection: "row",
                         justifyContent: "space-between"
                     }}>
                         <GradientButton
                             text={"JOIN ARENA"}
-                            onPress={async () => {
-                                if (parseFloat(skrAmount) > skr) {
-                                    setCustomState("INSUFFICIENT SKR")
-                                    return;
-                                }
-                                await deployCustom();
-                            }}
+                            onPress={() => {}}
                             fontFamily="Orbitron_900Black"
-                            disabled={disabled()}
+                            disabled={false}
                         />
                         <GradientButton
                             text={"SPECTATE"}
-                            onPress={async () => {
-                                if (parseFloat(skrAmount) > skr) {
-                                    setCustomState("INSUFFICIENT SKR")
-                                    return;
-                                }
-                                await deployCustom();
-                            }}
+                            onPress={() => {}}
                             fontFamily="Orbitron_900Black"
-                            disabled={disabled()}
+                            disabled={false}
                         />
                     </View>
                 </View>
@@ -307,7 +294,7 @@ export default function Wallet() {
                                     onPress={() => {
                                         if (!IN_PROGRESS) {
                                             router.push({
-                                                pathname: "/spectate/[gameId]",
+                                                pathname: "/FinalPosition/[gameId]",
                                                 params: {gameId: item.id},
                                             });
                                         }
