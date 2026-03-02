@@ -20,6 +20,7 @@ import { REST_URL } from '@/src/config/config'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { jwtStore } from '@/src/stores/jwt';
 import { Header } from '@/src/components/Header';
+import GradientCard2 from '@/src/components/GradientCard2';
 
 export default function Wallet() {
   const [fontsLoaded] = useFonts({ Orbitron_900Black })
@@ -179,168 +180,171 @@ export default function Wallet() {
 
   return (
     <TopContainer>
-		<View style={styles.statusContainer}>
-			<View style={styles.statusBar}>
-				<TouchableOpacity style={
-				{
-					backgroundColor: wallet.publicKey
-						? (isDevnet
-							? "#12372c91"
-							: "#391e3ca8")
-						: "#4f19196e",
-					paddingHorizontal: 12,
-					paddingVertical: 6,
-					borderRadius: 20,
-					borderWidth: 1,
-					borderColor: '#2A2A30',
-				}} 
-				onPress={() => {
-					if (!wallet.publicKey) return
-					setIsDevnet(!wallet.isDevnet)
-				}}>
-					<View style={styles.statusItem}>
-						<View style={[
-							styles.statusDot,
-							{
-								backgroundColor: wallet.publicKey ? (isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
-							}
-						]} />
-						<Text style={[
-							styles.statusText,
-							{
-								color: wallet.publicKey ? (isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
-							}
-						]}>
-							{wallet.publicKey ? (isDevnet ? "DEVNET" : "MAINNET") : "WALLET NOT CONNECTED"}
-						</Text>
-					</View>
-				</TouchableOpacity>
-				<TouchableOpacity onPress={async () => {
-					await fetchBalance()
-				}} style={styles.balanceBadge}>
-					<Text style={[
-						styles.balanceText,
-						{ fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-					]}>
-						{`◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol`}
-					</Text>
-				</TouchableOpacity>
-			</View>
-		</View>
-		<ScrollView
-			contentContainerStyle={styles.scrollContent}
-			showsVerticalScrollIndicator={false}
-		>
-			<View style={{
-				marginTop: 40
-			}}>
-				<Header title={'TREASURY'} tagline={''} fontsLoaded={fontsLoaded} />
-			</View>
+      <View style={styles.statusContainer}>
+        <View style={styles.statusBar}>
+          <TouchableOpacity style={
+          {
+            backgroundColor: wallet.publicKey
+              ? (isDevnet
+                ? "#12372c91"
+                : "#391e3ca8")
+              : "#4f19196e",
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: '#2A2A30',
+          }} 
+          onPress={() => {
+            if (!wallet.publicKey) return
+            setIsDevnet(!wallet.isDevnet)
+          }}>
+            <View style={styles.statusItem}>
+              <View style={[
+                styles.statusDot,
+                {
+                  backgroundColor: wallet.publicKey ? (isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
+                }
+              ]} />
+              <Text style={[
+                styles.statusText,
+                {
+                  color: wallet.publicKey ? (isDevnet ? "#3DE3B4" : "#B048C2") : "#f54444"
+                }
+              ]}>
+                {wallet.publicKey ? (isDevnet ? "DEVNET" : "MAINNET") : "WALLET NOT CONNECTED"}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={async () => {
+            await fetchBalance()
+          }} style={styles.balanceBadge}>
+            <Text style={[
+              styles.balanceText,
+              { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+            ]}>
+              {`◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{
+          marginTop: 40
+        }}>
+          <Header title={'TREASURY'} tagline={''} fontsLoaded={fontsLoaded} />
+        </View>
 
-		{/* WALLET CARD */}
-		<GradientCard>
-			<Text style={styles.label}>CONNECTED WALLET</Text>
-			{!wallet.publicKey && <Text style={styles.pubKey}>
-			Wallet Not Connected
-			</Text>}
-			{wallet.publicKey && <Text style={[styles.pubKey,
-			{
-			fontFamily: displayFont
-			}
-			]}>
-			{wallet.publicKey}
-			</Text>}
-		</GradientCard>
+      {/* WALLET CARD */}
+        <GradientCard2 padding={10}>
+          <Text style={styles.label}>CONNECTED WALLET</Text>
+          {!wallet.publicKey && <Text style={styles.pubKey}>
+          Wallet Not Connected
+          </Text>}
+          {wallet.publicKey && <Text style={[styles.pubKey,
+          {
+          fontFamily: displayFont
+          }
+          ]}>
+          {wallet.publicKey}
+          </Text>}
+        </GradientCard2>
 
-		{/* BALANCE */}
-		<LinearGradient
-			colors={['rgba(176,72,194,0.08)', 'rgba(61,227,180,0.05)']}
-			style={styles.balanceContainer}
-		>
-			<Text style={styles.balanceLabel}>CHESS ON CHAIN BALANCE</Text>
-			<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-			<Text style={[styles.balanceBig, { fontFamily: displayFont }]}>
-				{asset === "SOL"
-				? `${(lamports / LAMPORTS_PER_SOL).toFixed(4)}`
-				: `${skr / 1000000}`}
-			</Text>
-			<Text style={{
-				fontFamily: displayFont,
-				color: !isDevnet ? '#B048C2' : '#3DE3B4',
-				fontSize: 18,
-			}}>
-				{asset === "SOL"
-				? `sol`
-				: `skr`}
-			</Text>
-			</View>
-		</LinearGradient>
+      {/* BALANCE */}
+        <LinearGradient
+          colors={['rgba(176,72,194,0.08)', 'rgba(61,227,180,0.05)']}
+          style={styles.balanceContainer}
+        >
+          <Text style={styles.balanceLabel}>CHESS ON CHAIN BALANCE</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Text style={[styles.balanceBig, { fontFamily: displayFont }]}>
+            {asset === "SOL"
+            ? `${(lamports / LAMPORTS_PER_SOL).toFixed(4)}`
+            : `${skr / 1000000}`}
+          </Text>
+          <Text style={{
+            fontFamily: displayFont,
+            color: !isDevnet ? '#B048C2' : '#3DE3B4',
+            fontSize: 18,
+          }}>
+            {asset === "SOL"
+            ? `sol`
+            : `skr`}
+          </Text>
+          </View>
+        </LinearGradient>
 
-		{/* SEGMENT TOGGLES */}
-		<SegmentToggle
-			options={["SOL", "SKR"]}
-			selected={asset}
-			onChange={setAsset}
-		/>
+      {/* SEGMENT TOGGLES */}
+        <SegmentToggle
+          options={["SOL", "SKR"]}
+          selected={asset}
+          onChange={setAsset}
+        />
 
-		<SegmentToggle
-			options={["DEPOSIT", "WITHDRAW"]}
-			selected={mode}
-			onChange={setMode}
-		/>
+        <SegmentToggle
+          options={["DEPOSIT", "WITHDRAW"]}
+          selected={mode}
+          onChange={setMode}
+        />
 
-		{/* ACTION CARD */}
-		<GradientCard>
-			<Text style={styles.label}>{mode} {asset}</Text>
+      {/* ACTION CARD */}
+        <GradientCard2 padding={10}>
+          <View style={{
+            flexDirection: "column",
+            alignItems: "stretch",
+            width: "100%"
+          }}>
+            <Text style={styles.label}>{mode} {asset}</Text>
 
-			<TextInput
-			placeholder="0.00"
-			placeholderTextColor="#6B7280"
-			keyboardType="numbers-and-punctuation"
-			inputMode="decimal"
-			value={amount}
-			onChangeText={(value) => {
-				// Normalize comma to dot
-				const normalized = value.replace(",", ".");
+            <TextInput
+              placeholder="0.00"
+              placeholderTextColor="#6B7280"
+              keyboardType="numbers-and-punctuation"
+              inputMode="decimal"
+              value={amount}
+              onChangeText={(value) => {
+                // Normalize comma to dot
+                const normalized = value.replace(",", ".");
 
-				// Allow:
-				// "", "0", "0.", ".5", "1.23"
-				if (/^\d*\.?\d*$/.test(normalized)) {
-				setAmount(normalized);
-				}
-			}}
-			style={styles.input}
-			/>
-
-			<TouchableOpacity
-			activeOpacity={.5}
-			style={[
-				styles.actionButtonWrapper,
-				{ opacity }
-			]}
-			onPress={handleDepositWithdraw}
-			>
-			<LinearGradient
-				colors={['#B048C2', '#9082DB', '#3DE3B4']}
-				start={{ x: 0, y: 0 }}
-				end={{ x: 1, y: 0 }}
-				style={styles.actionButton}
-			>
-				<Text
-				allowFontScaling={false}
-				style={[styles.actionButtonText, {
-					fontFamily: displayFont,
-					color: "#fff"
-				}]}
-				>
-				{mode} {asset}
-				</Text>
-			</LinearGradient>
-			</TouchableOpacity>
-
-		</GradientCard>
-	</ScrollView>
-
+                // Allow:
+                // "", "0", "0.", ".5", "1.23"
+                if (/^\d*\.?\d*$/.test(normalized)) {
+                setAmount(normalized);
+                }
+              }}
+              style={styles.input}
+            />
+            <TouchableOpacity
+            activeOpacity={.5}
+            style={[
+              styles.actionButtonWrapper,
+              { opacity }
+            ]}
+            onPress={handleDepositWithdraw}
+            >
+              <LinearGradient
+                colors={['#B048C2', '#9082DB', '#3DE3B4']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.actionButton}
+              >
+                <Text
+                allowFontScaling={false}
+                style={[styles.actionButtonText, {
+                  fontFamily: displayFont,
+                  color: "#fff"
+                }]}
+                >
+                {mode} {asset}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </GradientCard2>
+      </ScrollView>
     </TopContainer >
   )
 }
@@ -349,11 +353,12 @@ export default function Wallet() {
 const styles = StyleSheet.create({
 
   label: {
-    color: '#8B8F97',
+    color: '#ffffff',
     fontSize: 11,
     letterSpacing: 2.2,
     marginBottom: 12,
     textTransform: 'uppercase',
+    fontWeight: '900'
   },
 
   pubKey: {
@@ -406,6 +411,7 @@ const styles = StyleSheet.create({
     paddingRight: 60,
     color: '#FFFFFF',
     fontSize: 20,
+    width: "100%"
   },
 
   inputSymbol: {

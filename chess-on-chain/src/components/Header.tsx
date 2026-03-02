@@ -29,10 +29,13 @@ export function Header({ title, tagline, fontsLoaded }: { title: string, tagline
 const styles = StyleSheet.create({
     appTitle: {
         color: "#FFFFFF",
-        fontSize: 30,
-        letterSpacing: 4,
+        fontSize: 33,
+        letterSpacing: 2,
         textAlign: "center",
         marginBottom: 20,
+        textShadowColor: '#000',
+        textShadowOffset: { width: 4, height: 4 },
+        textShadowRadius: 8,
     },
 
     accentLine: {

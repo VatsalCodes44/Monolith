@@ -321,7 +321,6 @@ const styles = StyleSheet.create({
     },
 
     gameCardInner: {
-        backgroundColor: "#16161A",
         borderRadius: 16,
         padding: 0,
     },

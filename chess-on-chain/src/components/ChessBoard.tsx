@@ -24,7 +24,6 @@ export function ChessBoard(
     gameId,
     jwt,
     gameType,
-    playMoveSound,
     spectator,
     gameState,
     setGameState
@@ -38,7 +37,6 @@ export function ChessBoard(
     gameId: string | null,
     jwt: string | null,
     gameType: "NORMAL" | "CUSTOM",
-    playMoveSound: () => Promise<void>,
     spectator: boolean,
     gameState: GAME_STATE,
     setGameState: React.Dispatch<React.SetStateAction<GAME_STATE>>,
@@ -146,19 +144,35 @@ export function ChessBoard(
     if (!pendingPromotionMove || !gameId || !jwt) return;
 
     // Make the move with the selected promotion piece
-    const moveObj: MOVE_TYPE_TS = {
-      type: MOVE,
-      payload: {
-        from: pendingPromotionMove.from,
-        to: pendingPromotionMove.to,
-        gameId,
-        network,
-        sol,
-        jwt
-      },
-      promotion: selectedPiece
-    }
-    socket.send(JSON.stringify(moveObj))
+    if (gameType === "NORMAL") {
+        const moveObj: MOVE_TYPE_TS = {
+          type: MOVE,
+          payload: {
+            from: pendingPromotionMove.from,
+            to: pendingPromotionMove.to,
+            gameId,
+            network,
+            sol,
+            jwt
+          },
+          promotion: selectedPiece
+        };
+
+        socket.send(JSON.stringify(moveObj));
+      } else {
+        const moveObj: MOVE_CUSTOM_TYPE_TS = {
+          type: MOVE_CUSTOM,
+          payload: {
+            from: pendingPromotionMove.from,
+            to: pendingPromotionMove.to,
+            gameId,
+            jwt
+          },
+          promotion: selectedPiece
+        };
+
+        socket.send(JSON.stringify(moveObj));
+      }
 
     // Clean up state
     setShowPromotionOptions(false);
@@ -201,7 +215,6 @@ export function ChessBoard(
                     if (squareName === gameState.prevFrom || squareName === gameState.prevTo) {
                       return (
                         <PreviousTurn
-                          playMoveSound={playMoveSound}
                           width={width}
                           piece={piece}
                           onPress={onPress}
@@ -428,7 +441,6 @@ function PreviousTurn({
   color,
   squareName,
   prevFrom,
-  playMoveSound,
 }: {
   width: number;
   onPress: (piece: Piece, rowIdx: number, colIdx: number) => void;
@@ -438,9 +450,7 @@ function PreviousTurn({
   color: "b" | "w";
   squareName: string;
   prevFrom: Square | null;
-  playMoveSound: () => Promise<void>;
 }) {
-  playMoveSound()
   const squareSize = Math.min(width, 640) / 8;
   const pieceSize = squareSize * 0.95;
 

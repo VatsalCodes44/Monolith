@@ -104,7 +104,6 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
         justifyContent: "space-between",
-        backgroundColor: "#000000",
         paddingHorizontal: 10,
         marginBottom: 5,
         alignItems: "center",

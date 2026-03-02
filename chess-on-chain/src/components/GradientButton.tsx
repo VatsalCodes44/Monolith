@@ -6,19 +6,22 @@ export function GradientButton({
   children,
   onPress,
   fontFamily,
-  disabled
+  disabled,
+  minWidth,
 }: {
   text?: string,
   children?: React.ReactNode,
   onPress?: () => void,
   fontFamily?: string,
-  disabled: boolean
+  disabled: boolean,
+  minWidth?: number
 }) {
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={[
       styles.button,
       {
-        opacity: disabled ? 0.5 : 1
+        opacity: disabled ? 0.5 : 1,
+        minWidth: minWidth ? minWidth : 160,
       }
     ]} disabled={disabled}>
       <LinearGradient
@@ -44,7 +47,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     height: 52,
-    minWidth: 160,
   },
   gradient: {
     flex: 1,

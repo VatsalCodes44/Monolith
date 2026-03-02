@@ -77,6 +77,10 @@ export default function CustomGame() {
     const isDevnet = useWalletStore(s => s.isDevnet)
     const jwt = jwtStore(s => s.jwt)
     const publicKey = useWalletStore(s => s.publicKey)
+    const moveSoundRef = useRef<Audio.Sound | null>(null);
+    const checkSoundRef = useRef<Audio.Sound | null>(null);
+    const illegalSoundRef = useRef<Audio.Sound | null>(null);
+    const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
 
     const onJoinCustomGameResponse = useCallback((payload: JOIN_CUSTOM_GAME_Response_Payload) => {
         setGameState(p => ({
@@ -113,6 +117,7 @@ export default function CustomGame() {
             timer2: payload.timer2,
             moves: payload.history,
         }));
+        playMoveSound();
     }, [])
 
     const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
@@ -164,6 +169,101 @@ export default function CustomGame() {
         setMessages(m => [...m, payload])
         setLastMessage(payload)
     }, [])
+
+    const playMoveSound = useCallback(async () => {
+        if (!moveSoundRef.current) return;
+
+        try {
+            await moveSoundRef.current.stopAsync();
+            await moveSoundRef.current.setPositionAsync(0);
+            await moveSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Move sound error:", err);
+        }
+    }, []);
+
+    const playCheckSound = useCallback(async () => {
+        if (!checkSoundRef.current) return;
+
+        try {
+            await checkSoundRef.current.stopAsync();
+            await checkSoundRef.current.setPositionAsync(0);
+            await checkSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Check sound error:", err);
+        }
+    }, []);
+
+    const playIllegalMoveSound = useCallback(async () => {
+        if (!illegalSoundRef.current) return;
+
+        try {
+            await illegalSoundRef.current.stopAsync();
+            await illegalSoundRef.current.setPositionAsync(0);
+            await illegalSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Check sound error:", err);
+        }
+    }, []);
+
+    const playLowOnTimeSound = useCallback(async () => {
+        if (!lowOnTimeSoundRef.current) return;
+
+        try {
+            await lowOnTimeSoundRef.current.stopAsync();
+            await lowOnTimeSoundRef.current.setPositionAsync(0);
+            await lowOnTimeSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Check sound error:", err);
+        }
+    }, []);
+
+    useEffect(() => {
+        const loadSounds = async () => {
+            await Audio.setAudioModeAsync({
+            playsInSilentModeIOS: true,
+            staysActiveInBackground: false,
+            playThroughEarpieceAndroid: true,
+            });
+
+            const moveSound = new Audio.Sound();
+            const checkSound = new Audio.Sound();
+            const illegalSound = new Audio.Sound();
+            const lowOnTimeSound = new Audio.Sound();
+
+            await moveSound.loadAsync(
+            require('../../../assets/audios/moveSound.mp3')
+            );
+
+            await checkSound.loadAsync(
+            require('../../../assets/audios/checkSound.mp3')
+            );
+
+            await illegalSound.loadAsync(
+            require('../../../assets/audios/illegalMoveSound.mp3')
+            );
+
+            await lowOnTimeSound.loadAsync(
+            require('../../../assets/audios/lowOnTime.mp3')
+            );
+
+            moveSoundRef.current = moveSound;
+            checkSoundRef.current = checkSound;
+            illegalSoundRef.current = illegalSound;
+            lowOnTimeSoundRef.current = lowOnTimeSound;
+        };
+
+        loadSounds();
+
+        return () => {
+            // Do NOT unload on unmount
+            // Let Expo AV handle destruction.
+            // moveSoundRef.current?.unloadAsync();
+            // checkSoundRef.current?.unloadAsync();
+            // illegalSoundRef.current?.unloadAsync();
+            // lowOnTimeSoundRef.current?.unloadAsync();
+        };
+    }, []);
 
     const connect = useCallback((isRejoin = false) => {
 
@@ -331,6 +431,9 @@ export default function CustomGame() {
                     skr={skr}
                     gameState={gameState}
                     setGameState={setGameState}
+                    playCheckSound={playCheckSound}
+                    playIllegalMoveSound={playIllegalMoveSound}
+                    playLowOnTimeSound={playLowOnTimeSound}
                 />
             }
             <TouchableOpacity onPress={() => {

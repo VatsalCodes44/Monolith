@@ -1,7 +1,6 @@
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, ImageBackground } from 'react-native'
 import React, { useCallback, useEffect, useState } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { useFonts, Orbitron_900Black } from '@expo-google-fonts/orbitron'
+import { useFonts, Orbitron_900Black, Orbitron_800ExtraBold } from '@expo-google-fonts/orbitron'
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { GameBet } from '@/src/stores/gameBet';
@@ -161,9 +160,13 @@ export default function Index() {
                     style={styles.cardBorderGradient}
                     key={index}
                     >
-                    <View style={styles.cardInner}>
+                    <ImageBackground
+                    source={require("../../assets/image/card.jpg")}
+                    resizeMode="cover"
+                    style={styles.cardInner}>
                         {/* Chess Piece */}
-                        <View style={styles.pieceSection}>
+                        <View
+                        style={styles.pieceSection}>
                         <View style={styles.pieceCircle}>
                             {option.piece}
                         </View>
@@ -200,7 +203,7 @@ export default function Index() {
                         fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
                         disabled={disabled()}
                         />
-                    </View>
+                    </ImageBackground>
                     </LinearGradient>
                 ))}
                 </View>
@@ -254,17 +257,19 @@ const styles = StyleSheet.create({
     },
 
     cardBorderGradient: {
-        padding: 1.5,
+        padding: 2,
         borderRadius: 16,
+        borderWidth: 6,
     },
 
     cardInner: {
-        backgroundColor: '#16161A',
-        borderRadius: 14.5,
-        padding: 16,
+        borderRadius: 16,
+        margin: 2,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        overflow: "hidden",
+        borderWidth: 6
     },
 
     pieceSection: {

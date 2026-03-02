@@ -45,6 +45,7 @@ export default function JoinSpectate() {
                     justifyContent: "space-between"
                 }}>
                     <GradientButton
+                        minWidth={145}
                         text={"JOIN ARENA"}
                         onPress={() => {
                             router.push({
@@ -58,6 +59,7 @@ export default function JoinSpectate() {
                         disabled={false}
                     />
                     <GradientButton
+                        minWidth={145}
                         text={"SPECTATE"}
                         onPress={() => {}}
                         fontFamily="Orbitron_900Black"
@@ -71,13 +73,12 @@ export default function JoinSpectate() {
 
 const styles = StyleSheet.create({
     cardBorder: {
-        padding: 1.5,
+        padding: 3,
         borderRadius: 18,
         marginBottom: 28,
     },
 
     cardInner: {
-        backgroundColor: "#16161A",
         borderRadius: 16,
     },
 

@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { StyleSheet, View } from "react-native";
+import { ImageBackground, StyleSheet, View } from "react-native";
 
 export function GradientCard({ children }: { children: React.ReactNode }) {
   return (
@@ -9,9 +9,12 @@ export function GradientCard({ children }: { children: React.ReactNode }) {
       end={{ x: 1, y: 0 }}
       style={styles.gradientBorder}
     >
-      <View style={styles.cardInner}>
+      <ImageBackground 
+      source={require("../../assets/image/card.jpg")} // local image
+      resizeMode="cover"
+      style={styles.cardInner}>
         {children}
-      </View>
+      </ImageBackground>
     </LinearGradient>
   )
 }
@@ -24,7 +27,6 @@ const styles = StyleSheet.create({
     },
 
     cardInner: {
-        backgroundColor: '#141417',
         borderRadius: 18,
         padding: 22,
     },
