@@ -4,11 +4,9 @@ import { useEffect, useRef, ReactNode } from 'react';
 export const ReJoin = ({
     isDisconnected,
     width,
-    fontsLoaded
 }: {
     isDisconnected: boolean,
     width?: number,
-    fontsLoaded: boolean
 }) => {
     const blockCloseRef = useRef(false);
 
@@ -64,7 +62,7 @@ export const ReJoin = ({
                         <ActivityIndicator color={"#CE2EDF"} size={64} />
                         <Text style={{
                             color: "#ffffffff",
-                            fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto",
+                            fontFamily: "Orbitron_900Black",
                             textAlign: "center",
                             fontSize: 22
                         }}>

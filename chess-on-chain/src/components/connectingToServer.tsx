@@ -3,7 +3,7 @@ import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Orbitron_900Black, useFonts } from '@expo-google-fonts/orbitron';
 
-export function ConnectingToServer({ message, fontsLoaded }: { message: string, fontsLoaded: boolean }) {
+export function ConnectingToServer({ message }: { message: string }) {
     return (
         <SafeAreaView style={{
             ...styles.container,
@@ -13,7 +13,7 @@ export function ConnectingToServer({ message, fontsLoaded }: { message: string, 
                 <ActivityIndicator color={"#CE2EDF"} size={64} />
                 <Text style={{
                     color: "#ffffffff",
-                    fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto",
+                    fontFamily: "Orbitron_900Black",
                     textAlign: "center",
                     fontSize: 22
                 }}>

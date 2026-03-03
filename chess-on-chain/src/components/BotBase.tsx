@@ -17,7 +17,6 @@ export function BotBase({
     showMessages,
     setShowMessages,
     scrollRef,
-    fontsLoaded,
     gameStarted,
     lastMessage,
     player1Pubkey,
@@ -35,7 +34,6 @@ export function BotBase({
     showMessages: boolean,
     setShowMessages: React.Dispatch<React.SetStateAction<boolean>>,
     scrollRef: React.RefObject<ScrollView | null>,
-    fontsLoaded: boolean,
     gameStarted: boolean,
     lastMessage: Message | undefined,
     player1Pubkey: string | null,
@@ -117,7 +115,6 @@ export function BotBase({
                     turnColor={gameState.chess.turn()}
                     myColor={gameState.color}
                     stake={`BOT MATCH`}
-                    fontsLoaded={fontsLoaded}
                 />
 
                 <View style={{ paddingHorizontal: 4 }}>
@@ -126,7 +123,6 @@ export function BotBase({
                     timer2={gameState.timer2}
                     color={gameState.color}
                     playLowOnTimeSound={playLowOnTimeSound}
-                    fontsLoaded={fontsLoaded}
                     />
                 </View>
 

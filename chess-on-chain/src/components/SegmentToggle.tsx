@@ -5,12 +5,10 @@ export function SegmentToggle<T extends string>({
     options,
     selected,
     onChange,
-    fontsLoaded
 }: {
     options: readonly T[],
     selected: T,
     onChange: (value: T) => void,
-    fontsLoaded: boolean
 }) {
     return (
         <View style={styles.segmentContainer}>
@@ -34,7 +32,7 @@ export function SegmentToggle<T extends string>({
                                 <Text style={[
                                     styles.segmentTextActive,
                                     {
-                                        fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto"
+                                        fontFamily: "Orbitron_900Black"
                                     }
                                 ]}>
                                     {option}
@@ -45,7 +43,7 @@ export function SegmentToggle<T extends string>({
                                 <Text style={[
                                     styles.segmentTextInactive,
                                     {
-                                        fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto"
+                                        fontFamily: "Orbitron_900Black"
                                     }
                                 ]}>
                                     {option}

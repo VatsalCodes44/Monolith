@@ -2,12 +2,12 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
 
-export function Header({ title, tagline, fontsLoaded }: { title: string, tagline?: string, fontsLoaded: boolean }) {
+export function Header({ title, tagline }: { title: string, tagline?: string }) {
     return (
         <View style={{ alignItems: "center", marginBottom: 16 }}>
             <Text style={[
                 styles.appTitle,
-                { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                { fontFamily: "Orbitron_900Black" }
             ]}>
                 {title}
             </Text>

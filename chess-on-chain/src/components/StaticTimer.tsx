@@ -4,13 +4,11 @@ export function StaticTimer({
     timer1,
     timer2,
     turn,
-    fontsLoaded,
     color,
 }: {
     timer1: number,
     timer2: number,
     turn: "w" | "b",
-    fontsLoaded: boolean,
     color: "w" | "b"
 }) {
 
@@ -21,8 +19,8 @@ export function StaticTimer({
 
     return (
         <View style={styles.container}>
-            {RenderTimer(leftTimer, isLeftLowTime, fontsLoaded)}
-            {RenderTimer(rightTimer, isRightLowTime, fontsLoaded)}
+            {RenderTimer(leftTimer, isLeftLowTime)}
+            {RenderTimer(rightTimer, isRightLowTime)}
         </View>
     )
 }
@@ -33,7 +31,7 @@ const formatTime = (time: number) => {
     return { minutes, seconds };
 }
 
-const RenderTimer = (time: number, isLowTime: boolean, fontsLoaded: boolean) => {
+const RenderTimer = (time: number, isLowTime: boolean) => {
     const { minutes, seconds } = formatTime(time);
 
     return (
@@ -42,7 +40,7 @@ const RenderTimer = (time: number, isLowTime: boolean, fontsLoaded: boolean) => 
                 <Text
                     key={`min-${idx}`}
                     style={{
-                        fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto",
+                        fontFamily: "Orbitron_900Black",
                         color: isLowTime ? "#ff0000" : "#ffffff",
                         fontSize: 18,
                         fontVariant: ["tabular-nums"],
@@ -56,7 +54,7 @@ const RenderTimer = (time: number, isLowTime: boolean, fontsLoaded: boolean) => 
 
             <Text
                 style={{
-                    fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto",
+                    fontFamily: "Orbitron_900Black",
                     color: isLowTime ? "#ff0000" : "#ffffff",
                     fontSize: 18,
                     width: 8,
@@ -71,7 +69,7 @@ const RenderTimer = (time: number, isLowTime: boolean, fontsLoaded: boolean) => 
                 <Text
                     key={`sec-${idx}`}
                     style={{
-                        fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto",
+                        fontFamily: "Orbitron_900Black",
                         color: isLowTime ? "#ff0000" : "#ffffff",
                         fontSize: 18,
                         fontVariant: ["tabular-nums"],

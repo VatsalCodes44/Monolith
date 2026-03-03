@@ -9,7 +9,6 @@ interface Props {
     turnColor: "b" | "w";
     myColor: "b" | "w";
     stake: string;
-    fontsLoaded: boolean;
 }
 
 const shortenKey = (key: string) => {
@@ -22,7 +21,6 @@ export const SolanaDuelHeader: React.FC<Props> = ({
     turnColor,
     myColor,
     stake,
-    fontsLoaded
 }) => {
     const isMyTurn = (turnColor === myColor);
 
@@ -67,7 +65,7 @@ export const SolanaDuelHeader: React.FC<Props> = ({
                 <Text style={[
                     styles.pubkeyText,
                     {
-                        fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto"
+                        fontFamily: "Orbitron_900Black"
                     }
                 ]}>
                     {player2Pubkey ? shortenKey(player2Pubkey) : "Finding..."}
@@ -76,7 +74,7 @@ export const SolanaDuelHeader: React.FC<Props> = ({
 
             <View style={styles.vsContainer}>
                 <Text style={{
-                    fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto",
+                    fontFamily: "Orbitron_900Black",
                     color: "#ffffff",
                     fontSize: 18,
                 }}>
@@ -89,7 +87,7 @@ export const SolanaDuelHeader: React.FC<Props> = ({
                 <Text style={[
                     styles.pubkeyText,
                     {
-                        fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto"
+                        fontFamily: "Orbitron_900Black"
                     }
                 ]}>
                     {player1Pubkey ? shortenKey(player1Pubkey) : "Finding..."}

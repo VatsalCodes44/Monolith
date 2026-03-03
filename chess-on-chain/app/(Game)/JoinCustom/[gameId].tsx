@@ -40,10 +40,6 @@ export interface Message {
 }
 
 export default function CustomGame() {
-    // const [fontsLoaded] = useFonts({
-    //   Orbitron_900Black,
-    // });
-    const fontsLoaded = true;
     const { gameId} = useLocalSearchParams<{ gameId: string}>();
     const gameIdRef = useRef<string | null>(gameId)
     const [skr, setSkr] = useState <number>(0);
@@ -408,7 +404,7 @@ export default function CustomGame() {
     return (
         <View style={{ flex: 1 }}>
             {!isReady &&
-                <ConnectingToServer message='Connecting to server...' fontsLoaded={fontsLoaded} />
+                <ConnectingToServer message='Connecting to server...' />
             }
 
             {isReady &&
@@ -425,7 +421,6 @@ export default function CustomGame() {
                     gameIdRef={gameIdRef}
                     isDevnet={isDevnet}
                     sol={"0.01"} // no use
-                    fontsLoaded={fontsLoaded}
                     gameStarted={gameStarted}
                     lastMessage={lastMessage}
                     player1Pubkey={publicKey}

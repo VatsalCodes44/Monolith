@@ -21,10 +21,6 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { Header } from '@/src/components/Header';
 
 export default function Index() {
-    const [fontsLoaded] = useFonts({
-        Orbitron_900Black,
-    });
-
     const [showSol, setShowSol] = useState(true)
     const wallet = useWallet();
     const setIsDevnet = useWalletStore(s => s.setIsDevnet)
@@ -135,7 +131,7 @@ export default function Index() {
                     }} style={styles.balanceBadge}>
                         <Text style={[
                             styles.balanceText,
-                            { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                            { fontFamily:"Orbitron_900Black" }
                         ]}>
                             {showSol ? `◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol` : `◎ ${(skr / 1_000_000).toFixed(2)} skr`}
                         </Text>
@@ -149,7 +145,7 @@ export default function Index() {
                 <View style={{
                     marginTop: 40
                 }}>
-                    <Header title={'CHESS on CHAIN'} tagline={'Instant Deposit. Instant Withdraw.'} fontsLoaded={fontsLoaded} />
+                    <Header title={'CHESS on CHAIN'} tagline={'Instant Deposit. Instant Withdraw.'} />
                 </View>
                 
                 <View style={styles.stakeSection}>
@@ -173,7 +169,7 @@ export default function Index() {
                             </View>
                             <Text style={[
                                 styles.pieceLabel,
-                                { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                                { fontFamily: "Orbitron_900Black"}
                             ]}>
                                 {option.label}
                             </Text>
@@ -183,7 +179,7 @@ export default function Index() {
                         <View style={styles.stakeInfo}>
                             <Text style={[
                                 styles.stakeAmount,
-                                { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                                { fontFamily: "Orbitron_900Black" }
                             ]}>
                                 {option.amount} SOL
                             </Text>
@@ -208,7 +204,7 @@ export default function Index() {
                             });
                         }}
                         text="ENTER ARENA"
-                        fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
+                        fontFamily= "Orbitron_900Black"
                         disabled={disabled()}
                         />
                     </ImageBackground>
@@ -226,7 +222,7 @@ export default function Index() {
                     onPress={() => {
                         router.push("/DeployCustom")
                     }}
-                    fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
+                    fontFamily= "Orbitron_900Black"
                     />
 
                     <GradientButton
@@ -235,14 +231,13 @@ export default function Index() {
                     onPress={() => {
                         router.push("/Bot");
                     }}
-                    fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
+                    fontFamily="Orbitron_900Black"
                     />
                 </View>
 
                 {/* Wallet Button */}
                 <WalletConnect
                     wallet={wallet}
-                    fontsLoaded={fontsLoaded}
                     setJwt={setJwt}
                     jwt={jwt}
                     fetchBalance={fetchBalance}

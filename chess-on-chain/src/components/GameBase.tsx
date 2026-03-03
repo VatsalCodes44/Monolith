@@ -22,7 +22,6 @@ function GameBaseComponent({
     gameIdRef,
     isDevnet,
     sol,
-    fontsLoaded,
     gameStarted,
     lastMessage,
     player1Pubkey,
@@ -46,7 +45,6 @@ function GameBaseComponent({
     gameIdRef: React.RefObject<string | null>,
     isDevnet: boolean,
     sol: "0.01" | "0.05" | "0.1",
-    fontsLoaded: boolean,
     gameStarted: boolean,
     lastMessage: Message | undefined,
     player1Pubkey: string | null,
@@ -146,12 +144,10 @@ function GameBaseComponent({
                     turnColor={gameState.chess.turn()}
                     myColor={gameState.color}
                     stake={`${sol} sol`}
-                    fontsLoaded={fontsLoaded}
                 />
 
                 <View style={{ paddingHorizontal: 4 }}>
                     <Timer
-                        fontsLoaded={fontsLoaded}
                         timer1={gameState.timer1}
                         timer2={gameState.timer2}
                         turn={gameState.chess.turn()}

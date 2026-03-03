@@ -24,7 +24,6 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { Header } from "@/src/components/Header";
 
 export default function DeployCustom() {
-    const fontsLoaded = true;
     const [opponentKey, setOpponentKey] = useState<string>("");
     const [isValidPubKey, setIsValidPubKey] = useState(true);
     const minSkr = 50;
@@ -138,7 +137,7 @@ export default function DeployCustom() {
                     }} style={styles.balanceBadge}>
                         <Text style={[
                             styles.balanceText,
-                            { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                            { fontFamily: "Orbitron_900Black" }
                         ]}>
                             {showSol ? `◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol` : `◎ ${(skr / 1_000_000).toFixed(2)} skr`}
                         </Text>
@@ -152,7 +151,7 @@ export default function DeployCustom() {
                 <View style={{
                     marginTop: 40
                 }}>
-                    <Header title={'DEPLOY CUSTOM ARENA'} tagline={'Private duel. Zero platform tax. Pure on-chain execution.'} fontsLoaded={fontsLoaded} />
+                    <Header title={'DEPLOY CUSTOM ARENA'} tagline={'Private duel. Zero platform tax. Pure on-chain execution.'} />
                 </View>
 
                 <LinearGradient

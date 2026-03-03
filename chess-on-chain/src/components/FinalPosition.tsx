@@ -14,7 +14,6 @@ export function FinalPosition({
     player1Pubkey,
     player2Pubkey,
     color,
-    fontsLoaded,
     sol,
     timer1,
     timer2,
@@ -26,7 +25,6 @@ export function FinalPosition({
     player1Pubkey: string,
     player2Pubkey: string,
     color: "w" | "b",
-    fontsLoaded: boolean,
     sol: string,
     timer1: number,
     timer2: number,
@@ -55,14 +53,12 @@ export function FinalPosition({
                 turnColor={chess.turn()}
                 myColor={color}
                 stake={custom ? `${sol} sol` : `${skr} skr`}
-                fontsLoaded={fontsLoaded}
             />
 
             <View style={{ paddingHorizontal: 4 }}>
                 <StaticTimer
                     timer1={timer1}
                     timer2={timer2}
-                    fontsLoaded={fontsLoaded}
                     turn={chess.turn()}
                     color={color}
                 />

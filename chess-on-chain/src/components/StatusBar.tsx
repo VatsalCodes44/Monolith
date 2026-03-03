@@ -7,14 +7,12 @@ export default function StatusBar({
     publicKey,
     isDevnet,
     networkPress,
-    fontsLoaded,
     lamports,
     skr,
 } : {
     publicKey: string | null,
     isDevnet: boolean,
     networkPress: () => Promise<void>,
-    fontsLoaded: boolean,
     lamports: number,
     skr: number,
 }) {
@@ -58,7 +56,7 @@ export default function StatusBar({
                 }} style={styles.balanceBadge}>
                     <Text style={[
                         styles.balanceText,
-                        { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                        { fontFamily: "Orbitron_900Black" }
                     ]}>
                         {showSol ? `◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol` : `◎ ${(skr / 1_000_000).toFixed(2)} skr`}
                     </Text>

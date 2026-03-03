@@ -6,13 +6,11 @@ export function BotTimer({
     timer2,
     color,
     playLowOnTimeSound,
-    fontsLoaded
 }: {
     timer1: number,
     timer2: number,
     color: "w" | "b",
     playLowOnTimeSound: () => Promise<void>,
-    fontsLoaded: boolean
 }) {
 
     const leftTimer = color === "w" ? timer2 : timer1
@@ -41,8 +39,8 @@ export function BotTimer({
 
     return (
         <View style={styles.container}>
-            {RenderTimer(leftTimer, fontsLoaded)}
-            {RenderTimer(rightTimer, fontsLoaded)}
+            {RenderTimer(leftTimer)}
+            {RenderTimer(rightTimer)}
         </View>
     )
 }
@@ -56,7 +54,7 @@ const formatTime = (time: number) => {
     return { minutes, seconds }
 }
 
-const RenderTimer = (time: number, fontsLoaded: boolean) => {
+const RenderTimer = (time: number) => {
     const { minutes, seconds } = formatTime(time)
     const isLow = time <= 30000 && time > 0
 
@@ -66,7 +64,7 @@ const RenderTimer = (time: number, fontsLoaded: boolean) => {
                 styles.timer,
                 {
                     color: isLow ? "#ff2e2e" : "#ffffff",
-                    fontFamily: fontsLoaded ? "Orbitron_900Black" : undefined
+                    fontFamily: "Orbitron_900Black"
                 }
             ]}
         >

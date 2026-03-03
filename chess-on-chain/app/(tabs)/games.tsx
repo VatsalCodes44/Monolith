@@ -25,7 +25,6 @@ import { JoinSpectate } from "@/src/components/JoinSpectate";
 
 
 export default function Games() {
-    const fontsLoaded = true;
     const [showSol, setShowSol] = useState(true)
     const publicKey = useWalletStore(s => s.publicKey)
     const isDevnet = useWalletStore(s => s.isDevnet)
@@ -126,7 +125,7 @@ export default function Games() {
                     }} style={styles.balanceBadge}>
                         <Text style={[
                             styles.balanceText,
-                            { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                            { fontFamily:"Orbitron_900Black" }
                         ]}>
                             {showSol ? `◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol` : `◎ ${(skr / 1_000_000).toFixed(2)} skr`}
                         </Text>
@@ -136,7 +135,7 @@ export default function Games() {
             <View style={{
                 marginTop: 40
             }}>
-                <Header title={'LIVE ARENAS'} tagline={'Watch. Join. Conquer.'} fontsLoaded={fontsLoaded} />
+                <Header title={'LIVE ARENAS'} tagline={'Watch. Join. Conquer.'} />
             </View>
 
             <JoinSpectate/>

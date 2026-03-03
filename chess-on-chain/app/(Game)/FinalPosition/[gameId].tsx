@@ -9,7 +9,6 @@ import { Chess, Move } from 'chess.js';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 export default function SpectateGame() {
-    const fontsLoaded = true;
     const { gameId } = useLocalSearchParams<{ gameId: string }>();
     const games = gamesStore(s => s.games)
     const game = games.find(g => g.id == gameId)
@@ -24,7 +23,6 @@ export default function SpectateGame() {
         <FinalPosition 
             chess={new Chess(game.fen)}
             color={color}
-            fontsLoaded={fontsLoaded}
             moves={game.history ? JSON.parse(game.history) as Move[] : []}
             player1Pubkey={publicKey}
             player2Pubkey={game.player1PublicKey == publicKey ? game.player2PublicKey : game.player1PublicKey}

@@ -25,10 +25,9 @@ import { GradientButton } from '@/src/components/GradientButton';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Wallet() {
-  const [fontsLoaded] = useFonts({ Orbitron_900Black })
 
 
-  const displayFont = fontsLoaded ? "Orbitron_900Black" : "System"
+  const displayFont = "Orbitron_900Black"
 
   const [asset, setAsset] = useState<"SOL" | "SKR">("SOL")
   const [mode, setMode] = useState<"DEPOSIT" | "WITHDRAW">("DEPOSIT")
@@ -247,7 +246,7 @@ export default function Wallet() {
           }} style={styles.balanceBadge}>
             <Text style={[
               styles.balanceText,
-              { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+              { fontFamily: "Orbitron_900Black"}
             ]}>
               {`◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol`}
             </Text>
@@ -261,7 +260,7 @@ export default function Wallet() {
         <View style={{
           marginTop: 40
         }}>
-          <Header title={'TREASURY'} tagline={''} fontsLoaded={fontsLoaded} />
+          <Header title={'TREASURY'} tagline={''} />
         </View>
 
       {/* WALLET CARD */}
@@ -305,14 +304,12 @@ export default function Wallet() {
 
       {/* SEGMENT TOGGLES */}
         <SegmentToggle
-          fontsLoaded={true}
           options={["SOL", "SKR"]}
           selected={asset}
           onChange={setAsset}
         />
 
         <SegmentToggle
-          fontsLoaded={true}
           options={["DEPOSIT", "WITHDRAW"]}
           selected={mode}
           onChange={setMode}
@@ -364,7 +361,7 @@ export default function Wallet() {
             disabled={disabled} 
             onPress={handleDepositWithdraw} 
             text={`${mode} ${asset}`}
-            fontFamily= {fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+            fontFamily="Orbitron_900Black"
             />
           </View>
         </GradientCard2>

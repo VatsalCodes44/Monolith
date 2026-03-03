@@ -7,13 +7,11 @@ import axios from 'axios'
 import { REST_URL } from '@/src/config/config'
 export function WalletConnect({
     wallet,
-    fontsLoaded,
     setJwt,
     jwt,
     fetchBalance
 }: {
     wallet: Wallet,
-    fontsLoaded?: boolean,
     setJwt: (jwt: string | null) => void,
     jwt: string | null,
     fetchBalance: (publicKey: string | null, jwt: string | null, isDevnet: boolean) => Promise<void>
@@ -68,7 +66,7 @@ export function WalletConnect({
                     }}>
                         <Text style={[
                             styles.walletButtonText,
-                            { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                            { fontFamily: "Orbitron_900Black" }
                         ]}>
                             {`${wallet.publicKey.slice(0, 4)}...${wallet.publicKey.slice(-4)}`}
                         </Text>
@@ -76,7 +74,7 @@ export function WalletConnect({
                     </View>) :
                     (<Text style={[
                         styles.walletButtonText,
-                        { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                        { fontFamily: "Orbitron_900Black" }
                     ]}>
                         {jwtLogin ? "Logging In..." : "CONNECT SOLANA WALLET"}
                     </Text>)}

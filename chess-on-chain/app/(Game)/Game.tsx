@@ -29,11 +29,6 @@ import { router } from 'expo-router'
 import { GAME_STATE, Message } from '@/src/config/game'
 
 export default function Game() {
-  
-    // const [fontsLoaded] = useFonts({
-        //   Orbitron_900Black,
-    // });
-    const fontsLoaded = true;
     const [gameState, setGameState] = useState<GAME_STATE>({
         chess: new Chess(),
         color: "w",
@@ -374,7 +369,7 @@ export default function Game() {
   return (
     <View style={{ flex: 1 }}>
       {(!socket.current || !publicKey || !jwt || !sol || !connected) &&
-        <ConnectingToServer message='Connecting to server...' fontsLoaded={fontsLoaded} />
+        <ConnectingToServer message='Connecting to server...'/>
       }
 
       {(socket.current && publicKey && jwt && sol && connected) &&
@@ -389,7 +384,6 @@ export default function Game() {
           gameIdRef={gameIdRef}
           isDevnet={isDevnet}
           sol={sol}
-          fontsLoaded={fontsLoaded}
           gameStarted={gameStarted}
           lastMessage={lastMessage}
           player1Pubkey={publicKey}
@@ -401,6 +395,7 @@ export default function Game() {
           playCheckSound={playCheckSound}
           playIllegalMoveSound={playIllegalMoveSound}
           playLowOnTimeSound={playLowOnTimeSound}
+          setLastMessage={setLastMessage}
         />
       }
       <TouchableOpacity onPress={() => {

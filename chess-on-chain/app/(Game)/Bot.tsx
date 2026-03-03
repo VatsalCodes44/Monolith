@@ -117,7 +117,6 @@ export default function Bot() {
                 showMessages={showMessages}
                 setShowMessages={setShowMessages}
                 scrollRef={scrollRef}
-                fontsLoaded={true}
                 gameStarted={true}
                 lastMessage={lastMessage}
                 player1Pubkey={"YOU"}
