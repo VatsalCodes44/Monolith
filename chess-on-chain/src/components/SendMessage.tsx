@@ -92,7 +92,6 @@ export const SendMessage = memo(({
                     multiline={false}
                     onChangeText={setMessage}
                     submitBehavior='blurAndSubmit'
-
                     style={{
                         backgroundColor: "#000",
                         borderWidth: 0,
@@ -103,6 +102,7 @@ export const SendMessage = memo(({
                         color: "#B048C2",
                         flex: 1,
                         marginRight: showMenuIcon ? 0 : 15,
+                        paddingLeft: 10
                     }}
                 />
                 {showMenuIcon && <TouchableOpacity

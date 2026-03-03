@@ -365,6 +365,10 @@ export class Game {
             timer1: this.timer1 <= 0 ? 0 : this.timer1,
             timer2: this.timer2 <= 0 ? 0 : this.timer2,
             history: this.board.history({ verbose: true }),
+            move: {
+                from: "",
+                to: ""
+            }
         };
         this.player1?.send(JSON.stringify({ type: TIME_OUT, payload }));
         this.player2?.send(JSON.stringify({ type: TIME_OUT, payload }));

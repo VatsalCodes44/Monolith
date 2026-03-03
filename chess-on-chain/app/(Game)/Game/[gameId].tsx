@@ -71,6 +71,55 @@ export default function Game() {
     const checkSoundRef = useRef<Audio.Sound | null>(null);
     const illegalSoundRef = useRef<Audio.Sound | null>(null);
     const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
+    const [soundsReady, setSoundsReady] = useState(false);
+
+    const playMoveSound = useCallback(async () => {
+        if (!moveSoundRef.current) return;
+
+        try {
+            await moveSoundRef.current.stopAsync();
+            await moveSoundRef.current.setPositionAsync(0);
+            await moveSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Move sound error:", err);
+        }
+    }, []);
+
+    const playCheckSound = useCallback(async () => {
+        if (!checkSoundRef.current) return;
+
+        try {
+            await checkSoundRef.current.stopAsync();
+            await checkSoundRef.current.setPositionAsync(0);
+            await checkSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Check sound error:", err);
+        }
+    }, []);
+
+    const playIllegalMoveSound = useCallback(async () => {
+        if (!illegalSoundRef.current) return;
+
+        try {
+            await illegalSoundRef.current.stopAsync();
+            await illegalSoundRef.current.setPositionAsync(0);
+            await illegalSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Check sound error:", err);
+        }
+    }, []);
+
+    const playLowOnTimeSound = useCallback(async () => {
+        if (!lowOnTimeSoundRef.current) return;
+
+        try {
+            await lowOnTimeSoundRef.current.stopAsync();
+            await lowOnTimeSoundRef.current.setPositionAsync(0);
+            await lowOnTimeSoundRef.current.playAsync();
+        } catch (err) {
+            console.log("Check sound error:", err);
+        }
+    }, []);
 
     const onInitGameResponse = useCallback((payload: INIT_GAME_RESPONSE_PAYLOAD) => {
         setGameState(p => ({
@@ -86,17 +135,23 @@ export default function Game() {
     }, [])
 
     const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
+        const newChess = new Chess(payload.board);
         setGameState(p => ({
             ...p,
-            chess: new Chess(payload.board),
+            chess: newChess,
             prevFrom: payload.move.from,
             prevTo: payload.move.to,
             timer1: payload.timer1,
             timer2: payload.timer2,
             moves: payload.history,
         }))
-        playMoveSound();
-    }, [])
+        if (newChess.inCheck()) {
+            playCheckSound();
+        }
+        else {
+            playMoveSound();
+        }
+    }, [playCheckSound, playMoveSound])
 
     const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
         setGameState(p => ({
@@ -127,17 +182,20 @@ export default function Game() {
             },
             moves: payload.history
         }));
+        setShowGameOver(true)
         gameOverRef.current = true;
     }, [])
 
     const onReJoinGameResponse = useCallback((payload: Re_JOIN_GAME_RESPONSE_PAYLOAD) => {
+        const newChess = new Chess(payload.board);
         setGameState(p => ({
             ...p,
             color: payload.color,
-            chess: new Chess(payload.board),
+            chess: newChess,
             timer1: payload.timer1,
             timer2: payload.timer2,
             opponentPubkey: payload.opponentPubkey,
+            moves: newChess.history({verbose: true})
         }));
         setGameStarted(true)
         gameIdRef.current = payload.gameId
@@ -250,54 +308,6 @@ export default function Game() {
         }
     }, [jwt, isDevnet])
 
-    const playMoveSound = useCallback(async () => {
-        if (!moveSoundRef.current) return;
-
-        try {
-            await moveSoundRef.current.stopAsync();
-            await moveSoundRef.current.setPositionAsync(0);
-            await moveSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Move sound error:", err);
-        }
-    }, []);
-
-    const playCheckSound = useCallback(async () => {
-        if (!checkSoundRef.current) return;
-
-        try {
-            await checkSoundRef.current.stopAsync();
-            await checkSoundRef.current.setPositionAsync(0);
-            await checkSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Check sound error:", err);
-        }
-    }, []);
-
-    const playIllegalMoveSound = useCallback(async () => {
-        if (!illegalSoundRef.current) return;
-
-        try {
-            await illegalSoundRef.current.stopAsync();
-            await illegalSoundRef.current.setPositionAsync(0);
-            await illegalSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Check sound error:", err);
-        }
-    }, []);
-
-    const playLowOnTimeSound = useCallback(async () => {
-        if (!lowOnTimeSoundRef.current) return;
-
-        try {
-            await lowOnTimeSoundRef.current.stopAsync();
-            await lowOnTimeSoundRef.current.setPositionAsync(0);
-            await lowOnTimeSoundRef.current.playAsync();
-        } catch (err) {
-            console.log("Check sound error:", err);
-        }
-    }, []);
-
     useEffect(() => {
         const loadSounds = async () => {
             await Audio.setAudioModeAsync({
@@ -331,6 +341,7 @@ export default function Game() {
             checkSoundRef.current = checkSound;
             illegalSoundRef.current = illegalSound;
             lowOnTimeSoundRef.current = lowOnTimeSound;
+            setSoundsReady(true);
         };
 
         loadSounds();
@@ -375,11 +386,11 @@ export default function Game() {
 
   return (
     <View style={{ flex: 1 }}>
-      {(!socket.current || !publicKey || !jwt || !sol || !connected) &&
+      {(!socket.current || !publicKey || !jwt || !sol || !connected || !soundsReady) &&
         <ConnectingToServer message='Connecting to server...' />
       }
 
-      {(socket.current && publicKey && jwt && sol && connected) &&
+      {(socket.current && publicKey && jwt && sol && connected && soundsReady) &&
         <GameBase
           showGameOver={showGameOver}
           setShowGameOver={setShowGameOver}

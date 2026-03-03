@@ -217,53 +217,6 @@ export function ChessBoard(
                     const isLight = (rowIdx + colIdx) % 2 === 0;
                     const squareName = String.fromCharCode("a".charCodeAt(0) + colIdx) +
                       (8 - rowIdx);
-
-                    if (squareName === gameState.prevFrom || squareName === gameState.prevTo) {
-                      return (
-                        <PreviousTurn
-                          width={width}
-                          piece={piece}
-                          onPress={onPress}
-                          prevFrom={gameState.prevFrom}
-                          colIdx={colIdx}
-                          rowIdx={rowIdx}
-                          color={gameState.color}
-                          squareName={squareName}
-                        />
-                      )
-                    }
-
-                    const loser = gameState.gameover.winner === "w" ? "b" : "w";
-
-                    const isKingInDanger =
-                      piece?.type === "k" &&
-                      (
-                        // CHECKMATE
-                        (gameState.gameover.isGameOver &&
-                          gameState.gameover.gameOverType === "checkmate" &&
-                          piece.color === gameState.chess.turn())
-
-                        ||
-
-                        // NORMAL CHECK
-                        (!gameState.gameover.isGameOver &&
-                          gameState.chess.inCheck() &&
-                          piece.color === gameState.chess.turn())
-                      );
-
-                    if (isKingInDanger) {
-                      playCheckSound();
-                      return (
-                        <Check
-                          width={width}
-                          onPress={onPress}
-                          piece={piece}
-                          color={gameState.color}
-                          colIdx={colIdx}
-                          rowIdx={rowIdx}
-                        />
-                      );
-                    }
                     return (
                       <Block color={gameState.color}
                         rowIdx={rowIdx}
@@ -273,6 +226,9 @@ export function ChessBoard(
                         piece={piece}
                         width={width}
                         moves={possibleMoves}
+                        chess={gameState.chess}
+                        prevFrom={gameState.prevFrom}
+                        prevTo={gameState.prevTo}
                       />
                     );
                   }}
@@ -383,154 +339,6 @@ export function ChessBoard(
 }
 
 
-function Check({
-  width,
-  onPress,
-  piece,
-  rowIdx,
-  colIdx,
-  color,
-}: {
-  width: number;
-  onPress: (piece: Piece, rowIdx: number, colIdx: number) => void;
-  piece: Piece;
-  rowIdx: number;
-  colIdx: number;
-  color: "b" | "w";
-}) {
-
-  const squareSize = Math.min(width, 640) / 8;
-  const pieceSize = squareSize * 0.85;
-
-  return (
-    <View
-      style={[
-        styles.square,
-        {
-          width: squareSize,
-          height: squareSize,
-          backgroundColor: "#fe0000",
-        },
-      ]}
-    >
-      <Pressable
-        onPress={() => {
-          onPress(piece, rowIdx, colIdx);
-        }}
-        style={[
-          styles.pressable,
-          {
-            width: squareSize,
-            height: squareSize,
-          },
-        ]}
-      >
-        {piece && (
-          <Piece
-            piece={piece}
-            width={pieceSize}
-            color={color}
-          />
-        )}
-      </Pressable>
-    </View>
-  );
-}
-
-
-function PreviousTurn({
-  width,
-  onPress,
-  piece,
-  rowIdx,
-  colIdx,
-  color,
-  squareName,
-  prevFrom,
-}: {
-  width: number;
-  onPress: (piece: Piece, rowIdx: number, colIdx: number) => void;
-  piece: Piece;
-  rowIdx: number;
-  colIdx: number;
-  color: "b" | "w";
-  squareName: string;
-  prevFrom: Square | null;
-}) {
-  const squareSize = Math.min(width, 640) / 8;
-  const pieceSize = squareSize * 0.95;
-
-  const isLight = (rowIdx + colIdx) % 2 === 0;
-  const isFromSquare = squareName === prevFrom;
-
-  const highlightColor = "#fff"
-
-  const baseStyle: ViewStyle = {
-    width: squareSize,
-    height: squareSize,
-    justifyContent: "center",
-    alignItems: "center",
-  };
-
-  const highlightStyle: ViewStyle = {
-    borderWidth: 5,
-    borderColor: highlightColor,
-    shadowColor: highlightColor,
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-  };
-
-  const pressableStyle: ViewStyle = {
-    width: squareSize,
-    height: squareSize,
-    justifyContent: "center",
-    alignItems: "center",
-  };
-
-  const content = (
-    <Pressable
-      onPress={() => onPress(piece, rowIdx, colIdx)}
-      style={pressableStyle}
-    >
-      {piece && (
-        <Piece
-          piece={piece}
-          width={pieceSize}
-          color={color}
-        />
-      )}
-    </Pressable>
-  );
-
-  if (isLight) {
-    return (
-      <LinearGradient
-        colors={["#B048C2", "#9082DB", "#3DE3B4"]}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[baseStyle, highlightStyle]}
-      >
-        {content}
-      </LinearGradient>
-    );
-  }
-
-  return (
-    <View
-      style={[
-        baseStyle,
-        { backgroundColor: "#1A1028" },
-        highlightStyle,
-      ]}
-    >
-      {content}
-    </View>
-  );
-}
-
-
 function Block({
   width,
   onPress,
@@ -539,53 +347,62 @@ function Block({
   colIdx,
   color,
   isLight,
-  moves
+  moves,
+  chess,
+  prevFrom,
+  prevTo,
 }: {
   width: number;
-  onPress: (piece: Piece, rowIdx: number, colIdx: number) => void;
-  piece: Piece;
+  onPress: (piece: any, rowIdx: number, colIdx: number) => void;
+  piece: any;
   rowIdx: number;
   colIdx: number;
   color: "b" | "w";
   isLight: boolean;
-  moves: string[] | null
+  moves: string[] | null;
+  chess: Chess;
+  prevFrom: string | null;
+  prevTo: string | null;
 }) {
   const squareSize = Math.min(width, 640) / 8;
   const pieceSize = squareSize * 0.95;
-  const squareName = String.fromCharCode("a".charCodeAt(0) + colIdx) +
-    (8 - rowIdx);
+
+  const squareName =
+    String.fromCharCode("a".charCodeAt(0) + colIdx) + (8 - rowIdx);
+
   const isPossibleMove = moves?.includes(squareName);
 
-  const squareProps = isLight
+  const isKingInCheck =
+    chess.inCheck() &&
+    piece?.type === "k" &&
+    piece?.color === chess.turn();
+
+  const isPreviousSquare =
+    squareName === prevFrom || squareName === prevTo;
+
+  const baseStyle: ViewStyle = {
+    width: squareSize,
+    height: squareSize,
+    justifyContent: "center",
+    alignItems: "center",
+  };
+
+  const borderStyle: ViewStyle = isPreviousSquare
     ? {
-      style: [
-        styles.square,
-        {
-          width: squareSize,
-          height: squareSize,
-          backgroundColor: "#1A1A1A", // 🔳 Light square
-        },
-      ],
-    }
-    : {
-      colors: ["#9945FF", "#14F195"], // 🟪 Solana gradient
-      start: { x: 0, y: 0 },
-      end: { x: 1, y: 1 },
-      style: [
-        styles.square,
-        {
-          width: squareSize,
-          height: squareSize,
-        },
-      ],
-    };
+        borderWidth: 6,
+        borderColor: "#ffffff",
+      }
+    : {};
 
-  return isLight ? (
-    <LinearGradient
-      colors={color == "w" ? ["#B048C2", "#9082DB", "#3DE3B4"] : ["#3DE3B4", "#9082DB", "#B048C2"]}
-      locations={[0, 0.5, 1]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+  const backgroundColor = isKingInCheck
+    ? "#fe0000"
+    : !isLight
+    ? "#1A1028"
+    : undefined;
+
+  const renderContent = () => (
+    <Pressable
+      onPress={() => onPress(piece, rowIdx, colIdx)}
       style={{
         width: squareSize,
         height: squareSize,
@@ -593,71 +410,55 @@ function Block({
         alignItems: "center",
       }}
     >
-      <Pressable
-        onPress={() => onPress(piece, rowIdx, colIdx)}
-        style={{
-          width: squareSize,
-          height: squareSize,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        {piece && (
-          <Piece piece={piece} width={pieceSize} color={color} />
-        )}
+      {piece && (
+        <Piece piece={piece} width={pieceSize} color={color} />
+      )}
 
-        {isPossibleMove && (
-          <View
-            style={{
-              position: "absolute",
-              width: squareSize * 0.50, //.35 initially
-              height: squareSize * 0.50,
-              borderRadius: (squareSize * 0.50) / 2,
-              backgroundColor: isLight
-                ? "rgba(0,0,0,0.25)"
-                : "rgba(255,255,255,0.25)"
-            }}
-          />
-        )}
-      </Pressable>
-    </LinearGradient>
-  ) : (
+      {isPossibleMove && (
+        <View
+          style={{
+            position: "absolute",
+            width: squareSize * 0.5,
+            height: squareSize * 0.5,
+            borderRadius: (squareSize * 0.5) / 2,
+            backgroundColor: isLight
+              ? "rgba(0,0,0,0.25)"
+              : "rgba(255,255,255,0.25)",
+          }}
+        />
+      )}
+    </Pressable>
+  );
+
+  // 🌈 Light square
+  if (isLight && !isKingInCheck) {
+    return (
+      <LinearGradient
+        colors={
+          color === "w"
+            ? ["#B048C2", "#9082DB", "#3DE3B4"]
+            : ["#3DE3B4", "#9082DB", "#B048C2"]
+        }
+        locations={[0, 0.5, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[baseStyle, borderStyle]}
+      >
+        {renderContent()}
+      </LinearGradient>
+    );
+  }
+
+  // 🌑 Dark square OR 🔴 Check square
+  return (
     <View
-      style={{
-        width: squareSize,
-        height: squareSize,
-        backgroundColor: "#1A1028", // clean dark block
-        justifyContent: "center",
-        alignItems: "center",
-      }}
+      style={[
+        baseStyle,
+        { backgroundColor },
+        borderStyle,
+      ]}
     >
-      <Pressable
-        onPress={() => onPress(piece, rowIdx, colIdx)}
-        style={{
-          width: squareSize,
-          height: squareSize,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        {piece && (
-          <Piece piece={piece} width={pieceSize} color={color} />
-        )}
-
-        {isPossibleMove && (
-          <View
-            style={{
-              position: "absolute",
-              width: squareSize * 0.50,
-              height: squareSize * 0.50,
-              borderRadius: (squareSize * 0.50) / 2,
-              backgroundColor: isLight
-                ? "rgba(0,0,0,0.25)"
-                : "rgba(255,255,255,0.25)"
-            }}
-          />
-        )}
-      </Pressable>
+      {renderContent()}
     </View>
   );
 }

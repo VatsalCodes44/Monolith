@@ -107,16 +107,22 @@ export default function CustomGame() {
     }, []);
 
     const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
+        const newChess = new Chess(payload.board);
         setGameState(p => ({
             ...p,
-            chess: new Chess(payload.board),
+            chess: newChess,
             prevFrom: payload.move.from,
             prevTo: payload.move.to,
             timer1: payload.timer1,
             timer2: payload.timer2,
             moves: payload.history,
         }));
-        playMoveSound();
+        if (newChess.inCheck()) {
+            playCheckSound();
+        }
+        else {
+            playMoveSound();
+        }
     }, [])
 
     const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
@@ -149,16 +155,19 @@ export default function CustomGame() {
             moves: payload.history
         }));
         gameOverRef.current = true;
+        setShowGameOver(true);
     }, [])
 
     const onReJoinCustomGameResponse = useCallback((payload: RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD) => {
+        const newChess = new Chess(payload.board);
         setGameState(p => ({
             ...p,
             color: payload.color,
-            chess: new Chess(payload.board),
+            chess: newChess,
             timer1: payload.timer1,
             timer2: payload.timer2,
             opponentPubkey: payload.opponentPubkey,
+            moves: newChess.history({verbose: true})
         }));
         setGameStarted(true)
         gameIdRef.current = payload.gameId

@@ -103,6 +103,7 @@ export default function Index() {
                         borderWidth: 1,
                         borderColor: '#2A2A30',
                     }} 
+                    disabled={!wallet.publicKey}
                     onPress={async () => {
                         if (!wallet.publicKey) return;
                         setIsDevnet(!wallet.isDevnet)
@@ -204,7 +205,7 @@ export default function Index() {
                         }}
                         text="ENTER ARENA"
                         fontFamily= "Orbitron_900Black"
-                        disabled={disabled()}
+                        disabled={!wallet.publicKey || disabled() || (lamports/LAMPORTS_PER_SOL) < parseFloat(option.amount)}
                         />
                     </ImageBackground>
                     </LinearGradient>

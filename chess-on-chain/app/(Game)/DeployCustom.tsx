@@ -39,7 +39,7 @@ export default function DeployCustom() {
     const jwt = jwtStore(s => s.jwt)
     const [customState, setCustomState] = useState<"DEPLOY MATCH" | "DEPLOYING" | "DEPLOYED" | "ERROR IN DEPLOYING" | "INSUFFICIENT SKR">("DEPLOY MATCH")
     const [gameId, setGameId] = useState<string | null>(null)
-    const [showSol, setShowSol] = useState(true);
+    const [showSol, setShowSol] = useState(false);
     const fetchBalance = useCallback(async (
         publicKey: string | null,
         jwt: string | null,
@@ -66,7 +66,9 @@ export default function DeployCustom() {
     }, []);
 
     const disabled = () => {
+        if (!publicKey || !jwt)
         if (isDevnet) return true;
+        if (skr/1_000_000 < 50) return true;
         if (parseFloat(skrAmount) < minSkr) return true;
         if (!isValidPubKey) return true;
         return false;
@@ -111,6 +113,7 @@ export default function DeployCustom() {
                         borderWidth: 1,
                         borderColor: '#2A2A30',
                     }} 
+                    disabled={!publicKey || !jwt}
                     onPress={async () => {
                         if (!publicKey) return;
                         setIsDevnet(!isDevnet)
@@ -133,7 +136,9 @@ export default function DeployCustom() {
                             </Text>
                         </View>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => {
+                    <TouchableOpacity
+                    disabled={!publicKey || !jwt}
+                    onPress={() => {
                         setShowSol(p => !p);
                     }} style={styles.balanceBadge}>
                         <Text style={[
@@ -314,7 +319,11 @@ export default function DeployCustom() {
                             <Text style={styles.highlight}>Seeker (SKR)</Text> tokens.{"\n\n"}
                             <Text style={styles.highlight}>0% platform fee</Text> is deducted —
                             100% of the total stake goes to the winner.{"\n\n"}
-                            Standard open arenas charge 5% from both players.
+                            Standard open arenas charge 5% from both players.{"\n\n"}
+
+                            If no opponent joins within{" "}
+                            <Text style={styles.highlight}>5 minutes</Text>, the custom match
+                            will be automatically cancelled and removed.
                         </Text>
                     </View>
                 </View>

@@ -85,16 +85,22 @@ export default function CustomGame() {
     const [player1Pubkey, setplayer1Pubkey] = useState<string>("")
 
     const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
+        const newChess = new Chess(payload.board);
         setGameState(p => ({
             ...p,
-            chess: new Chess(payload.board),
+            chess: newChess,
             prevFrom: payload.move.from,
             prevTo: payload.move.to,
             timer1: payload.timer1,
             timer2: payload.timer2,
             moves: payload.history,
         }));
-        playMoveSound()
+        if (newChess.inCheck()) {
+            playCheckSound();
+        }
+        else {
+            playMoveSound();
+        }
     }, [])
 
     const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
@@ -126,6 +132,7 @@ export default function CustomGame() {
             }
         }));
         setGameStarted(true)
+        setShowGameOver(true)
         gameOverRef.current = true;
     }, [])
 

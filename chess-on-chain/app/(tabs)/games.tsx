@@ -97,7 +97,8 @@ export default function Games() {
                         borderRadius: 20,
                         borderWidth: 1,
                         borderColor: '#2A2A30',
-                    }} 
+                    }}
+                    disabled={!publicKey}
                     onPress={async () => {
                         if (!publicKey) return;
                         setIsDevnet(!isDevnet)

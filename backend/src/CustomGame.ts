@@ -6,6 +6,7 @@ import { Game } from "./Game.js";
 export class CustomGame extends Game {
     public skr: number;
     public started = false;
+    public createdAt: number;
     constructor(
         player1Pubkey: string,
         player2Pubkey: string,
@@ -16,6 +17,7 @@ export class CustomGame extends Game {
         // similarly network variable is of no use
         super(null, null, player1Pubkey, player2Pubkey, "MAINNET", "0.01", gameId, true);
         this.skr = skr;
+        this.createdAt = Date.now()
     }
 
     protected async settlePaymentAndGameEnd(gameOverType: "CHECKMATE" | "STALEMATE" | "DRAW" | "TIME_OUT", winner: "w" | "b" | null, gameId: string) {
