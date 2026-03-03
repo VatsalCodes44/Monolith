@@ -1,10 +1,23 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { Stack } from 'expo-router'
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
-import { useColorScheme } from 'react-native'
+import * as SplashScreen from 'expo-splash-screen';
+import { Orbitron_900Black, useFonts } from '@expo-google-fonts/orbitron';
+import { useEffect } from 'react';
+
+SplashScreen.preventAutoHideAsync();
 
 export default function () {
-    const colorScheme = useColorScheme()
+    const [loaded, error] = useFonts({
+        Orbitron_900Black,
+    });
+
+    useEffect(() => {
+        if (loaded || error) {
+        SplashScreen.hideAsync();
+        }
+    }, [loaded, error]);
+
+    if (!loaded && !error) return null;
 
     return <Stack screenOptions={{ headerShown: false }} />
 }

@@ -230,9 +230,10 @@ export default function Index() {
                     />
 
                     <GradientButton
-                    text="JOIN OPEN ARENA"
+                    text="BOT"
                     disabled={disabled()}
                     onPress={() => {
+                        router.push("/Bot");
                     }}
                     fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}
                     />
