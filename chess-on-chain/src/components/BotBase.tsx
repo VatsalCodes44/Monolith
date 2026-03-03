@@ -11,6 +11,7 @@ import { GAME_STATE, Message } from '@/src/config/game'
 import { BotSendMessage } from './BotSendMessage'
 import { BotBoard } from './BotBoard'
 import { BotTimer } from './BotTimer'
+import { GameOverModal } from './GameOverModal'
 
 export function BotBase({
     width,
@@ -28,7 +29,10 @@ export function BotBase({
     playIllegalMoveSound,
     playCheckSound,
     playLowOnTimeSound,
-    setLastMessage
+    playMoveSound,
+    setLastMessage,
+    showGameOver,
+    setShowGameOver
 }: {
     width: number,
     showMessages: boolean,
@@ -45,7 +49,10 @@ export function BotBase({
     playIllegalMoveSound: () => Promise<void>,
     playCheckSound: () => Promise<void>,
     playLowOnTimeSound: () => Promise<void>,
-    setLastMessage: React.Dispatch<React.SetStateAction<Message | undefined>>
+    playMoveSound: () => Promise<void>,
+    setLastMessage: React.Dispatch<React.SetStateAction<Message | undefined>>,
+    setShowGameOver: React.Dispatch<React.SetStateAction<boolean>>,
+    showGameOver: boolean
 }) {
     return (
         <ImageBackground
@@ -109,6 +116,8 @@ export function BotBase({
                     }
                 </ShowMessages>
 
+                <GameOverModal onClose={() => setShowGameOver(false)} isOpen={showGameOver} text={gameState.gameover.gameOverType?.toUpperCase() || "GAME OVER"} />
+
                 <SolanaDuelHeader
                     player1Pubkey={player1Pubkey}
                     player2Pubkey={"BOT"}
@@ -141,6 +150,9 @@ export function BotBase({
                         setGameState={setGameState}
                         playIllegalMoveSound={playIllegalMoveSound}
                         playCheckSound={playCheckSound}
+                        playMoveSound={playMoveSound}
+                        setShowGameOver={setShowGameOver}
+                        showGameOver={showGameOver}
                     />
                 </View>
 

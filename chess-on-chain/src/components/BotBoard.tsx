@@ -57,18 +57,22 @@ export function BotBoard({
     setGameState,
     playIllegalMoveSound,
     playCheckSound,
+    playMoveSound,
+    setShowGameOver,
+    showGameOver
 }: {
-    gameStarted: boolean
-    spectator: boolean
-    gameState: GAME_STATE
-    setGameState: React.Dispatch<React.SetStateAction<GAME_STATE>>
-    playIllegalMoveSound: () => Promise<void>
-    playCheckSound: () => Promise<void>
+    gameStarted: boolean,
+    spectator: boolean,
+    gameState: GAME_STATE,
+    setGameState: React.Dispatch<React.SetStateAction<GAME_STATE>>,
+    playIllegalMoveSound: () => Promise<void>,
+    playCheckSound: () => Promise<void>,
+    playMoveSound: () => Promise<void>,
+    setShowGameOver: React.Dispatch<React.SetStateAction<boolean>>,
+    showGameOver: boolean
 }) {
     const { width } = useWindowDimensions()
     const boardSize = Math.min(width, 642)
-
-    const moveSoundRef = useRef<Audio.Sound | null>(null)
 
     const [showPromotionOptions, setShowPromotionOptions] = useState(false)
     const [pendingPromotionMove, setPendingPromotionMove] =
@@ -82,31 +86,6 @@ export function BotBoard({
     useEffect(() => {
         setTurn(gameState.chess.turn())
     }, [gameState.chess])
-
-    useEffect(() => {
-        const load = async () => {
-            await Audio.setAudioModeAsync({
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: false,
-                playThroughEarpieceAndroid: true,
-            })
-            const sound = new Audio.Sound()
-            await sound.loadAsync(require("../../assets/audios/moveSound.mp3"))
-            moveSoundRef.current = sound
-        }
-        load()
-    }, [])
-
-    const playMoveSound = async () => {
-        if (!moveSoundRef.current) return
-        try {
-            await moveSoundRef.current.stopAsync()
-            await moveSoundRef.current.setPositionAsync(0)
-            await moveSoundRef.current.playAsync()
-        } catch (err) {
-            console.log("Move sound error:", err)
-        }
-    }
 
     // Possible moves highlight
     useEffect(() => {
@@ -143,7 +122,18 @@ export function BotBoard({
                 gameover: gameover.isGameOver ? gameover : p.gameover
             }))
 
-            playMoveSound()
+            if (newChess.isCheckmate()){
+                setShowGameOver(true);
+            }
+            else if (newChess.isGameOver()){
+                setShowGameOver(true);
+            }
+            else if (newChess.inCheck()) {
+                playCheckSound();
+            }
+            else {
+                playMoveSound();
+            }
         }, 800)
 
         return () => clearTimeout(timeout)
@@ -196,7 +186,18 @@ export function BotBoard({
                 gameover: gameover.isGameOver ? gameover : p.gameover
             }))
 
-            playMoveSound()
+            if (newChess.isCheckmate()){
+                setShowGameOver(true);
+            }
+            else if (newChess.isGameOver()){
+                setShowGameOver(true);
+            }
+            else if (newChess.inCheck()) {
+                playCheckSound();
+            }
+            else {
+                playMoveSound();
+            }
             setShowPromotionOptions(false)
         } catch {
             playIllegalMoveSound()
@@ -226,7 +227,18 @@ export function BotBoard({
             gameover: gameover.isGameOver ? gameover : p.gameover
         }))
 
-        playMoveSound()
+        if (newChess.isCheckmate()){
+            setShowGameOver(true);
+        }
+        else if (newChess.isGameOver()){
+            setShowGameOver(true);
+        }
+        else if (newChess.inCheck()) {
+            playCheckSound();
+        }
+        else {
+            playMoveSound();
+        }
         setShowPromotionOptions(false)
         setPendingPromotionMove(null)
     }
@@ -264,47 +276,6 @@ export function BotBoard({
                                         const squareName =
                                             String.fromCharCode("a".charCodeAt(0) + colIdx) + (8 - rowIdx)
 
-                                        const isKingInDanger =
-                                            piece?.type === "k" &&
-                                            (
-                                                (gameState.gameover.isGameOver &&
-                                                    gameState.gameover.gameOverType === "checkmate" &&
-                                                    piece.color === gameState.chess.turn())
-                                                ||
-                                                (!gameState.gameover.isGameOver &&
-                                                    gameState.chess.inCheck() &&
-                                                    piece.color === gameState.chess.turn())
-                                            )
-
-                                        if (isKingInDanger) {
-                                            playCheckSound()
-                                            return (
-                                                <Check
-                                                    width={width}
-                                                    onPress={onPress}
-                                                    piece={piece}
-                                                    rowIdx={rowIdx}
-                                                    colIdx={colIdx}
-                                                    color={gameState.color}
-                                                />
-                                            )
-                                        }
-
-                                        if (squareName === gameState.prevFrom || squareName === gameState.prevTo) {
-                                            return (
-                                                <PreviousTurn
-                                                    width={width}
-                                                    onPress={onPress}
-                                                    piece={piece}
-                                                    rowIdx={rowIdx}
-                                                    colIdx={colIdx}
-                                                    color={gameState.color}
-                                                    squareName={squareName}
-                                                    prevFrom={gameState.prevFrom}
-                                                />
-                                            )
-                                        }
-
                                         return (
                                             <Block
                                                 width={width}
@@ -315,6 +286,9 @@ export function BotBoard({
                                                 color={gameState.color}
                                                 isLight={isLight}
                                                 moves={possibleMoves}
+                                                chess={gameState.chess}
+                                                prevFrom={gameState.prevFrom}
+                                                prevTo={gameState.prevTo}
                                             />
                                         )
                                     }}
@@ -386,156 +360,128 @@ export function BotBoard({
     )
 }
 
-function Check({
-    width, onPress, piece, rowIdx, colIdx, color
-}: {
-    width: number
-    onPress: (piece: PieceType, rowIdx: number, colIdx: number) => void
-    piece: PieceType
-    rowIdx: number
-    colIdx: number
-    color: "b" | "w"
-}) {
-    const squareSize = Math.min(width, 640) / 8
-    const pieceSize = squareSize * 0.85
-    return (
-        <View style={[styles.square, {
-            width: squareSize,
-            height: squareSize,
-            backgroundColor: "#fe0000"
-        }]}>
-            <Pressable
-                onPress={() => onPress(piece, rowIdx, colIdx)}
-                style={[styles.pressable, { width: squareSize, height: squareSize }]}
-            >
-                {piece && <Piece piece={piece} width={pieceSize} color={color} />}
-            </Pressable>
-        </View>
-    )
-}
-
-function PreviousTurn({
-    width, onPress, piece, rowIdx, colIdx, color, squareName, prevFrom
-}: {
-    width: number
-    onPress: (piece: PieceType, rowIdx: number, colIdx: number) => void
-    piece: PieceType
-    rowIdx: number
-    colIdx: number
-    color: "b" | "w"
-    squareName: string
-    prevFrom: Square | null
-}) {
-    const squareSize = Math.min(width, 640) / 8
-    const pieceSize = squareSize * 0.95
-    const isLight = (rowIdx + colIdx) % 2 === 0
-
-    const baseStyle: ViewStyle = {
-        width: squareSize, height: squareSize,
-        justifyContent: "center", alignItems: "center"
-    }
-    const highlightStyle: ViewStyle = {
-        borderWidth: 5, borderColor: "#fff",
-        shadowColor: "#fff", shadowOpacity: 0.6,
-        shadowRadius: 10, shadowOffset: { width: 0, height: 0 }
-    }
-    const pressableStyle: ViewStyle = {
-        width: squareSize, height: squareSize,
-        justifyContent: "center", alignItems: "center"
-    }
-
-    const content = (
-        <Pressable onPress={() => onPress(piece, rowIdx, colIdx)} style={pressableStyle}>
-            {piece && <Piece piece={piece} width={pieceSize} color={color} />}
-        </Pressable>
-    )
-
-    if (isLight) {
-        return (
-            <LinearGradient
-                colors={["#B048C2", "#9082DB", "#3DE3B4"]}
-                locations={[0, 0.5, 1]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[baseStyle, highlightStyle]}
-            >
-                {content}
-            </LinearGradient>
-        )
-    }
-    return (
-        <View style={[baseStyle, { backgroundColor: "#1A1028" }, highlightStyle]}>
-            {content}
-        </View>
-    )
-}
-
 function Block({
-    width, onPress, piece, rowIdx, colIdx, color, isLight, moves
+  width,
+  onPress,
+  piece,
+  rowIdx,
+  colIdx,
+  color,
+  isLight,
+  moves,
+  chess,
+  prevFrom,
+  prevTo,
 }: {
-    width: number
-    onPress: (piece: PieceType, rowIdx: number, colIdx: number) => void
-    piece: PieceType
-    rowIdx: number
-    colIdx: number
-    color: "b" | "w"
-    isLight: boolean
-    moves: string[] | null
+  width: number;
+  onPress: (piece: any, rowIdx: number, colIdx: number) => void;
+  piece: any;
+  rowIdx: number;
+  colIdx: number;
+  color: "b" | "w";
+  isLight: boolean;
+  moves: string[] | null;
+  chess: Chess;
+  prevFrom: string | null;
+  prevTo: string | null;
 }) {
-    const squareSize = Math.min(width, 640) / 8
-    const pieceSize = squareSize * 0.95
-    const squareName = String.fromCharCode("a".charCodeAt(0) + colIdx) + (8 - rowIdx)
-    const isPossibleMove = moves?.includes(squareName)
+  const squareSize = Math.min(width, 640) / 8;
+  const pieceSize = squareSize * 0.95;
 
-    return isLight ? (
-        <LinearGradient
-            colors={color === "w"
-                ? ["#B048C2", "#9082DB", "#3DE3B4"]
-                : ["#3DE3B4", "#9082DB", "#B048C2"]}
-            locations={[0, 0.5, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ width: squareSize, height: squareSize, justifyContent: "center", alignItems: "center" }}
-        >
-            <Pressable
-                onPress={() => onPress(piece, rowIdx, colIdx)}
-                style={{ width: squareSize, height: squareSize, justifyContent: "center", alignItems: "center" }}
-            >
-                {piece && <Piece piece={piece} width={pieceSize} color={color} />}
-                {isPossibleMove && (
-                    <View style={{
-                        position: "absolute",
-                        width: squareSize * 0.50,
-                        height: squareSize * 0.50,
-                        borderRadius: (squareSize * 0.50) / 2,
-                        backgroundColor: "rgba(0,0,0,0.25)"
-                    }} />
-                )}
-            </Pressable>
-        </LinearGradient>
-    ) : (
-        <View style={{
-            width: squareSize, height: squareSize,
-            backgroundColor: "#1A1028",
-            justifyContent: "center", alignItems: "center"
-        }}>
-            <Pressable
-                onPress={() => onPress(piece, rowIdx, colIdx)}
-                style={{ width: squareSize, height: squareSize, justifyContent: "center", alignItems: "center" }}
-            >
-                {piece && <Piece piece={piece} width={pieceSize} color={color} />}
-                {isPossibleMove && (
-                    <View style={{
-                        position: "absolute",
-                        width: squareSize * 0.50,
-                        height: squareSize * 0.50,
-                        borderRadius: (squareSize * 0.50) / 2,
-                        backgroundColor: "rgba(255,255,255,0.25)"
-                    }} />
-                )}
-            </Pressable>
-        </View>
-    )
+  const squareName =
+    String.fromCharCode("a".charCodeAt(0) + colIdx) + (8 - rowIdx);
+
+  const isPossibleMove = moves?.includes(squareName);
+
+  const isKingInCheck =
+    chess.inCheck() &&
+    piece?.type === "k" &&
+    piece?.color === chess.turn();
+
+  const isPreviousSquare =
+    squareName === prevFrom || squareName === prevTo;
+
+  const baseStyle: ViewStyle = {
+    width: squareSize,
+    height: squareSize,
+    justifyContent: "center",
+    alignItems: "center",
+  };
+
+  const borderStyle: ViewStyle = isPreviousSquare
+    ? {
+        borderWidth: 6,
+        borderColor: "#ffffff",
+      }
+    : {};
+
+  const backgroundColor = isKingInCheck
+    ? "#fe0000"
+    : !isLight
+    ? "#1A1028"
+    : undefined;
+
+  const renderContent = () => (
+    <Pressable
+      onPress={() => onPress(piece, rowIdx, colIdx)}
+      style={{
+        width: squareSize,
+        height: squareSize,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      {piece && (
+        <Piece piece={piece} width={pieceSize} color={color} />
+      )}
+
+      {isPossibleMove && (
+        <View
+          style={{
+            position: "absolute",
+            width: squareSize * 0.5,
+            height: squareSize * 0.5,
+            borderRadius: (squareSize * 0.5) / 2,
+            backgroundColor: isLight
+              ? "rgba(0,0,0,0.25)"
+              : "rgba(255,255,255,0.25)",
+          }}
+        />
+      )}
+    </Pressable>
+  );
+
+  // 🌈 Light square
+  if (isLight && !isKingInCheck) {
+    return (
+      <LinearGradient
+        colors={
+          color === "w"
+            ? ["#B048C2", "#9082DB", "#3DE3B4"]
+            : ["#3DE3B4", "#9082DB", "#B048C2"]
+        }
+        locations={[0, 0.5, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[baseStyle, borderStyle]}
+      >
+        {renderContent()}
+      </LinearGradient>
+    );
+  }
+
+  // 🌑 Dark square OR 🔴 Check square
+  return (
+    <View
+      style={[
+        baseStyle,
+        { backgroundColor },
+        borderStyle,
+      ]}
+    >
+      {renderContent()}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

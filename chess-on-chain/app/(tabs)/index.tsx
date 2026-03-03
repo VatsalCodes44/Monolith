@@ -226,7 +226,7 @@ export default function Index() {
                     />
 
                     <GradientButton
-                    text="BOT"
+                    text="🤖 PRACTICE MODE"
                     disabled={disabled()}
                     onPress={() => {
                         router.push("/Bot");
