@@ -64,6 +64,7 @@ export default function CustomGame() {
     const isMountedRef = useRef(true);
     const [lastMessage, setLastMessage] = useState<Message>()
     const [showMessages, setShowMessages] = useState(false)
+    const [showGameOver, setShowGameOver] = useState(false)
     const [messages, setMessages] = useState<Message[]>([]);
     const [connected, setConnected] = useState(false)
     const gameOverRef = useRef(false)
@@ -131,6 +132,7 @@ export default function CustomGame() {
                 isGameOver: true
             }
         }));
+        setShowGameOver(true)
         gameOverRef.current = true;
     }, [])
 
@@ -409,6 +411,8 @@ export default function CustomGame() {
 
             {isReady &&
                 <GameBase
+                    showGameOver={showGameOver}
+                    setShowGameOver={setShowGameOver}
                     spectator={false}
                     width={width}
                     showMessages={showMessages}
@@ -434,11 +438,6 @@ export default function CustomGame() {
                     setLastMessage={setLastMessage}
                 />
             }
-            <TouchableOpacity onPress={() => {
-                socket.current?.close()
-            }} style={{ position: "absolute", bottom: 100, right: 10, backgroundColor: "#CE2EDF", padding: 10, borderRadius: 10 }}>
-                <Text style={{ color: "#ffffff" }}>Close</Text>
-            </TouchableOpacity>
         </View>
     )
 }

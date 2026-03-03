@@ -1,6 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, ImageBackground } from 'react-native'
-import React, { useCallback, useEffect, useState } from 'react'
-import { useFonts, Orbitron_900Black, Orbitron_800ExtraBold } from '@expo-google-fonts/orbitron'
+import React, { useCallback, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { GameBet } from '@/src/stores/gameBet';

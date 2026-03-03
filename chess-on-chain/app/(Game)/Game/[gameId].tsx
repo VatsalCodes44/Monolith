@@ -52,11 +52,12 @@ export default function Game() {
     }>();
     const isDevnet = useRef(network == "DEVNET" ? true : false);
     const socket = useRef<WebSocket | null>(null);
-    const [gameStarted, setGameStarted] = useState(false)
-    const gameIdRef = useRef<string | null>(gameId == "null" ? null : gameId)
+    const [gameStarted, setGameStarted] = useState(false);
+    const gameIdRef = useRef<string | null>(gameId == "null" ? null : gameId);
     const isMountedRef = useRef(true);
-    const [lastMessage, setLastMessage] = useState<Message>()
-    const [showMessages, setShowMessages] = useState(false)
+    const [lastMessage, setLastMessage] = useState<Message>();
+    const [showMessages, setShowMessages] = useState(false);
+    const [showGameOver, setShowGameOver] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [connected, setConnected] = useState(false)
     const gameOverRef = useRef(false)
@@ -110,6 +111,7 @@ export default function Game() {
                 isGameOver: true
             }
         }));
+        setShowGameOver(true)
         gameOverRef.current = true;
     }, [])
 
@@ -379,6 +381,8 @@ export default function Game() {
 
       {(socket.current && publicKey && jwt && sol && connected) &&
         <GameBase
+          showGameOver={showGameOver}
+          setShowGameOver={setShowGameOver}
           setLastMessage={setLastMessage}
           spectator={false}
           width={width}
@@ -403,11 +407,6 @@ export default function Game() {
           playLowOnTimeSound={playLowOnTimeSound}
         />
       }
-      <TouchableOpacity onPress={() => {
-        socket.current?.close()
-      }} style={{ position: "absolute", bottom: 100, right: 10, backgroundColor: "#CE2EDF", padding: 10, borderRadius: 10 }}>
-        <Text style={{ color: "#ffffff" }}>Close</Text>
-      </TouchableOpacity>
     </View>
   )
 }

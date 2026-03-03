@@ -66,6 +66,7 @@ export default function DeployCustom() {
     }, []);
 
     const disabled = () => {
+        if (isDevnet) return true;
         if (parseFloat(skrAmount) < minSkr) return true;
         if (!isValidPubKey) return true;
         return false;

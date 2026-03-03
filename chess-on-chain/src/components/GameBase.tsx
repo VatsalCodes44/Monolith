@@ -1,5 +1,5 @@
 import { StyleSheet, View, Text, useWindowDimensions, ScrollView, TouchableOpacity, ImageBackground } from 'react-native'
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ChessBoard } from "@/src/components/ChessBoard"
 import { Chess, Move, Square } from 'chess.js'
@@ -11,6 +11,7 @@ import { Captured } from '@/src/components/Captured'
 import { ShowMessages } from '@/src/components/ShowMessages'
 import { SolanaDuelHeader } from '@/src/components/SolanaDuelHeader'
 import { GAME_STATE, Message } from '../config/game'
+import { GameOverModal } from './GameOverModal'
 
 function GameBaseComponent({
     width,
@@ -34,7 +35,9 @@ function GameBaseComponent({
     playIllegalMoveSound,
     playCheckSound,
     playLowOnTimeSound,
-    setLastMessage
+    setLastMessage,
+    showGameOver,
+    setShowGameOver
 }: {
     width: number,
     showMessages: boolean,
@@ -58,9 +61,10 @@ function GameBaseComponent({
     playIllegalMoveSound: () => Promise<void>,
     playCheckSound: () => Promise<void>,
     playLowOnTimeSound: () => Promise<void>,
-    setLastMessage: React.Dispatch<React.SetStateAction<Message | undefined>>
+    setLastMessage: React.Dispatch<React.SetStateAction<Message | undefined>>,
+    setShowGameOver: React.Dispatch<React.SetStateAction<boolean>>,
+    showGameOver: boolean
 }) {
-
 
     return (
         <ImageBackground
@@ -137,6 +141,8 @@ function GameBaseComponent({
                             </Text>
                     }
                 </ShowMessages>
+
+                <GameOverModal onClose={() => setShowGameOver(false)} isOpen={showGameOver} text={gameState.gameover.gameOverType?.toUpperCase() || "GAME OVER"} />
 
                 <SolanaDuelHeader
                     player1Pubkey={player1Pubkey}
