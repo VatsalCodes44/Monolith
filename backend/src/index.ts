@@ -7,10 +7,12 @@ import nacl from "tweetnacl";
 import { verifySolTransfer } from "./lib/verifySolTransfer.js";
 import { verifySeekerTransfer } from "./lib/verifySeekerTransfer.js";
 import jwt from "jsonwebtoken";
-import { login, deposit, verifyLogin, getBalance, INIT_CUSTOM_GAME_TYPE } from "./types/type.js";
+import { login, deposit, verifyLogin, getBalance, INIT_CUSTOM_GAME_TYPE, withdraw } from "./types/type.js";
 import { jwtVerification } from "./middlewares/jwtVerification.js";
 import { CUSTOM_CREATED, INSUFFICIENT_FUNDS } from "./Messages.js";
 import bs58 from "bs58";
+import { Transaction, SystemProgram, Keypair, PublicKey, Connection, clusterApiUrl, sendAndConfirmTransaction } from "@solana/web3.js";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createTransferInstruction, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token"
 
 const app = express();
 const PORT = 8080;
@@ -19,6 +21,11 @@ const gameManager = new GameManager();
 const message = "Chess on chain wants you to sign this message: ";
 let count = 0;
 const loginHandler: Map<string, string> = new Map();
+const connection = new Connection((process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta")),"confirmed");
+const keyPair = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY!));
+const SEEKER_MINT = new PublicKey(
+    "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3"
+);
 
 app.use(express.json());
 
@@ -116,8 +123,6 @@ app.post("/deposit", jwtVerification, async (req, res) => {
 
 
     try {
-        // Verify on-chain first
-
         if (asset == "SOL") {
             let verification = await verifySolTransfer(
                 network,
@@ -208,17 +213,189 @@ app.post("/deposit", jwtVerification, async (req, res) => {
 
         return res.json({ success: true });
 
-    } catch (error: any) {
-
-        // Unique constraint = replay
-        if (error.code === "P2002") {
-            return res.status(400).json({ error: "Transaction already processed" });
-        }
+    } 
+    catch (error: any) {
+    if (error.code === "P2002") {
+        return res.status(400).json({ error: "Transaction already processed" });
+    }
 
         console.error(error);
         return res.status(500).json({ error: "Deposit failed" });
     }
 });
+
+app.post("/withdraw", jwtVerification, async (req, res) => {
+    const parsed = withdraw.safeParse(req.body);
+
+    if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request" });
+    }
+
+    const { amount, asset } = parsed.data;
+    const userPublicKey = (req as any).user.publicKey;
+
+    try {
+        if (asset == "SOL") {
+
+            try {
+                const result = await prisma.player.updateMany({
+                    where: {
+                        publicKey: userPublicKey,
+                        mainnetLamports: {
+                            gte: amount
+                        }
+                    },
+                    data: {
+                        mainnetLamports: {
+                            decrement: amount
+                        }
+                    }
+                })
+                if (result.count == 0) throw new Error("Insufficient Funds");
+            }
+            catch {
+                res.status(400).send("Insufficient Funds")
+                return;
+            }
+
+            let signature  = "";
+            try {
+                const solTx = new Transaction().add(
+                    SystemProgram.transfer({
+                        fromPubkey: keyPair.publicKey,
+                        toPubkey: new PublicKey(userPublicKey),
+                        lamports: amount
+                    })
+                )
+
+                signature = await sendAndConfirmTransaction(
+                    connection,
+                    solTx,
+                    [keyPair],
+                )
+            }
+            catch {
+                const result = await prisma.player.update({
+                    where: {
+                        publicKey: userPublicKey
+                    },
+                    data: {
+                        mainnetLamports: {
+                            increment: amount
+                        }
+                    }
+                })
+                res.status(400).send("Insufficient Funds")
+                return;
+            }
+
+            if (signature == "") throw new Error("Error in transferring");
+
+            res.send({
+                amount,
+                signature
+            })
+            return;
+        }
+        else if (asset == "SKR") {
+            
+            try {
+                const result = await prisma.player.updateMany({
+                    where: {
+                        publicKey: userPublicKey,
+                        skr: {
+                            gte: amount
+                        }
+                    },
+                    data: {
+                        skr: {
+                            decrement: amount
+                        }
+                    }
+                })
+                if (result.count == 0) throw new Error("Insufficient Funds");
+            }
+            catch {
+                res.status(400).send("Insufficient Funds")
+                return;
+            }
+
+            let signature  = "";
+            try {
+
+                const feePayerATA = getAssociatedTokenAddressSync(
+                    SEEKER_MINT,
+                    keyPair.publicKey,
+                    false, 
+                    TOKEN_PROGRAM_ID,
+                    ASSOCIATED_TOKEN_PROGRAM_ID
+                );
+
+                const recipientATA = getAssociatedTokenAddressSync(
+                    SEEKER_MINT,
+                    new PublicKey(userPublicKey),
+                    false,
+                    TOKEN_PROGRAM_ID,
+                    ASSOCIATED_TOKEN_PROGRAM_ID
+                );
+
+                const transferInstruction = createTransferInstruction(
+                    feePayerATA, 
+                    recipientATA, 
+                    keyPair.publicKey,
+                    amount, // amount
+                    [], // multiSigners
+                    TOKEN_PROGRAM_ID // programId
+                );
+
+                const transferBlockhash = await connection.getLatestBlockhash();
+
+                let transferTransaction = new Transaction({
+                    feePayer: keyPair.publicKey,
+                    blockhash: transferBlockhash.blockhash,
+                    lastValidBlockHeight: transferBlockhash.lastValidBlockHeight
+                }).add(transferInstruction);
+
+                signature = await sendAndConfirmTransaction(
+                    connection,
+                    transferTransaction,
+                    [keyPair]
+                );
+
+            }
+            catch {
+                const result = await prisma.player.updateMany({
+                    where: {
+                        publicKey: userPublicKey,
+                    },
+                    data: {
+                        skr: {
+                            increment: amount
+                        }
+                    }
+                })
+                res.status(400).send("Insufficient Funds")
+                return;
+            }
+
+            if (signature == "") throw new Error("Error in transferring");
+
+            res.send({
+                amount,
+                signature
+            })
+            return;
+        }
+
+    } 
+    catch (error: any) {
+        if (error.code === "P2002") {
+            return res.status(400).json({ error: "Transaction already processed" });
+        }
+    }
+
+    res.status(400).send("error in transfering")
+})
 
 app.post("/login", async (req, res) => {
     const parsed = login.safeParse(req.body);

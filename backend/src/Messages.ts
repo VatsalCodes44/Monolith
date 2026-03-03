@@ -18,4 +18,7 @@ export const ENTERED_ARENA = "entered_arena";
 export const CANNOT_JOIN_CUSTOM = "cannot_join_custom";
 
 export const SPECTATE = "spectate";
+export const ENTERED_SPECTATE = "entered_spectate"
+export const INVALID_GAMEID = "invalid_gameid"
+
 // add its response too in the frontend types see from the addCustomeGame message in the GameManager.tsx

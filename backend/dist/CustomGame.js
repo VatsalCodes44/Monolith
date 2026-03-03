@@ -1,4 +1,4 @@
-import { INIT_GAME } from "./Messages.js";
+import { JOIN_CUSTOM_GAME } from "./Messages.js";
 import { prisma } from "./lib/prisma.js";
 import { Game } from "./Game.js";
 export class CustomGame extends Game {
@@ -128,6 +128,7 @@ export class CustomGame extends Game {
     // and the timer starts from that moment, to avoid this we will call the start game when 
     // the second player joins the game.
     startGame() {
+        console.log("startGame — started:", this.started, "p1:", !!this.player1, "p2:", !!this.player2);
         if (this.started)
             return;
         if (this.player1 == null || this.player2 == null)
@@ -137,7 +138,7 @@ export class CustomGame extends Game {
         this.timer2 = 10 * 60 * 1000;
         this.lastMoveTimestamp = Date.now();
         this.player1.send(JSON.stringify({
-            type: INIT_GAME,
+            type: JOIN_CUSTOM_GAME,
             payload: {
                 color: "w",
                 board: this.board.fen(),
@@ -149,7 +150,7 @@ export class CustomGame extends Game {
             }
         }));
         this.player2?.send(JSON.stringify({
-            type: INIT_GAME,
+            type: JOIN_CUSTOM_GAME,
             payload: {
                 color: "b",
                 board: this.board.fen(),

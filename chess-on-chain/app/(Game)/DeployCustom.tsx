@@ -40,15 +40,7 @@ export default function DeployCustom() {
     const jwt = jwtStore(s => s.jwt)
     const [customState, setCustomState] = useState<"DEPLOY MATCH" | "DEPLOYING" | "DEPLOYED" | "ERROR IN DEPLOYING" | "INSUFFICIENT SKR">("DEPLOY MATCH")
     const [gameId, setGameId] = useState<string | null>(null)
-
-    useEffect(() => {
-        if (isDevnet) {
-            setIsDevnet(false)
-            fetchBalance(publicKey, jwt, false)
-        }
-    },
-     [])
-
+    const [showSol, setShowSol] = useState(true);
     const fetchBalance = useCallback(async (
         publicKey: string | null,
         jwt: string | null,
@@ -63,7 +55,6 @@ export default function DeployCustom() {
             };
             const res = await axios.post(`${REST_URL}/getBalance`, payload, {
                 headers: { Authorization: `Bearer ${jwt}` },
-
             });
             const data = res.data;
             console.log("RAW DATA:", data.lamports, "-----------", data.skr);
@@ -73,8 +64,7 @@ export default function DeployCustom() {
         } catch (e) {
             console.log(e);
         }
-    },
-     []);
+    }, []);
 
     const disabled = () => {
         if (parseFloat(skrAmount) < minSkr) return true;
@@ -143,14 +133,14 @@ export default function DeployCustom() {
                             </Text>
                         </View>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={async () => {
-                        await fetchBalance(publicKey, jwt, isDevnet)
+                    <TouchableOpacity onPress={() => {
+                        setShowSol(p => !p);
                     }} style={styles.balanceBadge}>
                         <Text style={[
                             styles.balanceText,
                             { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
                         ]}>
-                            {`◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol`}
+                            {showSol ? `◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol` : `◎ ${(skr / 1_000_000).toFixed(2)} skr`}
                         </Text>
                     </TouchableOpacity>
                 </View>

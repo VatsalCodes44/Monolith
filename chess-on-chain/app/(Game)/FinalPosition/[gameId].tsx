@@ -21,21 +21,19 @@ export default function SpectateGame() {
     }
 
     return (
-        <View style={{ flex: 1 }}>
-            <FinalPosition 
-                chess={new Chess(game.fen)}
-                color={color}
-                fontsLoaded={fontsLoaded}
-                moves={game.history ? JSON.parse(game.history) as Move[] : []}
-                player1Pubkey={publicKey}
-                player2Pubkey={game.player1PublicKey == publicKey ? game.player2PublicKey : game.player1PublicKey}
-                sol={(game.lamports/LAMPORTS_PER_SOL).toFixed(2).toString()}
-                timer1={game.timer1}
-                timer2={game.timer2}
-                custom={game.customGame}
-                skr={(game.skr/1_000_000).toFixed(2).toString()}
-            />
-        </View>
+        <FinalPosition 
+            chess={new Chess(game.fen)}
+            color={color}
+            fontsLoaded={fontsLoaded}
+            moves={game.history ? JSON.parse(game.history) as Move[] : []}
+            player1Pubkey={publicKey}
+            player2Pubkey={game.player1PublicKey == publicKey ? game.player2PublicKey : game.player1PublicKey}
+            sol={(game.lamports/LAMPORTS_PER_SOL).toFixed(2).toString()}
+            timer1={game.timer1}
+            timer2={game.timer2}
+            custom={game.customGame}
+            skr={(game.skr/1_000_000).toFixed(2).toString()}
+        />
     )
 }
 

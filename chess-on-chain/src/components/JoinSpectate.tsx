@@ -5,7 +5,7 @@ import { GradientButton } from './GradientButton'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 
-export default function JoinSpectate() {
+export function JoinSpectate() {
     const [gameId, setGameId] = useState("")
     return (
         <GradientCard2 padding={20}>
@@ -61,7 +61,14 @@ export default function JoinSpectate() {
                     <GradientButton
                         minWidth={145}
                         text={"SPECTATE"}
-                        onPress={() => {}}
+                        onPress={() => {
+                            router.push({
+                                pathname: "/Spectate/[gameId]",
+                                params: {
+                                    gameId,
+                                },
+                            })
+                        }}
                         fontFamily="Orbitron_900Black"
                         disabled={false}
                     />

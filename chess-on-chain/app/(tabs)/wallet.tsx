@@ -21,6 +21,8 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { jwtStore } from '@/src/stores/jwt';
 import { Header } from '@/src/components/Header';
 import GradientCard2 from '@/src/components/GradientCard2';
+import { GradientButton } from '@/src/components/GradientButton';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Wallet() {
   const [fontsLoaded] = useFonts({ Orbitron_900Black })
@@ -40,21 +42,19 @@ export default function Wallet() {
   const setSkr = gameBalance(s => s.setSkr);
   const jwt = jwtStore(s => s.jwt);
 
-  let opacity = .95;
-  if (!wallet.publicKey || !jwt) opacity = .5;
-  else if (isDevnet) {
-    if (mode == "DEPOSIT") {
-      if (asset == "SOL") opacity = .95;
-      else opacity = .5;
-    }
-    else {
-      if (asset == "SOL") opacity = .95;
-      else opacity = .5;
+  let disabled = false;
+
+  if (!wallet.publicKey || !jwt) {
+    disabled = true;
+  } else if (isDevnet) {
+    // On devnet ONLY deposit SOL is allowed
+    if (!(mode === "DEPOSIT" && asset === "SOL")) {
+      disabled = true;
     }
   }
-  else {
-    opacity = .95;
-  }
+
+  const showDevnetRestriction =
+  isDevnet && !(mode === "DEPOSIT" && asset === "SOL");
 
   const fetchBalance = async () => {
     if (!wallet.publicKey || !jwt) return;
@@ -84,7 +84,6 @@ export default function Wallet() {
 
   const transferSol = async () => {
     console.log(wallet.publicKey)
-    console.log("---------------------------------")
     console.log(jwt)
     if (!wallet.publicKey || !jwt) return;
 
@@ -149,6 +148,42 @@ export default function Wallet() {
     }
   }
 
+  const withdraw = async () => {
+    if (!wallet.publicKey || !jwt) return;
+
+    const parsedAmount = parseFloat(amount);
+
+    if (!parsedAmount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      console.log("Invalid amount");
+      return;
+    }
+
+    try {
+      console.log("Calling sendSOL...");
+      const signature = await wallet.sendSOL(parsedAmount);
+      if (!signature) return;
+
+      console.log("Signature:", signature);
+
+      await axios.post(
+        `${REST_URL}/withdraw`,
+        {
+          asset,
+          amount: asset == "SKR" ? parsedAmount*1_000_000 : parsedAmount*LAMPORTS_PER_SOL,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+          },
+        }
+      );
+
+      await fetchBalance();
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   const handleDepositWithdraw = async () => {
     console.log(asset)
     console.log(mode)
@@ -165,18 +200,9 @@ export default function Wallet() {
       }
     }
     else {
-      // if(asset == "SOL") {
-      //   withdrawSol();
-      // }
-      // else {
-      //   withdrawSeeker();
-      // }
+      await withdraw();
     }
   }
-
-  useEffect(() => {
-    fetchBalance();
-  }, [wallet.publicKey, wallet.isDevnet]);
 
   return (
     <TopContainer>
@@ -279,12 +305,14 @@ export default function Wallet() {
 
       {/* SEGMENT TOGGLES */}
         <SegmentToggle
+          fontsLoaded={true}
           options={["SOL", "SKR"]}
           selected={asset}
           onChange={setAsset}
         />
 
         <SegmentToggle
+          fontsLoaded={true}
           options={["DEPOSIT", "WITHDRAW"]}
           selected={mode}
           onChange={setMode}
@@ -297,51 +325,47 @@ export default function Wallet() {
             alignItems: "stretch",
             width: "100%"
           }}>
-            <Text style={styles.label}>{mode} {asset}</Text>
+            <Text style={styles.label}>{mode} {asset} {showDevnetRestriction && "(DEVNET: ONLY SOL DEPOSIT ALLOWED)"}</Text>
 
-            <TextInput
-              placeholder="0.00"
-              placeholderTextColor="#6B7280"
-              keyboardType="numbers-and-punctuation"
-              inputMode="decimal"
-              value={amount}
-              onChangeText={(value) => {
-                // Normalize comma to dot
-                const normalized = value.replace(",", ".");
-
-                // Allow:
-                // "", "0", "0.", ".5", "1.23"
-                if (/^\d*\.?\d*$/.test(normalized)) {
-                setAmount(normalized);
+            <View style={[
+                styles.inputContainer,
+                {
+                    borderColor: "#3DE3B4",
+                    borderWidth: 1,
                 }
-              }}
-              style={styles.input}
+            ]}>
+                <Ionicons
+                    name="flash-outline"
+                    size={18}
+                    color="#3DE3B4"
+                    style={{ marginRight: 10 }}
+                />
+                <TextInput
+                    placeholder="Enter amount"
+                    placeholderTextColor="#6B7280"
+                    value={amount.toString()}
+                    onChangeText={(text) => {
+                        // Normalize comma to dot
+                        const normalized = text.replace(",", ".");
+
+                        // Allow:
+                        // "", "0", "0.", ".5", "1.23"
+                        if (/^\d*\.?\d*$/.test(normalized)) {
+                            setAmount(normalized);
+                        }
+                    }}
+                    keyboardType="number-pad"
+                    style={styles.input}
+                    cursorColor="#3DE3B4"
+                />
+            </View>
+            
+            <GradientButton
+            disabled={disabled} 
+            onPress={handleDepositWithdraw} 
+            text={`${mode} ${asset}`}
+            fontFamily= {fontsLoaded ? "Orbitron_900Black" : "Roboto" }
             />
-            <TouchableOpacity
-            activeOpacity={.5}
-            style={[
-              styles.actionButtonWrapper,
-              { opacity }
-            ]}
-            onPress={handleDepositWithdraw}
-            >
-              <LinearGradient
-                colors={['#B048C2', '#9082DB', '#3DE3B4']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.actionButton}
-              >
-                <Text
-                allowFontScaling={false}
-                style={[styles.actionButtonText, {
-                  fontFamily: displayFont,
-                  color: "#fff"
-                }]}
-                >
-                {mode} {asset}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
           </View>
         </GradientCard2>
       </ScrollView>
@@ -398,30 +422,23 @@ const styles = StyleSheet.create({
 
   /* ===== INPUT ===== */
 
-  inputWrapper: {
-    marginBottom: 22,
-    position: 'relative',
-  },
-
   input: {
-    backgroundColor: '#18181F',
-    borderRadius: 14,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    paddingRight: 60,
-    color: '#FFFFFF',
-    fontSize: 20,
-    width: "100%"
+    flex: 1,
+    color: "#FFFFFF",
+    fontSize: 14,
+    letterSpacing: 1,
   },
 
-  inputSymbol: {
-    position: 'absolute',
-    right: 18,
-    top: '50%',
-    transform: [{ translateY: -10 }],
-    color: '#8B8F97',
-    fontSize: 12,
-    letterSpacing: 1,
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1F1F24",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 52,
+    borderWidth: 1,
+    borderColor: "#2A2A30",
+    marginBottom: 16
   },
 
   /* ===== BUTTON ===== */

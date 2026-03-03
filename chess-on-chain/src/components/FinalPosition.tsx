@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { ImageBackground, StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { SolanaDuelHeader } from './SolanaDuelHeader'
@@ -35,57 +35,66 @@ export function FinalPosition({
     custom: boolean
 }) {
   return (
-    <SafeAreaView style={{
+    <ImageBackground
+    source={require("../../assets/image/chessBg.jpg")}
+    resizeMode="cover"
+    style={{
         flex: 1,
-        backgroundColor: "#000000",
-        paddingVertical: 0,
-    }}>
+        backgroundColor: "#191919"
+    }}
+    imageStyle={{opacity: 1}}
+    >
+        <SafeAreaView style={{
+            flex: 1,
+            paddingVertical: 0,
+        }}>
 
-        <SolanaDuelHeader
-            player1Pubkey={player1Pubkey}
-            player2Pubkey={player2Pubkey}
-            turnColor={chess.turn()}
-            myColor={color}
-            stake={custom ? `${sol} sol` : `${skr} skr`}
-            fontsLoaded={fontsLoaded}
-        />
-
-        <View style={{ paddingHorizontal: 4 }}>
-            <StaticTimer
-                timer1={timer1}
-                timer2={timer2}
+            <SolanaDuelHeader
+                player1Pubkey={player1Pubkey}
+                player2Pubkey={player2Pubkey}
+                turnColor={chess.turn()}
+                myColor={color}
+                stake={custom ? `${sol} sol` : `${skr} skr`}
                 fontsLoaded={fontsLoaded}
-                turn={chess.turn()}
-                color={color}
             />
-        </View>
-        <View style={{
-            height: 60,
-            marginVertical: 4,
-            width: "100%",
-        }}>
-            <Captured moves={moves} color={color} />
-        </View>
 
-        <View style={{
-            justifyContent: "center",
-            alignItems: "center"
-        }}>
+            <View style={{ paddingHorizontal: 4 }}>
+                <StaticTimer
+                    timer1={timer1}
+                    timer2={timer2}
+                    fontsLoaded={fontsLoaded}
+                    turn={chess.turn()}
+                    color={color}
+                />
+            </View>
             <View style={{
                 height: 60,
                 marginVertical: 4,
                 width: "100%",
             }}>
-                <MoveHistory moves={moves} />
+                <Captured moves={moves} color={color} />
             </View>
 
-            <StaticChessBoard
-                chess={chess}
-                color={color}
+            <View style={{
+                justifyContent: "center",
+                alignItems: "center"
+            }}>
+                <View style={{
+                    height: 60,
+                    marginVertical: 4,
+                    width: "100%",
+                }}>
+                    <MoveHistory moves={moves} />
+                </View>
 
-            />
-        </View>
-    </SafeAreaView>
+                <StaticChessBoard
+                    chess={chess}
+                    color={color}
+
+                />
+            </View>
+        </SafeAreaView>
+    </ImageBackground>
   )
 }
 

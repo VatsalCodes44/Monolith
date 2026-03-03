@@ -19,6 +19,9 @@ export const CUSTOM_NOT_FOUND = "custom_not_found";
 export const ENTERED_ARENA = "entered_arena";
 export const CANNOT_JOIN_CUSTOM = "cannot_join_custom";
 export const SPECTATE = "spectate";
+export const ENTERED_SPECTATE = "entered_spectate";
+export const INVALID_GAMEID = "invalid_gameid";
+
 
 
 export type INIT_GAME_RESPONSE_PAYLOAD = {
@@ -113,4 +116,15 @@ export type ENTER_ARENA_PAYLOAD = {
     timer2: number,
     gameId: string,
     opponentPubkey: string,
+    gameStarted: boolean
+}
+
+export type ENTERED_SPECTATE_PAYLOAD = {
+    player1Pubkey: string,
+    player2Pubkey: string,
+    board: string,
+    timer1: number, 
+    timer2: number,
+    skr: number,
+    gameStarted: boolean
 }

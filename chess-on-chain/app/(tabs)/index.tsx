@@ -40,30 +40,31 @@ export default function Index() {
         if (!jwt) return true;
         return false;
     }
-    const stakeOptions = [
+    const stakeOptions: {
+        amount: "0.01" | "0.05" | "0.1",
+        piece: React.JSX.Element,
+        label: string,
+        subtitle: string
+    }[] = [
         {
-        amount: 0.01,
-        piece: <WP height={56} width={56} />,
-        label: "PAWN",
-        subtitle: "Entry Arena"
+            amount: "0.01",
+            piece: <WP height={56} width={56} />,
+            label: "PAWN",
+            subtitle: "Entry Arena"
         },
         {
-        amount: 0.05,
-        piece: <WN height={56} width={56} />,
-        label: "KNIGHT",
-        subtitle: "Tactical Play"
+            amount: "0.05",
+            piece: <WN height={56} width={56} />,
+            label: "KNIGHT",
+            subtitle: "Tactical Play"
         },
         {
-        amount: 0.1,
-        piece: <WK height={56} width={56} />,
-        label: "KING",
-        subtitle: "High Stakes"
+            amount: "0.1",
+            piece: <WK height={56} width={56} />,
+            label: "KING",
+            subtitle: "High Stakes"
         }
     ];
-
-    useEffect(()=> {
-        fetchBalance(wallet.publicKey, jwt, wallet.isDevnet)
-    }, [])
 
     const fetchBalance = useCallback(async (
         publicKey: string | null,
@@ -74,19 +75,19 @@ export default function Index() {
         console.log(publicKey, "2222222222222222", jwt)
         if (!publicKey || !jwt) return;
         try {
-        const payload: GET_BALANCE_TYPE_TS = {
-            network: isDevnet ? "DEVNET" : "MAINNET",
-        };
-        const res = await axios.post(`${REST_URL}/getBalance`, payload, {
-            headers: { Authorization: `Bearer ${jwt}` },
-        });
-        const data = res.data;
-        console.log("RAW DATA:", data.lamports, "-----------", data.skr);
-        setLamports(Number(data.lamports));
-        setSkr(Number(data.skr));
-        console.log("STORE STATE:", gameBalance.getState().lamports);
+            const payload: GET_BALANCE_TYPE_TS = {
+                network: isDevnet ? "DEVNET" : "MAINNET",
+            };
+            const res = await axios.post(`${REST_URL}/getBalance`, payload, {
+                headers: { Authorization: `Bearer ${jwt}` },
+            });
+            const data = res.data;
+            console.log("RAW DATA:", data.lamports, "-----------", data.skr);
+            setLamports(Number(data.lamports));
+            setSkr(Number(data.skr));
+            console.log("STORE STATE:", gameBalance.getState().lamports);
         } catch (e) {
-        console.log(e);
+            console.log(e);
         }
     }, []);
 
@@ -167,28 +168,28 @@ export default function Index() {
                         {/* Chess Piece */}
                         <View
                         style={styles.pieceSection}>
-                        <View style={styles.pieceCircle}>
-                            {option.piece}
-                        </View>
-                        <Text style={[
-                            styles.pieceLabel,
-                            { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                        ]}>
-                            {option.label}
-                        </Text>
+                            <View style={styles.pieceCircle}>
+                                {option.piece}
+                            </View>
+                            <Text style={[
+                                styles.pieceLabel,
+                                { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                            ]}>
+                                {option.label}
+                            </Text>
                         </View>
 
                         {/* Stake Info */}
                         <View style={styles.stakeInfo}>
-                        <Text style={[
-                            styles.stakeAmount,
-                            { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
-                        ]}>
-                            {option.amount} SOL
-                        </Text>
-                        <Text style={styles.stakeSubtitle}>
-                            {option.subtitle}
-                        </Text>
+                            <Text style={[
+                                styles.stakeAmount,
+                                { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
+                            ]}>
+                                {option.amount} SOL
+                            </Text>
+                            <Text style={styles.stakeSubtitle}>
+                                {option.subtitle}
+                            </Text>
                         </View>
 
                         {/* CTA Button */}
@@ -196,8 +197,15 @@ export default function Index() {
                         onPress={async () => {
                             console.log("hello")
                             if (!wallet.publicKey || !jwt) return;
-                            setSol(option.amount == 0.1 ? "0.1" : (option.amount == 0.05 ? "0.05" : "0.01"))
-                            router.push("/Game");
+                            setSol(option.amount)
+                            router.push({
+                                pathname: "/Game/[gameId]",
+                                params: {
+                                    gameId: "null",
+                                    sol: option.amount,
+                                    network: wallet.isDevnet ? "DEVNET" : "MAINNET"
+                                }
+                            });
                         }}
                         text="ENTER ARENA"
                         fontFamily={fontsLoaded ? "Orbitron_900Black" : "Roboto"}

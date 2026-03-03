@@ -88,6 +88,10 @@ export const deposit = z.object({
     network: z.enum(["MAINNET", "DEVNET"]),
     asset: z.enum(["SOL", "SKR"]),
 });
+export const withdraw = z.object({
+    asset: z.enum(["SOL", "SKR"]),
+    amount: z.number()
+});
 export const verifyLogin = z.object({
     publicKey: z.string(),
     signature: z.string(),

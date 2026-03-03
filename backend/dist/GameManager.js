@@ -1,4 +1,4 @@
-import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME, CUSTOM_NOT_FOUND, ENTERED_ARENA, SPECTATE } from "./Messages.js";
+import { INIT_GAME, RE_JOIN_GAME, MESSAGE, MOVE, INSUFFICIENT_FUNDS, RE_JOIN_CUSTOM_GAME, MOVE_CUSTOM, MESSAGE_CUSTOM, JOIN_CUSTOM_GAME, CUSTOM_NOT_FOUND, ENTERED_ARENA, SPECTATE, ENTERED_SPECTATE, INVALID_GAMEID } from "./Messages.js";
 import { Game } from "./Game.js";
 import { INIT_GAME_TYPE, JOIN_CUSTOM_GAME_TYPE, MESSAGE_CUSTOM_TYPE, MESSAGE_TYPE, MOVE_CUSTOM_TYPE, MOVE_TYPE, Re_JOIN_CUSTOM_GAME_TYPE, Re_JOIN_GAME_TYPE, SEPCTATE_GAME } from "./types/type.js";
 import { prisma } from "./lib/prisma.js";
@@ -48,7 +48,27 @@ export class GameManager {
                         return;
                     }
                     const { gameId } = result.data.payload;
-                    this.customGames.get(gameId)?.spectators.push(socket);
+                    const game = this.customGames.get(gameId);
+                    if (!game) {
+                        socket.send(JSON.stringify({
+                            type: INVALID_GAMEID,
+                            payload: {}
+                        }));
+                        return;
+                    }
+                    game.spectators.push(socket);
+                    socket.send(JSON.stringify({
+                        type: ENTERED_SPECTATE,
+                        payload: {
+                            player1Pubkey: game.player1Pubkey,
+                            player2Pubkey: game.player2Pubkey,
+                            board: game.board.fen(),
+                            timer1: game.timer1,
+                            timer2: game.timer2,
+                            skr: Number(game.skr),
+                            gameStarted: game.started
+                        }
+                    }));
                     return;
                 }
                 if (message.type === INIT_GAME) {
@@ -86,6 +106,14 @@ export class GameManager {
                     }
                     const { payload } = result.data;
                     const { gameId, network, sol, jwt } = payload;
+                    // -------------------------------------
+                    const key = this.getGameKey(network, sol);
+                    console.log("KEY:", key);
+                    console.log("ALL KEYS IN MAP:", [...this.games.keys()]);
+                    console.log("GAMES IN THIS KEY:", [...(this.games.get(key)?.keys() ?? [])]);
+                    const abc = this.games.get(key)?.get(gameId);
+                    console.log("GAME FOUND:", abc);
+                    // -------------------------------------
                     let publicKey;
                     try {
                         publicKey = this.jwtVerification(jwt).publicKey;
@@ -209,6 +237,7 @@ export class GameManager {
                                         timer2: gameExists.timer2,
                                         gameId,
                                         opponentPubkey: gameExists.player2Pubkey,
+                                        gameStarted: true
                                     }
                                 }));
                                 return;
@@ -225,6 +254,7 @@ export class GameManager {
                                         timer2: gameExists.timer2,
                                         gameId,
                                         opponentPubkey: gameExists.player1Pubkey,
+                                        gameStarted: true
                                     }
                                 }));
                                 return;
@@ -291,6 +321,7 @@ export class GameManager {
                                     timer2: newGame.timer2,
                                     gameId,
                                     opponentPubkey: newGame.player2Pubkey,
+                                    gameStarted: false
                                 }
                             }));
                         }
@@ -310,6 +341,7 @@ export class GameManager {
                                         timer2: newGame.timer2,
                                         gameId,
                                         opponentPubkey: newGame.player2Pubkey,
+                                        gameStarted: false
                                     }
                                 }));
                             }

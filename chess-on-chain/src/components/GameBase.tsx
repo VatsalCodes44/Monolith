@@ -35,6 +35,7 @@ function GameBaseComponent({
     playIllegalMoveSound,
     playCheckSound,
     playLowOnTimeSound,
+    setLastMessage
 }: {
     width: number,
     showMessages: boolean,
@@ -56,9 +57,10 @@ function GameBaseComponent({
     setGameState: React.Dispatch<React.SetStateAction<GAME_STATE>>,
     messages: Message[],
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
-    playIllegalMoveSound: () => Promise<void>
-    playCheckSound: () => Promise<void>
-    playLowOnTimeSound: () => Promise<void>
+    playIllegalMoveSound: () => Promise<void>,
+    playCheckSound: () => Promise<void>,
+    playLowOnTimeSound: () => Promise<void>,
+    setLastMessage: React.Dispatch<React.SetStateAction<Message | undefined>>
 }) {
 
 
@@ -66,7 +68,10 @@ function GameBaseComponent({
         <ImageBackground
         source={require("../../assets/image/chessBg.jpg")}
         resizeMode="cover"
-        style={{flex: 1}}
+        style={{
+            flex: 1,
+            backgroundColor: "#191919"
+        }}
         imageStyle={{opacity: 5}}
         >
             <SafeAreaView style={{
@@ -115,6 +120,7 @@ function GameBaseComponent({
                                     ))}
                                 </ScrollView>
                                 <SendMessage
+                                    setLastMessage={setLastMessage}
                                     socket={socket.current!}
                                     setMessages={setMessages}
                                     color={gameState.color}
@@ -125,6 +131,7 @@ function GameBaseComponent({
                                     isDevnet={isDevnet}
                                     sol={sol}
                                     gameType={gameType}
+                                    spectator={spectator}
                                 />
                             </View> :
                             <Text style={{ color: "#ffffff", fontSize: 25, textAlign: "center", opacity: .3 }}>
@@ -198,6 +205,7 @@ function GameBaseComponent({
                 }}>
                     {lastMessage && <LastMessage color={gameState.color} lastMessage={lastMessage} width={width} />}
                     <SendMessage
+                        setLastMessage={setLastMessage}
                         setMessages={setMessages}
                         color={gameState.color}
                         setShowMessages={setShowMessages}
@@ -208,6 +216,7 @@ function GameBaseComponent({
                         sol={sol}
                         socket={socket.current!}
                         gameType={gameType}
+                        spectator={spectator}
                     />
                 </View>
             </SafeAreaView>

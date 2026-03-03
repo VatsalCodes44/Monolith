@@ -9,25 +9,19 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { TopContainer } from "@/src/components/TopContainer";
 import { GradientButton } from "@/src/components/GradientButton";
-import { Ionicons } from "@expo/vector-icons";
 import { gameBalance } from "@/src/stores/gameBalance";
-import { isValidPublicKey } from "@/src/utils/isvalidPublicKey";
 import { useWalletStore } from "@/src/stores/wallet-store";
 import { GET_BALANCE_TYPE_TS, INIT_CUSTOM_GAME_TYPE_TS } from "@/src/config/serverInputs";
 import { REST_URL } from "@/src/config/config";
 import axios from "axios";
 import { jwtStore } from "@/src/stores/jwt";
-import { GET_GAMES_RESPONSE_PAYLOAD, INIT_CUSTOM_GAME } from "@/src/config/serverResponds";
-import { useWallet } from "@/src/hooks/useWallet";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { Header } from "@/src/components/Header";
 import GradientCard2 from "@/src/components/GradientCard2";
 import { router } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { gamesStore } from "@/src/stores/gamesStore";
-import JoinSpectate from "@/src/components/JoinSpectate";
-
+import { JoinSpectate } from "@/src/components/JoinSpectate";
 
 
 export default function Games() {
@@ -134,7 +128,7 @@ export default function Games() {
                             styles.balanceText,
                             { fontFamily: fontsLoaded ? "Orbitron_900Black" : "Roboto" }
                         ]}>
-                            {`◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol`}
+                            {showSol ? `◎ ${(lamports / LAMPORTS_PER_SOL).toFixed(4)} sol` : `◎ ${(skr / 1_000_000).toFixed(2)} skr`}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -243,7 +237,27 @@ export default function Games() {
                                 <GradientButton
                                     text={ IN_PROGRESS ? "JOIN MATCH" : "VIEW FINAL POSITION"}
                                     onPress={() => {
-                                        if (!IN_PROGRESS) {
+                                        if (IN_PROGRESS) {
+                                            if (item.customGame){
+                                                router.push({
+                                                    pathname: "/JoinCustom/[gameId]",
+                                                    params: {
+                                                        gameId: item.id,
+                                                    },
+                                                })
+                                            }
+                                            else {
+                                                router.push({
+                                                    pathname: "/Game/[gameId]",
+                                                    params: {
+                                                        gameId: item.id,
+                                                        sol: ((item.lamports)/LAMPORTS_PER_SOL).toString(),
+                                                        network: item.network
+                                                    }
+                                                })
+                                            }
+                                        }
+                                        else {
                                             router.push({
                                                 pathname: "/FinalPosition/[gameId]",
                                                 params: {gameId: item.id},
@@ -354,6 +368,10 @@ const styles = StyleSheet.create({
     stakeText: {
         color: "#B048C2",
         fontSize: 14,
+        fontWeight: "bold",
+        textShadowColor: '#ffffff',
+        textShadowOffset: { width: .5, height: .5 },
+        textShadowRadius: 1,
     },
 
     playersRow: {

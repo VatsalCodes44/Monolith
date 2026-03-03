@@ -33,6 +33,7 @@ export class Game {
         this.spectators = [];
         if (customGame)
             return;
+        console.log(gameId);
         this.player1?.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
@@ -367,6 +368,9 @@ export class Game {
         };
         this.player1?.send(JSON.stringify({ type: TIME_OUT, payload }));
         this.player2?.send(JSON.stringify({ type: TIME_OUT, payload }));
+        this.spectators.forEach(s => {
+            s.send(JSON.stringify({ type: TIME_OUT, payload }));
+        });
         this.ispaymentSettling = true;
         await this.settlePaymentAndGameEnd("TIME_OUT", winner, this.gameId);
         // this.ispaymentSettling = false; // not resetting because the game ended

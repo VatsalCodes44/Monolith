@@ -16,7 +16,9 @@ export const SendMessage = memo(({
     isDevnet,
     jwt,
     socket,
-    gameType
+    gameType,
+    setLastMessage,
+    spectator=false
 }: {
     color: "w" | "b",
     setShowMessages: React.Dispatch<React.SetStateAction<boolean>>,
@@ -27,11 +29,14 @@ export const SendMessage = memo(({
     isDevnet: boolean,
     jwt: string,
     socket: WebSocket,
-    gameType: "CUSTOM" | "NORMAL"
+    gameType: "CUSTOM" | "NORMAL",
+    setLastMessage: React.Dispatch<React.SetStateAction<Message | undefined>>,
+    spectator?: boolean,
 }) => {
     const [message, setMessage] = useState<string>("")
 
     const handleSend = () => {
+        if (spectator) return;
         if (!message.trim() || !gameId) return;
         if (gameType == "NORMAL") {
             const messageInput: MESSAGE_TYPE_TS = {
@@ -61,6 +66,7 @@ export const SendMessage = memo(({
         }
         setMessages(p => [...p, { from: color, message }])
         setMessage("");
+        setLastMessage({ from: color, message });
     }
 
     return (
@@ -78,7 +84,7 @@ export const SendMessage = memo(({
                 justifyContent: "space-between",
             }}>
                 <TextInput
-                    value={message}
+                    value={spectator ? "" : message}
                     placeholder='Send message'
                     placeholderTextColor='#cf96d8'
                     returnKeyType='send'
@@ -102,6 +108,7 @@ export const SendMessage = memo(({
                 {showMenuIcon && <TouchableOpacity
                     style={{ height: "100%" }}
                     onPress={() => {
+                        if (spectator) return;
                         setShowMessages(true)
                     }}
                 >

@@ -66,6 +66,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderRadius: 10,
     marginRight: 8,
+    borderColor: "#9CA3AF",
+    borderWidth: 1
   },
   moveNumber: {
     color: "#888",

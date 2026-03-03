@@ -1,55 +1,39 @@
 import { StyleSheet, View, Text, useWindowDimensions, ScrollView, TouchableOpacity } from 'react-native'
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { ChessBoard } from "@/src/components/ChessBoard"
 import {
-    ENTER_ARENA_PAYLOAD,
-    ENTERED_ARENA,
-    ENTERED_SPECTATE,
-    ENTERED_SPECTATE_PAYLOAD,
-    GAME_OVER,
-    GAME_OVER_RESPONSE_PAYLOAD,
-    GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD,
-    JOIN_CUSTOM_GAME,
-    JOIN_CUSTOM_GAME_Response_Payload,
-    MESSAGE,
-    MESSAGE_CUSTOM,
-    message_payload,
-    MOVE,
-    MOVE_RESPONSE_PAYLOAD,
-    RE_JOIN_CUSTOM_GAME,
-    RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD,
-    SPECTATE,
-    TIME_OUT
-} from '@/src/config/serverResponds';
-import { Chess, Move, Square } from 'chess.js';
-import { WS_URL } from '@/src/config/config';
-import { ConnectingToServer } from '@/src/components/connectingToServer';
-import { Audio } from 'expo-av';
-import { useWalletStore } from '@/src/stores/wallet-store';
-import { SEPCTATE_GAME_TS } from '@/src/config/serverInputs';
-import { jwtStore } from '@/src/stores/jwt';
-import { GameBase } from '@/src/components/GameBase';
-import { router, useLocalSearchParams } from 'expo-router';
-import { GameBet } from '@/src/stores/gameBet';
-import { GAME_STATE } from '@/src/config/game';
+  GAME_OVER,
+  GAME_OVER_RESPONSE_PAYLOAD,
+  GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD,
+  INIT_GAME,
+  INIT_GAME_RESPONSE_PAYLOAD,
+  MESSAGE,
+  message_payload,
+  MOVE,
+  MOVE_RESPONSE_PAYLOAD,
+  RE_JOIN_GAME,
+  Re_JOIN_GAME_RESPONSE_PAYLOAD,
+  TIME_OUT
+} from '@/src/config/serverResponds'
+import { Audio } from 'expo-av'
+import { Chess, Move, Square } from 'chess.js'
+import { WS_URL } from '@/src/config/config'
+import { ConnectingToServer } from '@/src/components/connectingToServer'
+import { GameBet } from '@/src/stores/gameBet'
+import { useWalletStore } from '@/src/stores/wallet-store'
+import { INIT_GAME_TYPE_TS, Re_JOIN_GAME_TYPE_TS } from '@/src/config/serverInputs'
+import { jwtStore } from '@/src/stores/jwt'
+import { GameBase } from '@/src/components/GameBase'
+import { router, useLocalSearchParams } from 'expo-router'
+import { GAME_STATE, Message } from '@/src/config/game'
 
-export interface GameOver {
-    winner: "b" | "w" | null,
-    gameOverType: "checkmate" | "stalemate" | "draw" | "time_out" | null,
-    isGameOver: boolean
-}
-
-export interface Message {
-    from: "w" | "b",
-    message: string,
-}
-
-export default function CustomGame() {
+export default function Game() {
+  
     // const [fontsLoaded] = useFonts({
-    //   Orbitron_900Black,
+        //   Orbitron_900Black,
     // });
     const fontsLoaded = true;
-    const { gameId} = useLocalSearchParams<{ gameId: string}>();
-    const gameIdRef = useRef<string | null>(gameId)
     const [gameState, setGameState] = useState<GAME_STATE>({
         chess: new Chess(),
         color: "w",
@@ -66,8 +50,15 @@ export default function CustomGame() {
             isGameOver: false
         }
     })
+    const { gameId, sol, network } = useLocalSearchParams<{ 
+        gameId: "null" | string,
+        sol: "0.01" | "0.05" | "0.1",
+        network: "MAINNET" | "DEVNET"
+    }>();
+    const isDevnet = useRef(network == "DEVNET" ? true : false);
     const socket = useRef<WebSocket | null>(null);
     const [gameStarted, setGameStarted] = useState(false)
+    const gameIdRef = useRef<string | null>(gameId == "null" ? null : gameId)
     const isMountedRef = useRef(true);
     const [lastMessage, setLastMessage] = useState<Message>()
     const [showMessages, setShowMessages] = useState(false)
@@ -78,16 +69,25 @@ export default function CustomGame() {
     const scrollRef = useRef<ScrollView>(null);
     const { width } = useWindowDimensions()
     const setSol = GameBet(s => s.setSol)
-    const sol = GameBet(s => s.sol)
-    const isDevnet = useWalletStore(s => s.isDevnet)
     const jwt = jwtStore(s => s.jwt)
     const publicKey = useWalletStore(s => s.publicKey)
-    const [skr, setSkr] = useState <number>(0);
     const moveSoundRef = useRef<Audio.Sound | null>(null);
     const checkSoundRef = useRef<Audio.Sound | null>(null);
     const illegalSoundRef = useRef<Audio.Sound | null>(null);
     const lowOnTimeSoundRef = useRef<Audio.Sound | null>(null);
-    const [player1Pubkey, setplayer1Pubkey] = useState<string>("")
+
+    const onInitGameResponse = useCallback((payload: INIT_GAME_RESPONSE_PAYLOAD) => {
+        setGameState(p => ({
+            ...p,
+            color: payload.color,
+            chess: new Chess(payload.board),
+            timer1: payload.timer1,
+            timer2: payload.timer2,
+            opponentPubkey: payload.opponentPubkey
+        }))
+        setGameStarted(true)
+        gameIdRef.current = payload.gameId
+    }, [])
 
     const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
         setGameState(p => ({
@@ -98,8 +98,8 @@ export default function CustomGame() {
             timer1: payload.timer1,
             timer2: payload.timer2,
             moves: payload.history,
-        }));
-        playMoveSound()
+        }))
+        playMoveSound();
     }, [])
 
     const onGameOver = useCallback((payload: GAME_OVER_RESPONSE_PAYLOAD) => {
@@ -127,55 +127,78 @@ export default function CustomGame() {
                 winner: payload.winner,
                 gameOverType: payload.gameOverType,
                 isGameOver: true
-            }
+            },
+            moves: payload.history
         }));
-        setGameStarted(true)
         gameOverRef.current = true;
     }, [])
 
-    const onEnteredSpectateResponse = useCallback((payload: ENTERED_SPECTATE_PAYLOAD) => {
+    const onReJoinGameResponse = useCallback((payload: Re_JOIN_GAME_RESPONSE_PAYLOAD) => {
         setGameState(p => ({
             ...p,
+            color: payload.color,
             chess: new Chess(payload.board),
             timer1: payload.timer1,
             timer2: payload.timer2,
-            opponentPubkey: payload.player2Pubkey,
-            
+            opponentPubkey: payload.opponentPubkey,
         }));
-        setplayer1Pubkey(payload.player1Pubkey)
-        setGameStarted(payload.gameStarted)
-        setSkr(payload.skr)
+        setGameStarted(true)
+        gameIdRef.current = payload.gameId
+        setSol(payload.sol)
     }, [])
 
+    const onMessageResponse = useCallback((payload: message_payload) => {
+        setMessages(p => [...p, payload]);
+        setLastMessage(payload)
+    }, [])
 
-
-    const connect = useCallback((isRejoin = false) => {
-
+    const connect = useCallback(() => {
         if (socket.current?.readyState === WebSocket.CONNECTING ||
             socket.current?.readyState === WebSocket.OPEN) {
             console.log("Already connecting/connected, skipping");
             return;
         }
-        if (!jwt) {
+        if (!jwt || !sol) {
             router.replace("/");
             return;
         }
-
         const ws = new WebSocket(WS_URL)
 
         ws.onopen = () => {
-            if (!jwt) {
+            console.log("gameIdRef.current:", gameIdRef.current)
+            if (!jwt || !sol) {
+                console.log("here1")
+                ws.close();
                 return;
             }
             socket.current = ws
             setConnected(true)
-            const payload: SEPCTATE_GAME_TS = {
-                type: SPECTATE,
-                payload: {
-                    gameId
+            if (gameIdRef.current) {
+                console.log("here2")
+                const payload: Re_JOIN_GAME_TYPE_TS = {
+                    type: RE_JOIN_GAME,
+                    payload: {
+                        gameId: gameIdRef.current,
+                        network: isDevnet.current ? "DEVNET" : "MAINNET",
+                        sol,
+                        jwt
+                    }
                 }
+                ws.send(JSON.stringify(payload))
+            } 
+            else {
+                console.log("here3")
+                const payload: INIT_GAME_TYPE_TS = {
+                    type: INIT_GAME,
+                    payload: {
+                        jwt,
+                        network: isDevnet ? "DEVNET" : "MAINNET",
+                        sol
+                    }
+                }
+
+                ws.send(JSON.stringify(payload))
             }
-            socket.current.send(JSON.stringify(payload));
         }
 
         ws.onclose = () => {
@@ -188,7 +211,7 @@ export default function CustomGame() {
             socket.current = null
             setConnected(false)
             reconnectTimeoutRef.current = setTimeout(() => {
-                connect(true)
+                connect()
                 reconnectTimeoutRef.current = null
             }, 2000)
         }
@@ -202,24 +225,33 @@ export default function CustomGame() {
             const payload = message.payload
 
             switch (message.type) {
-                case ENTERED_SPECTATE:
-                    onEnteredSpectateResponse(payload as ENTERED_SPECTATE_PAYLOAD);
-                    break;
+
+                case INIT_GAME:
+                onInitGameResponse(payload as INIT_GAME_RESPONSE_PAYLOAD);
+                break;
+
                 case MOVE:
-                    onMoveResponse(payload as MOVE_RESPONSE_PAYLOAD);
-                    break;
+                onMoveResponse(payload as MOVE_RESPONSE_PAYLOAD);
+                break;
 
                 case GAME_OVER:
-                    onGameOver(payload as GAME_OVER_RESPONSE_PAYLOAD);
-                    break;
+                onGameOver(payload as GAME_OVER_RESPONSE_PAYLOAD);
+                break;
 
                 case TIME_OUT:
-                    onTimeOutResponse(payload as GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD);
-                    break;
+                onTimeOutResponse(payload as GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD);
+                break;
+
+                case MESSAGE:
+                onMessageResponse(payload as message_payload);
+                break;
+
+                case RE_JOIN_GAME:
+                onReJoinGameResponse(payload as Re_JOIN_GAME_RESPONSE_PAYLOAD);
+                break;
             }
         }
     }, [jwt, isDevnet])
-
 
     const playMoveSound = useCallback(async () => {
         if (!moveSoundRef.current) return;
@@ -325,14 +357,6 @@ export default function CustomGame() {
         }
     }, [showMessages, messages]);
 
-    useEffect(() => {
-        if (showMessages && messages.length > 0) {
-            // slight delay because modal animation + layout timing
-            setTimeout(() => {
-                scrollRef.current?.scrollToEnd({ animated: false });
-            }, 100);
-        }
-    }, [showMessages, messages]);
 
     useEffect(() => {
         connect();
@@ -346,59 +370,52 @@ export default function CustomGame() {
                 socket.current.close();
                 socket.current = null;
             }
+            setSol(null)
         }
     }, [])
 
-    const isReady =
-        socket.current &&
-        publicKey &&
-        jwt &&
-        skr > 0 &&
-        connected;
-        console.log(isReady)
 
-    return (
-        <View style={{ flex: 1 }}>
-            {!isReady &&
-                <ConnectingToServer message={connected ? 'Waiting for game to start...' : 'Connecting to server...'} fontsLoaded={fontsLoaded} />
-            }
 
-            {isReady &&
-                <GameBase
-                    spectator={true}
-                    width={width}
-                    showMessages={showMessages}
-                    setShowMessages={setShowMessages}
-                    messages={messages}
-                    scrollRef={scrollRef}
-                    socket={socket}
-                    setMessages={setMessages}
-                    jwt={jwt}
-                    gameIdRef={gameIdRef}
-                    isDevnet={isDevnet}
-                    sol={"0.01"} // no use
-                    fontsLoaded={fontsLoaded}
-                    gameStarted={gameStarted}
-                    lastMessage={lastMessage}
-                    player1Pubkey={player1Pubkey}
-                    gameType='CUSTOM'
-                    skr={skr}
-                    gameState={gameState}
-                    setGameState={setGameState}
-                    playCheckSound={playCheckSound}
-                    playIllegalMoveSound={playIllegalMoveSound}
-                    playLowOnTimeSound={playLowOnTimeSound}
-                    setLastMessage={setLastMessage}
-                />
-            }
-            <TouchableOpacity onPress={() => {
-                socket.current?.close()
-            }} style={{ position: "absolute", bottom: 100, right: 10, backgroundColor: "#CE2EDF", padding: 10, borderRadius: 10 }}>
-                <Text style={{ color: "#ffffff" }}>Close</Text>
-            </TouchableOpacity>
-        </View>
-    )
+  return (
+    <View style={{ flex: 1 }}>
+      {(!socket.current || !publicKey || !jwt || !sol || !connected) &&
+        <ConnectingToServer message='Connecting to server...' fontsLoaded={fontsLoaded} />
+      }
+
+      {(socket.current && publicKey && jwt && sol && connected) &&
+        <GameBase
+          setLastMessage={setLastMessage}
+          spectator={false}
+          width={width}
+          showMessages={showMessages}
+          setShowMessages={setShowMessages}
+          scrollRef={scrollRef}
+          socket={socket}
+          jwt={jwt}
+          gameIdRef={gameIdRef}
+          isDevnet={isDevnet.current}
+          sol={sol}
+          fontsLoaded={fontsLoaded}
+          gameStarted={gameStarted}
+          lastMessage={lastMessage}
+          player1Pubkey={publicKey}
+          gameType='NORMAL'
+          messages={messages}
+          setMessages={setMessages}
+          gameState={gameState}
+          setGameState={setGameState}
+          playCheckSound={playCheckSound}
+          playIllegalMoveSound={playIllegalMoveSound}
+          playLowOnTimeSound={playLowOnTimeSound}
+        />
+      }
+      <TouchableOpacity onPress={() => {
+        socket.current?.close()
+      }} style={{ position: "absolute", bottom: 100, right: 10, backgroundColor: "#CE2EDF", padding: 10, borderRadius: 10 }}>
+        <Text style={{ color: "#ffffff" }}>Close</Text>
+      </TouchableOpacity>
+    </View>
+  )
 }
-    
 
 const styles = StyleSheet.create({})

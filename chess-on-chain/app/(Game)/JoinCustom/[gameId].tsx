@@ -102,9 +102,11 @@ export default function CustomGame() {
             chess: new Chess(payload.board),
             timer1: payload.timer1,
             timer2: payload.timer2,
+            color: payload.color,
+            opponentPubkey: payload.opponentPubkey
         }))
         setSkr(payload.skr);
-        setGameStarted(false);
+        setGameStarted(payload.gameStarted);
     }, []);
 
     const onMoveResponse = useCallback((payload: MOVE_RESPONSE_PAYLOAD) => {
@@ -360,7 +362,7 @@ export default function CustomGame() {
                     onTimeOutResponse(payload as GAME_OVER_TIMEOUT_RESPONSE_PAYLOAD);
                     break;
 
-                case MESSAGE_CUSTOM:
+                case MESSAGE:
                     onMessageResponse(payload as message_payload);
                     break;
 
@@ -434,6 +436,7 @@ export default function CustomGame() {
                     playCheckSound={playCheckSound}
                     playIllegalMoveSound={playIllegalMoveSound}
                     playLowOnTimeSound={playLowOnTimeSound}
+                    setLastMessage={setLastMessage}
                 />
             }
             <TouchableOpacity onPress={() => {
