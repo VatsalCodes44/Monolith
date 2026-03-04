@@ -4,11 +4,13 @@ import { Game } from "./Game.js";
 export class CustomGame extends Game {
     skr;
     started = false;
+    createdAt;
     constructor(player1Pubkey, player2Pubkey, gameId, skr) {
         // sol variable of parent class is of no use in the custom game as the currency will be skr
         // similarly network variable is of no use
         super(null, null, player1Pubkey, player2Pubkey, "MAINNET", "0.01", gameId, true);
         this.skr = skr;
+        this.createdAt = Date.now();
     }
     async settlePaymentAndGameEnd(gameOverType, winner, gameId) {
         const maxTries = 3;

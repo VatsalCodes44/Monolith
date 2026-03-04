@@ -29,6 +29,7 @@ export class GameManager {
         this.customGames = new Map();
         this.users = [];
         setInterval(() => this.garbageGamesCollectorAndPaymentSettler(), 20 * 1000);
+        setInterval(() => this.garbageCustomGamesCollectorAndPaymentRefund(), 5 * 60 * 1000);
     }
     addUser(socket) {
         if (!this.users.includes(socket)) {
@@ -584,19 +585,6 @@ export class GameManager {
             return false;
         return network === "MAINNET" ? result.mainnetLamports >= stake : result.devnetLamports >= stake;
     }
-    async isCustomGameEligible(publicKey, skr) {
-        const result = await prisma.player.findUnique({
-            where: {
-                publicKey,
-            },
-            select: {
-                skr: true
-            }
-        });
-        if (!result)
-            return false;
-        return result.skr >= skr;
-    }
     removeUser(socket) {
         this.users = this.users.filter(s => s !== socket);
         for (const [key, pending] of this.pendingUsers) {
@@ -633,6 +621,42 @@ export class GameManager {
             const ended = await game.updateTimerAndCheckTimeout();
             if (ended) {
                 this.customGames.delete(game.gameId);
+            }
+        }
+    }
+    async garbageCustomGamesCollectorAndPaymentRefund() {
+        for (const game of this.customGames.values()) {
+            if (!game.started && Date.now() - game.createdAt >= 300_000) {
+                const player1pubkey = game.player1Pubkey;
+                const skrAmount = game.skr;
+                const gameId = game.gameId;
+                try {
+                    const trnsaction = await prisma.$transaction(async (tx) => {
+                        const deletedGame = await tx.game.delete({
+                            where: {
+                                id: gameId
+                            }
+                        });
+                        const user = await tx.player.update({
+                            where: {
+                                publicKey: player1pubkey
+                            },
+                            data: {
+                                skr: {
+                                    increment: skrAmount
+                                }
+                            }
+                        });
+                    }, {
+                        isolationLevel: "Serializable",
+                        maxWait: 10000,
+                        timeout: 10000
+                    });
+                    this.customGames.delete(game.gameId);
+                }
+                catch (e) {
+                    console.log("garbageCustomGamesCollectorAndPaymentRefund error: ", e);
+                }
             }
         }
     }
