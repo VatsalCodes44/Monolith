@@ -1,10 +1,13 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
-
+import Animated, { ZoomIn, ZoomOut } from "react-native-reanimated"
 export function Header({ title, tagline }: { title: string, tagline?: string }) {
     return (
-        <View style={{ alignItems: "center", marginBottom: 16 }}>
+        <Animated.View 
+        entering={ZoomIn.duration(200).delay(50).springify()} 
+        exiting={ZoomOut.duration(200).delay(50).springify()} 
+        style={{ alignItems: "center", marginBottom: 16 }}>
             <Text style={[
                 styles.appTitle,
                 { fontFamily: "Orbitron_900Black" }
@@ -22,7 +25,7 @@ export function Header({ title, tagline }: { title: string, tagline?: string }) 
             {tagline && <Text style={styles.tagline}>
                 {tagline}
             </Text>}
-        </View>
+        </Animated.View>
     )
 }
 

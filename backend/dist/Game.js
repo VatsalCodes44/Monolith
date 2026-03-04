@@ -226,8 +226,8 @@ export class Game {
                             data: {
                                 status: gameOverType,
                                 fen: this.board.fen(),
-                                timer1: this.timer1,
-                                timer2: this.timer2,
+                                timer1: this.timer1 < 0 ? 0 : this.timer1,
+                                timer2: this.timer2 < 0 ? 0 : this.timer2,
                                 winner,
                                 history: JSON.stringify(this.board.history({ verbose: true })),
                             }

@@ -14,6 +14,8 @@ export async function jwtVerification(req: Request, res: Response, next: NextFun
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        console.log("----------------------------------------");
+        console.log(decoded);
         (req as any).user = decoded;
         next();
     } catch {

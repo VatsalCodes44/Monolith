@@ -143,7 +143,7 @@ export default function Game() {
             prevTo: payload.move.to,
             timer1: payload.timer1,
             timer2: payload.timer2,
-            moves: payload.history,
+            moves: payload.history || [],
         }))
         if (newChess.inCheck()) {
             playCheckSound();
@@ -159,7 +159,7 @@ export default function Game() {
             chess: new Chess(payload.board),
             prevFrom: payload.move.from,
             prevTo: payload.move.to,
-            moves: payload.history,
+            moves: payload.history || [],
             gameover: {
                 winner: payload.winner,
                 gameOverType: payload.gameOverType,
@@ -180,7 +180,7 @@ export default function Game() {
                 gameOverType: payload.gameOverType,
                 isGameOver: true
             },
-            moves: payload.history
+            moves: payload.history || []
         }));
         setShowGameOver(true)
         gameOverRef.current = true;
@@ -195,7 +195,7 @@ export default function Game() {
             timer1: payload.timer1,
             timer2: payload.timer2,
             opponentPubkey: payload.opponentPubkey,
-            moves: newChess.history({verbose: true})
+            moves: payload.history || []
         }));
         setGameStarted(true)
         gameIdRef.current = payload.gameId

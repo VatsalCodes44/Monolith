@@ -3,6 +3,7 @@ import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen';
 import { Orbitron_900Black, useFonts } from '@expo-google-fonts/orbitron';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -19,7 +20,11 @@ export default function () {
 
     if (!loaded && !error) return null;
 
-    return <Stack screenOptions={{ headerShown: false }} />
+    return(
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <Stack screenOptions={{ headerShown: false }} />
+        </GestureHandlerRootView>
+    )
 }
 
 const styles = StyleSheet.create({})

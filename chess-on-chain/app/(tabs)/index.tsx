@@ -18,6 +18,7 @@ import { GET_BALANCE_TYPE_TS } from '@/src/config/serverInputs';
 import { jwtStore } from '@/src/stores/jwt';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { Header } from '@/src/components/Header';
+import Animated, { FadeInDown, FadeOutDown, ZoomIn, ZoomOut } from "react-native-reanimated"
 
 export default function Index() {
     const [showSol, setShowSol] = useState(true)
@@ -150,98 +151,101 @@ export default function Index() {
                 
                 <View style={styles.stakeSection}>
                 {stakeOptions.map((option, index) => (
-                    <LinearGradient
-                    colors={['#B048C2', '#9082DB', '#3DE3B4']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.cardBorderGradient}
-                    key={index}
-                    >
-                    <ImageBackground
-                    source={require("../../assets/image/card.jpg")}
-                    resizeMode="cover"
-                    style={styles.cardInner}>
-                        {/* Chess Piece */}
-                        <View
-                        style={styles.pieceSection}>
-                            <View style={styles.pieceCircle}>
-                                {option.piece}
-                            </View>
-                            <Text style={[
-                                styles.pieceLabel,
-                                { fontFamily: "Orbitron_900Black"}
-                            ]}>
-                                {option.label}
-                            </Text>
-                        </View>
+                    <Animated.View key={index} 
+                    entering={FadeInDown.delay(50).duration(200).springify()}
+                    exiting={FadeOutDown.delay(50).duration(200).springify()}>
+                        <LinearGradient
+                        colors={['#B048C2', '#9082DB', '#3DE3B4']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.cardBorderGradient}
+                        >
+                            <ImageBackground
+                            source={require("../../assets/image/card.jpg")}
+                            resizeMode="cover"
+                            style={styles.cardInner}>
+                                {/* Chess Piece */}
+                                <View
+                                style={styles.pieceSection}>
+                                    <View style={styles.pieceCircle}>
+                                        {option.piece}
+                                    </View>
+                                    <Text style={[
+                                        styles.pieceLabel,
+                                        { fontFamily: "Orbitron_900Black"}
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                </View>
 
-                        {/* Stake Info */}
-                        <View style={styles.stakeInfo}>
-                            <Text style={[
-                                styles.stakeAmount,
-                                { fontFamily: "Orbitron_900Black" }
-                            ]}>
-                                {option.amount} SOL
-                            </Text>
-                            <Text style={styles.stakeSubtitle}>
-                                {option.subtitle}
-                            </Text>
-                        </View>
+                                {/* Stake Info */}
+                                <View style={styles.stakeInfo}>
+                                    <Text style={[
+                                        styles.stakeAmount,
+                                        { fontFamily: "Orbitron_900Black" }
+                                    ]}>
+                                        {option.amount} SOL
+                                    </Text>
+                                    <Text style={styles.stakeSubtitle}>
+                                        {option.subtitle}
+                                    </Text>
+                                </View>
 
-                        {/* CTA Button */}
-                        <GradientButton
-                        onPress={async () => {
-                            console.log("hello")
-                            if (!wallet.publicKey || !jwt) return;
-                            setSol(option.amount)
-                            router.push({
-                                pathname: "/Game/[gameId]",
-                                params: {
-                                    gameId: "null",
-                                    sol: option.amount,
-                                    network: wallet.isDevnet ? "DEVNET" : "MAINNET"
-                                }
-                            });
-                        }}
-                        text="ENTER ARENA"
-                        fontFamily= "Orbitron_900Black"
-                        disabled={!wallet.publicKey || disabled() || (lamports/LAMPORTS_PER_SOL) < parseFloat(option.amount)}
-                        />
-                    </ImageBackground>
-                    </LinearGradient>
+                                {/* CTA Button */}
+                                <GradientButton
+                                onPress={async () => {
+                                    console.log("hello")
+                                    if (!wallet.publicKey || !jwt) return;
+                                    setSol(option.amount)
+                                    router.push({
+                                        pathname: "/Game/[gameId]",
+                                        params: {
+                                            gameId: "null",
+                                            sol: option.amount,
+                                            network: wallet.isDevnet ? "DEVNET" : "MAINNET"
+                                        }
+                                    });
+                                }}
+                                text="ENTER ARENA"
+                                fontFamily= "Orbitron_900Black"
+                                disabled={!wallet.publicKey || disabled() || (lamports/LAMPORTS_PER_SOL) < parseFloat(option.amount)}
+                                />
+                            </ImageBackground>
+                        </LinearGradient>
+                    </Animated.View>
                 ))}
                 </View>
 
                 {/* ACTION SECTION */}
-                <View style={styles.actionSection}>
+                <View>
                 {/* Dual Buttons */}
-                <View style={styles.dualButtonRow}>
-                    <GradientButton
-                    text="DEPLOY CUSTOM"
-                    disabled={disabled()}
-                    onPress={() => {
-                        router.push("/DeployCustom")
-                    }}
-                    fontFamily= "Orbitron_900Black"
-                    />
+                    <View style={styles.dualButtonRow}>
+                        <GradientButton
+                        text="DEPLOY CUSTOM"
+                        disabled={disabled()}
+                        onPress={() => {
+                            router.push("/DeployCustom")
+                        }}
+                        fontFamily= "Orbitron_900Black"
+                        />
 
-                    <GradientButton
-                    text="🤖 PRACTICE MODE"
-                    disabled={disabled()}
-                    onPress={() => {
-                        router.push("/Bot");
-                    }}
-                    fontFamily="Orbitron_900Black"
-                    />
-                </View>
+                        <GradientButton
+                        text="🤖 PRACTICE MODE"
+                        disabled={disabled()}
+                        onPress={() => {
+                            router.push("/Bot");
+                        }}
+                        fontFamily="Orbitron_900Black"
+                        />
+                    </View>
 
-                {/* Wallet Button */}
-                <WalletConnect
-                    wallet={wallet}
-                    setJwt={setJwt}
-                    jwt={jwt}
-                    fetchBalance={fetchBalance}
-                />
+                    {/* Wallet Button */}
+                    <WalletConnect
+                        wallet={wallet}
+                        setJwt={setJwt}
+                        jwt={jwt}
+                        fetchBalance={fetchBalance}
+                    />
                 </View>
             </ScrollView>
         </TopContainer>
@@ -335,7 +339,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         gap: 8,
-        marginBottom: 4,
+        marginBottom: 16,
     },
     
     scrollContent: {

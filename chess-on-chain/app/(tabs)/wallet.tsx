@@ -39,10 +39,13 @@ export default function Wallet() {
     const setSkr = gameBalance(s => s.setSkr);
     const jwt = jwtStore(s => s.jwt);
     const [showSol, setShowSol] = useState(true)
+    const [sending, setSending] = useState(false);
 
     let disabled = false;
-
-    if (!wallet.publicKey || !jwt) {
+    if (sending) {
+        disabled = true;
+    }
+    else if (!wallet.publicKey || !jwt) {
         disabled = true;
     } 
     else if (isDevnet) {
@@ -60,8 +63,6 @@ export default function Wallet() {
         jwt: string | null,
         isDevnet: boolean
     ) => {
-        console.log("🔥 fetchBalance called");
-        console.log(publicKey, "2222222222222222", jwt)
         if (!publicKey || !jwt) return;
         try {
             const payload: GET_BALANCE_TYPE_TS = {
@@ -71,18 +72,14 @@ export default function Wallet() {
                 headers: { Authorization: `Bearer ${jwt}` },
             });
             const data = res.data;
-            console.log("RAW DATA:", data.lamports, "-----------", data.skr);
             setLamports(Number(data.lamports));
             setSkr(Number(data.skr));
-            console.log("STORE STATE:", gameBalance.getState().lamports);
         } catch (e) {
-            console.log(e);
         }
     }, []);
 
     const transferSol = async () => {
-        console.log(wallet.publicKey)
-        console.log(jwt)
+        setSending(true)
         if (!wallet.publicKey || !jwt) return;
 
         const parsedAmount = parseFloat(amount);
@@ -117,9 +114,13 @@ export default function Wallet() {
         } catch (e) {
             console.log(e);
         }
+        finally {
+            setSending(false)
+        }
     };
 
     const transferSeeker = async () => {
+        setSending(true)
         if (!wallet.publicKey || !jwt || isDevnet) return;
         try {
             const signature = await wallet.sendSKR(parseFloat(amount));
@@ -144,9 +145,13 @@ export default function Wallet() {
         catch (e) {
             console.log(e)
         }
+        finally{
+            setSending(false)
+        }
     }
 
     const withdraw = async () => {
+        setSending(true);
         if (!wallet.publicKey || !jwt) return;
 
         const parsedAmount = parseFloat(amount);
@@ -157,11 +162,6 @@ export default function Wallet() {
         }
 
         try {
-            console.log("Calling sendSOL...");
-            const signature = await wallet.sendSOL(parsedAmount);
-            if (!signature) return;
-
-            console.log("Signature:", signature);
 
             await axios.post(
                 `${REST_URL}/withdraw`,
@@ -179,6 +179,9 @@ export default function Wallet() {
         await fetchBalance(wallet.publicKey, jwt, isDevnet);
         } catch (e) {
             console.log(e);
+        }
+        finally {
+            setSending(false)
         }
     }
 
@@ -361,7 +364,7 @@ export default function Wallet() {
                 <GradientButton
                 disabled={disabled} 
                 onPress={handleDepositWithdraw} 
-                text={`${mode} ${asset}`}
+                text={sending ? "PROCESSING ..." : `${mode} ${asset}`}
                 fontFamily="Orbitron_900Black"
                 />
             </View>

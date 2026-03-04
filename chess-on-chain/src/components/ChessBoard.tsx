@@ -6,7 +6,7 @@ import { MOVE, MOVE_CUSTOM } from "@/src/config/serverResponds";
 import { Piece } from './Piece';
 import { MOVE_CUSTOM_TYPE_TS, MOVE_TYPE_TS } from "@/src/config/serverInputs";
 import { GAME_STATE } from '../config/game';
-
+import Animated, { ZoomIn, ZoomOut } from "react-native-reanimated"
 type Piece = ({
   square: Square;
   type: PieceSymbol;
@@ -187,7 +187,10 @@ export function ChessBoard(
   }
 
   return (
-    <View>
+    <Animated.View
+    entering={ZoomIn.duration(200).delay(50).springify()} 
+    exiting={ZoomOut.duration(200).delay(50).springify()} 
+    >
       <View style={{ position: 'relative' }}>
         <View style={{
           width: boardSize,
@@ -334,7 +337,7 @@ export function ChessBoard(
           </View>
         }
       </View>
-    </View>
+    </Animated.View>
   )
 }
 

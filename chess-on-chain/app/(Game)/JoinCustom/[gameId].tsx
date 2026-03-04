@@ -86,7 +86,8 @@ export default function CustomGame() {
             chess: new Chess(payload.board),
             timer1: payload.timer1,
             timer2: payload.timer2,
-            opponentPubkey: payload.opponentPubkey
+            opponentPubkey: payload.opponentPubkey,
+            moves: payload.history || []
         }));
         setGameStarted(true);
         gameIdRef.current = payload.gameId
@@ -100,7 +101,8 @@ export default function CustomGame() {
             timer1: payload.timer1,
             timer2: payload.timer2,
             color: payload.color,
-            opponentPubkey: payload.opponentPubkey
+            opponentPubkey: payload.opponentPubkey,
+            moves: payload.history || []
         }))
         setSkr(payload.skr);
         setGameStarted(payload.gameStarted);
@@ -115,7 +117,7 @@ export default function CustomGame() {
             prevTo: payload.move.to,
             timer1: payload.timer1,
             timer2: payload.timer2,
-            moves: payload.history,
+            moves: payload.history || [],
         }));
         if (newChess.inCheck()) {
             playCheckSound();
@@ -131,7 +133,7 @@ export default function CustomGame() {
             chess: new Chess(payload.board),
             prevFrom: payload.move.from,
             prevTo: payload.move.to,
-            moves: payload.history,
+            moves: payload.history || [],
             gameover: {
                 winner: payload.winner,
                 gameOverType: payload.gameOverType,
@@ -152,7 +154,7 @@ export default function CustomGame() {
                 gameOverType: payload.gameOverType,
                 isGameOver: true
             },
-            moves: payload.history
+            moves: payload.history || []
         }));
         gameOverRef.current = true;
         setShowGameOver(true);
@@ -167,7 +169,7 @@ export default function CustomGame() {
             timer1: payload.timer1,
             timer2: payload.timer2,
             opponentPubkey: payload.opponentPubkey,
-            moves: newChess.history({verbose: true})
+            moves: payload.history || []
         }));
         setGameStarted(true)
         gameIdRef.current = payload.gameId

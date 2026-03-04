@@ -70,6 +70,7 @@ export type Re_JOIN_GAME_RESPONSE_PAYLOAD = {
     network: "MAINNET" | "DEVNET",
     sol: "0.01" | "0.05" | "0.1",
     opponentPubkey: string,
+    history: Move[]
 }
 
 export type JOIN_CUSTOM_GAME_Response_Payload = {
@@ -80,6 +81,7 @@ export type JOIN_CUSTOM_GAME_Response_Payload = {
     gameId: string,
     skr: number,
     opponentPubkey: string,
+    history: Move[]
 }
 
 export type RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD = {
@@ -90,6 +92,7 @@ export type RE_JOIN_CUSTOM_GAME_RESPONSE_PAYLOAD = {
     gameId: string,
     skr: number,
     opponentPubkey: string,
+    history: Move[]
 }
 
 export type GET_GAMES_RESPONSE_PAYLOAD = {
@@ -116,7 +119,8 @@ export type ENTER_ARENA_PAYLOAD = {
     timer2: number,
     gameId: string,
     opponentPubkey: string,
-    gameStarted: boolean
+    gameStarted: boolean,
+    history: Move[]
 }
 
 export type ENTERED_SPECTATE_PAYLOAD = {
@@ -126,5 +130,6 @@ export type ENTERED_SPECTATE_PAYLOAD = {
     timer1: number, 
     timer2: number,
     skr: number,
-    gameStarted: boolean
+    gameStarted: boolean,
+    history: Move[]
 }

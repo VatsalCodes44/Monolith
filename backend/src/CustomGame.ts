@@ -57,7 +57,7 @@ export class CustomGame extends Game {
                                 data: {
                                     skr: {
                                         increment: totalStake
-                                    }
+                                    },
                                 }
                             })
                         }

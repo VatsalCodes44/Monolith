@@ -12,7 +12,7 @@ import { jwtVerification } from "./middlewares/jwtVerification.js";
 import { CUSTOM_CREATED, INSUFFICIENT_FUNDS } from "./Messages.js";
 import bs58 from "bs58";
 import { Transaction, SystemProgram, Keypair, PublicKey, Connection, clusterApiUrl, sendAndConfirmTransaction } from "@solana/web3.js";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, createTransferInstruction, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token"
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, createTransferInstruction, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token"
 
 const app = express();
 const PORT = 8080;
@@ -20,12 +20,24 @@ const server = http.createServer(app);
 const gameManager = new GameManager();
 const message = "Chess on chain wants you to sign this message: ";
 let count = 0;
-const loginHandler: Map<string, string> = new Map();
+const loginHandler: Map<string, {
+    nonce: string,
+    createdAt: number,
+}> = new Map();
 const connection = new Connection((process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta")),"confirmed");
 const keyPair = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY!));
 const SEEKER_MINT = new PublicKey(
     "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3"
 );
+
+setInterval(() => {
+    for (const key of loginHandler.keys()) {
+        const obj = loginHandler.get(key);
+        if (obj && Date.now()-obj.createdAt >= 20000) {
+            loginHandler.delete(key);
+        }
+    }
+}, 10000)
 
 app.use(express.json());
 
@@ -112,7 +124,7 @@ app.post("/getGames", jwtVerification, async (req, res) => {
 
 app.post("/deposit", jwtVerification, async (req, res) => {
     const parsed = deposit.safeParse(req.body);
-
+    console.log(parsed)
 
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
@@ -137,6 +149,7 @@ app.post("/deposit", jwtVerification, async (req, res) => {
             await prisma.$transaction(async (tx) => {
 
                 // Prevent replay (race-condition safe)
+                console.log('here sol')
                 await tx.transactions.create({
                     data: {
                         signature,
@@ -206,6 +219,7 @@ app.post("/deposit", jwtVerification, async (req, res) => {
                         skr: verification.amount,
                     },
                 });
+
             });
         }
 
@@ -231,8 +245,12 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
         return res.status(400).json({ error: "Invalid request" });
     }
 
+    console.log(parsed)
+
     const { amount, asset } = parsed.data;
     const userPublicKey = (req as any).user.publicKey;
+    console.log("--------------------------", userPublicKey, "--------------------------")
+    console.log(keyPair.publicKey.toBase58())
 
     try {
         if (asset == "SOL") {
@@ -298,6 +316,8 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
             return;
         }
         else if (asset == "SKR") {
+
+            console.log("skr withdraw")
             
             try {
                 const result = await prisma.player.updateMany({
@@ -316,6 +336,7 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
                 if (result.count == 0) throw new Error("Insufficient Funds");
             }
             catch {
+                console.log(325)
                 res.status(400).send("Insufficient Funds")
                 return;
             }
@@ -339,6 +360,15 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
                     ASSOCIATED_TOKEN_PROGRAM_ID
                 );
 
+                const createRecipientATA = createAssociatedTokenAccountInstruction(
+                    keyPair.publicKey, // payer
+                    recipientATA, // associated token account address
+                    new PublicKey(userPublicKey), // owner
+                    SEEKER_MINT, // mint
+                    TOKEN_PROGRAM_ID,
+                    ASSOCIATED_TOKEN_PROGRAM_ID
+                );
+
                 const transferInstruction = createTransferInstruction(
                     feePayerATA, 
                     recipientATA, 
@@ -354,7 +384,7 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
                     feePayer: keyPair.publicKey,
                     blockhash: transferBlockhash.blockhash,
                     lastValidBlockHeight: transferBlockhash.lastValidBlockHeight
-                }).add(transferInstruction);
+                }).add(createRecipientATA).add(transferInstruction);
 
                 signature = await sendAndConfirmTransaction(
                     connection,
@@ -363,7 +393,9 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
                 );
 
             }
-            catch {
+            catch (e) {
+                console.log(e)
+                console.log(374)
                 const result = await prisma.player.updateMany({
                     where: {
                         publicKey: userPublicKey,
@@ -380,6 +412,7 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
 
             if (signature == "") throw new Error("Error in transferring");
 
+            console.log("signature   ", signature)
             res.send({
                 amount,
                 signature
@@ -390,10 +423,11 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
     } 
     catch (error: any) {
         if (error.code === "P2002") {
+            console.log(402)
             return res.status(400).json({ error: "Transaction already processed" });
         }
     }
-
+    console.group(406)
     res.status(400).send("error in transfering")
 })
 
@@ -420,7 +454,10 @@ app.post("/login", async (req, res) => {
         return;
     }
     const nonce = `${Math.floor(Math.random() * 10000000000)}`;
-    loginHandler.set(publicKey, nonce);
+    loginHandler.set(publicKey, {
+        nonce,
+        createdAt: Date.now(),
+    });
     res.status(200).json({ nonce: `${message}${nonce}` });
 })
 
@@ -431,7 +468,7 @@ app.post("/verifyLogin", async (req, res) => {
     }
     const { publicKey, signature, nonce } = parsed.data;
     const storedNonce = loginHandler.get(publicKey);
-    if (!storedNonce || `${message}${storedNonce}` !== nonce) {
+    if (!storedNonce || `${message}${storedNonce.nonce}` !== nonce) {
         return res.status(400).json({ error: "Invalid nonce" });
     }
     try {

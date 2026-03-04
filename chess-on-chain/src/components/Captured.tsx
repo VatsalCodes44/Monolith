@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native'
 import React from 'react'
 import { Move, PieceSymbol } from 'chess.js'
 import { Piece } from './Piece'
+import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from "react-native-reanimated"
 
 function CapturedComponent({
   moves,
@@ -39,7 +40,10 @@ function CapturedComponent({
     if (pieces.length === 0) return null
 
     return (
-      <View style={styles.stack}>
+      <Animated.View 
+      entering={FadeIn.duration(200).delay(50).springify()} 
+      exiting={FadeOut.duration(200).delay(50).springify()} 
+      style={styles.stack}>
         {pieces.map((item, index) => (
           <View
             key={`${item.type}-${index}`}
@@ -59,7 +63,7 @@ function CapturedComponent({
             />
           </View>
         ))}
-      </View>
+      </Animated.View>
     )
   }
 

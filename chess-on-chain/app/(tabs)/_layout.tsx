@@ -27,7 +27,7 @@ export default function () {
                     tabBarIcon: ({ color, focused }) => <FontAwesome color={color} name={focused ? "wallet" : "wallet-outline"} size={focused ? 26 : 24} />,
                 }} />
                 <Tabs.Screen name='profile' options={{
-                    tabBarIcon: ({ color, focused }) => <FontAwesome color={color} name={focused ? "image" : "image-outline"} size={focused ? 26 : 24} />,
+                    tabBarIcon: ({ color, focused }) => <FontAwesome color={color} name={focused ? "person" : "person-outline"} size={focused ? 26 : 22} />,
                 }} />
                 <Tabs.Screen name='info' options={{
                     tabBarIcon: ({ color, focused }) => <FontAwesome color={color} name={focused ? "information-circle" : "information-circle-outline"} size={focused ? 28 : 26} />,

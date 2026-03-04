@@ -180,7 +180,7 @@ function GameBaseComponent({
                         marginVertical: 4,
                         width: "100%",
                     }}>
-                        <MoveHistory moves={gameState.moves} />
+                        <MoveHistory gameState={gameState} />
                     </View>
                     <ChessBoard
                         spectator={spectator}

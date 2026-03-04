@@ -13,14 +13,33 @@ datasource db {
 }
 
 model Player {
-  publicKey       String         @id
-  devnetLamports  BigInt         @default(0)
-  mainnetLamports BigInt         @default(0)
-  skr             BigInt         @default(0)
-  gameAsPlayer1   Game[]         @relation("Player1")
-  gameAsPlayer2   Game[]         @relation("Player2")
-  nfts            PlayerNft[]
-  transactions    Transactions[]
+  publicKey           String         @id
+  devnetLamports      BigInt         @default(0)
+  mainnetLamports     BigInt         @default(0)
+  skr                 BigInt         @default(0)
+  
+  devnetRating        Int            @default(100)
+  mainnetRating       Int            @default(100)
+
+  peakDevnetRating    Int            @default(100)
+  peakMainnetRating   Int            @default(100)
+
+  devnetWins          Int            @default(0)
+  devnetLoss          Int            @default(0)     
+  devnetDraw          Int            @default(0) 
+  mainnetWins         Int            @default(0)
+  mainnetLoss         Int            @default(0)     
+  mainnetDraw         Int            @default(0)
+  devnetSolWon        BigInt         @default(0)
+  mainnetSolWon       BigInt         @default(0)
+
+  devnetSolLost        BigInt         @default(0)
+  mainnetSolLost      BigInt         @default(0)
+
+  skrUsed             BigInt         @default(0)
+  gameAsPlayer1       Game[]         @relation("Player1")
+  gameAsPlayer2       Game[]         @relation("Player2")
+  transactions        Transactions[]
 }
 
 // player 1 is always white
@@ -59,15 +78,6 @@ enum GameStatus {
 enum Color {
   w
   b
-}
-
-model PlayerNft {
-  id        String   @id @default(uuid())
-  publicKey String
-  mintedNft String
-  network   Network
-  createdAt DateTime @default(now())
-  player    Player   @relation(fields: [publicKey], references: [publicKey])
 }
 
 enum Asset {

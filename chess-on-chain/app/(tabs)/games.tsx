@@ -2,7 +2,6 @@ import {
     StyleSheet,
     Text,
     View,
-    TextInput,
     TouchableOpacity,
     FlatList,
 } from "react-native";
@@ -22,6 +21,10 @@ import { router } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { gamesStore } from "@/src/stores/gamesStore";
 import { JoinSpectate } from "@/src/components/JoinSpectate";
+import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
+import { Gesture, RefreshControl } from 'react-native-gesture-handler';
+import { PullToRefresh } from "@/src/components/Gestures/PullToRefresh";
+
 
 
 export default function Games() {
@@ -37,6 +40,8 @@ export default function Games() {
     const setGames = gamesStore(s => s.setGames)
     const games = gamesStore(s => s.games)
     const isFocused = useIsFocused()
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
     useEffect(() => {
         if (isDevnet && isFocused) {
             setIsDevnet(false)
@@ -74,11 +79,13 @@ export default function Games() {
 
 
     const getGames = useCallback(async () => {
+        setIsRefreshing(true);
         const res = await axios.post(`${REST_URL}/getGames`, {}, {
             headers: { Authorization: `Bearer ${jwt}` },
         })
         console.log(res.data)
         setGames(res.data.games)
+        setIsRefreshing(false);
     }, [jwt, publicKey])
 
     return (
@@ -153,15 +160,23 @@ export default function Games() {
                 </Text>
                 <View style={styles.divider} />
                 <FlatList 
-                    data={games}
-                    keyExtractor={(game) => game.id}
-                    scrollEnabled={true}
-                    showsVerticalScrollIndicator={false}
-                    style={{
-                        flex: 1, 
-                        paddingTop: 15,
-                    }}
-                    renderItem={({ item }) => {
+                refreshControl={
+                    <RefreshControl
+                    refreshing={isRefreshing}
+                    onRefresh={getGames}
+                    tintColor="#3DE3B4"
+                    colors={["#B048C2"]}
+                    />
+                }
+                data={games}
+                keyExtractor={(game) => game.id}
+                scrollEnabled={true}
+                showsVerticalScrollIndicator={false}
+                style={{
+                    flex: 1, 
+                    paddingTop: 15,
+                }}
+                renderItem={({ item }) => {
                     const IN_PROGRESS = item.status === "IN_PROGRESS";
 
                     let statusColor: string;
@@ -179,98 +194,103 @@ export default function Games() {
                         : `${(item.lamports * 2) / LAMPORTS_PER_SOL} SOL`;
 
                     return (
-                        <GradientCard2 padding={20}>
-                            <View style={styles.gameCardInner}>
-                                <View style={styles.gameHeaderRow}>
-                                    <Text style={styles.gameTitle}>
-                                        {item.customGame ? "CUSTOM ARENA" : "OPEN ARENA"}
-                                    </Text>
-
-                                    <View style={[
-                                        styles.statusBadge,
-                                        { backgroundColor: item.network == "MAINNET" ? "#391e3ca8" : "#12372c91"}
-                                    ]}>
-                                        <Text style={[
-                                            styles.statusBadgeText,
-                                            { color: item.network == "MAINNET" ? "#B048C2" : "#3DE3B4"}
-                                        ]}>
-                                            {item.network}
+                        <Animated.View 
+                        entering={FadeInDown.delay(50).duration(200).springify()}
+                        exiting={FadeOutDown.delay(50).duration(200).springify()}
+                        >
+                            <GradientCard2 padding={20}>
+                                <View style={styles.gameCardInner}>
+                                    <View style={styles.gameHeaderRow}>
+                                        <Text style={styles.gameTitle}>
+                                            {item.customGame ? "CUSTOM ARENA" : "OPEN ARENA"}
                                         </Text>
+
+                                        <View style={[
+                                            styles.statusBadge,
+                                            { backgroundColor: item.network == "MAINNET" ? "#391e3ca8" : "#12372c91"}
+                                        ]}>
+                                            <Text style={[
+                                                styles.statusBadgeText,
+                                                { color: item.network == "MAINNET" ? "#B048C2" : "#3DE3B4"}
+                                            ]}>
+                                                {item.network}
+                                            </Text>
+                                        </View>
+
+                                        <View style={[
+                                            styles.statusBadge,
+                                            { backgroundColor: statusColor }
+                                        ]}>
+                                            <Text style={[
+                                                styles.statusBadgeText,
+                                                { color: statusTextColor}
+                                            ]}>
+                                                {item.status}
+                                            </Text>
+                                        </View>
                                     </View>
 
-                                    <View style={[
-                                        styles.statusBadge,
-                                        { backgroundColor: statusColor }
-                                    ]}>
-                                        <Text style={[
-                                            styles.statusBadgeText,
-                                            { color: statusTextColor}
-                                        ]}>
-                                            {item.status}
+                                    <View style={{
+                                        flexDirection: "row",
+                                        gap: 10,
+                                        alignItems: "center"
+                                    }}>
+                                        <Text style={styles.stakeText}>
+                                        ◎ {stakeText}
                                         </Text>
+
+                                        {item.winner && (
+                                        <Text style={[
+                                            styles.winnerText,
+                                            {
+                                                color: item.winner == "w" && item.player1PublicKey == publicKey ? "#3DE3B4" : "#f54444"
+                                            }
+                                        ]}>
+                                            {item.winner == "w" && item.player1PublicKey == publicKey ? "VICTORY" : "DEFEAT"}
+                                        </Text>
+                                        )}
                                     </View>
-                                </View>
 
-                                <View style={{
-                                    flexDirection: "row",
-                                    gap: 10,
-                                    alignItems: "center"
-                                }}>
-                                    <Text style={styles.stakeText}>
-                                    ◎ {stakeText}
-                                    </Text>
-
-                                    {item.winner && (
-                                    <Text style={[
-                                        styles.winnerText,
-                                        {
-                                            color: item.winner == "w" && item.player1PublicKey == publicKey ? "#3DE3B4" : "#f54444"
-                                        }
-                                    ]}>
-                                        {item.winner == "w" && item.player1PublicKey == publicKey ? "VICTORY" : "DEFEAT"}
-                                    </Text>
-                                    )}
-                                </View>
-
-                                {/* CTA */}
-                                <View style={{ marginTop: 14 }}>
-                                <GradientButton
-                                    text={ IN_PROGRESS ? "JOIN MATCH" : "VIEW FINAL POSITION"}
-                                    onPress={() => {
-                                        if (IN_PROGRESS) {
-                                            if (item.customGame){
-                                                router.push({
-                                                    pathname: "/JoinCustom/[gameId]",
-                                                    params: {
-                                                        gameId: item.id,
-                                                    },
-                                                })
+                                    {/* CTA */}
+                                    <View style={{ marginTop: 14 }}>
+                                    <GradientButton
+                                        text={ IN_PROGRESS ? "JOIN MATCH" : "VIEW FINAL POSITION"}
+                                        onPress={() => {
+                                            if (IN_PROGRESS) {
+                                                if (item.customGame){
+                                                    router.push({
+                                                        pathname: "/JoinCustom/[gameId]",
+                                                        params: {
+                                                            gameId: item.id,
+                                                        },
+                                                    })
+                                                }
+                                                else {
+                                                    router.push({
+                                                        pathname: "/Game/[gameId]",
+                                                        params: {
+                                                            gameId: item.id,
+                                                            sol: ((item.lamports)/LAMPORTS_PER_SOL).toString(),
+                                                            network: item.network
+                                                        }
+                                                    })
+                                                }
                                             }
                                             else {
                                                 router.push({
-                                                    pathname: "/Game/[gameId]",
-                                                    params: {
-                                                        gameId: item.id,
-                                                        sol: ((item.lamports)/LAMPORTS_PER_SOL).toString(),
-                                                        network: item.network
-                                                    }
-                                                })
+                                                    pathname: "/FinalPosition/[gameId]",
+                                                    params: {gameId: item.id},
+                                                });
                                             }
-                                        }
-                                        else {
-                                            router.push({
-                                                pathname: "/FinalPosition/[gameId]",
-                                                params: {gameId: item.id},
-                                            });
-                                        }
-                                    }}
-                                    fontFamily="Orbitron_900Black"
-                                    disabled={false}
-                                />
-                                </View>
+                                        }}
+                                        fontFamily="Orbitron_900Black"
+                                        disabled={false}
+                                    />
+                                    </View>
 
-                            </View>
-                        </GradientCard2>
+                                </View>
+                            </GradientCard2>
+                        </Animated.View>
                     );
                     }}
                 />

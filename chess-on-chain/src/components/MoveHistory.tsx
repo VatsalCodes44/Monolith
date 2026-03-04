@@ -2,20 +2,21 @@ import { FlatList, StyleSheet, Text, View } from 'react-native'
 import React, { useEffect, useRef } from 'react'
 import { Move } from 'chess.js'
 import { Piece } from './Piece'   // 👈 using your real pieces
+import { GAME_STATE } from '../config/game'
 
-export function MoveHistory({ moves }: { moves: Move[] }) {
+export function MoveHistory({ gameState }: { gameState: GAME_STATE }) {
   const flatListRef = useRef<FlatList>(null)
 
   useEffect(() => {
-    if (moves.length > 0) {
+    if (gameState.moves.length > 0) {
       flatListRef.current?.scrollToEnd({ animated: true })
     }
-  }, [moves])
+  }, [gameState.moves])
 
   return (
     <View>
       <FlatList
-        data={moves}
+        data={gameState.moves}
         ref={flatListRef}
         horizontal
         showsHorizontalScrollIndicator={false}

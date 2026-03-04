@@ -12,7 +12,7 @@ import { jwtVerification } from "./middlewares/jwtVerification.js";
 import { CUSTOM_CREATED, INSUFFICIENT_FUNDS } from "./Messages.js";
 import bs58 from "bs58";
 import { Transaction, SystemProgram, Keypair, PublicKey, Connection, clusterApiUrl, sendAndConfirmTransaction } from "@solana/web3.js";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, createTransferInstruction, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, createTransferInstruction, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 const app = express();
 const PORT = 8080;
 const server = http.createServer(app);
@@ -98,6 +98,7 @@ app.post("/getGames", jwtVerification, async (req, res) => {
 });
 app.post("/deposit", jwtVerification, async (req, res) => {
     const parsed = deposit.safeParse(req.body);
+    console.log(parsed);
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
     }
@@ -111,6 +112,7 @@ app.post("/deposit", jwtVerification, async (req, res) => {
             }
             await prisma.$transaction(async (tx) => {
                 // Prevent replay (race-condition safe)
+                console.log('here sol');
                 await tx.transactions.create({
                     data: {
                         signature,
@@ -184,8 +186,11 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: "Invalid request" });
     }
+    console.log(parsed);
     const { amount, asset } = parsed.data;
     const userPublicKey = req.user.publicKey;
+    console.log("--------------------------", userPublicKey, "--------------------------");
+    console.log(keyPair.publicKey.toBase58());
     try {
         if (asset == "SOL") {
             try {
@@ -241,6 +246,7 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
             return;
         }
         else if (asset == "SKR") {
+            console.log("skr withdraw");
             try {
                 const result = await prisma.player.updateMany({
                     where: {
@@ -259,6 +265,7 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
                     throw new Error("Insufficient Funds");
             }
             catch {
+                console.log(325);
                 res.status(400).send("Insufficient Funds");
                 return;
             }
@@ -266,6 +273,11 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
             try {
                 const feePayerATA = getAssociatedTokenAddressSync(SEEKER_MINT, keyPair.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
                 const recipientATA = getAssociatedTokenAddressSync(SEEKER_MINT, new PublicKey(userPublicKey), false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+                const createRecipientATA = createAssociatedTokenAccountInstruction(keyPair.publicKey, // payer
+                recipientATA, // associated token account address
+                new PublicKey(userPublicKey), // owner
+                SEEKER_MINT, // mint
+                TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
                 const transferInstruction = createTransferInstruction(feePayerATA, recipientATA, keyPair.publicKey, amount, // amount
                 [], // multiSigners
                 TOKEN_PROGRAM_ID // programId
@@ -275,10 +287,12 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
                     feePayer: keyPair.publicKey,
                     blockhash: transferBlockhash.blockhash,
                     lastValidBlockHeight: transferBlockhash.lastValidBlockHeight
-                }).add(transferInstruction);
+                }).add(createRecipientATA).add(transferInstruction);
                 signature = await sendAndConfirmTransaction(connection, transferTransaction, [keyPair]);
             }
-            catch {
+            catch (e) {
+                console.log(e);
+                console.log(374);
                 const result = await prisma.player.updateMany({
                     where: {
                         publicKey: userPublicKey,
@@ -294,6 +308,7 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
             }
             if (signature == "")
                 throw new Error("Error in transferring");
+            console.log("signature   ", signature);
             res.send({
                 amount,
                 signature
@@ -303,9 +318,11 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
     }
     catch (error) {
         if (error.code === "P2002") {
+            console.log(402);
             return res.status(400).json({ error: "Transaction already processed" });
         }
     }
+    console.group(406);
     res.status(400).send("error in transfering");
 });
 app.post("/login", async (req, res) => {

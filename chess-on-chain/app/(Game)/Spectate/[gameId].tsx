@@ -93,7 +93,7 @@ export default function CustomGame() {
             prevTo: payload.move.to,
             timer1: payload.timer1,
             timer2: payload.timer2,
-            moves: payload.history,
+            moves: payload.history || [],
         }));
         if (newChess.inCheck()) {
             playCheckSound();
@@ -109,7 +109,7 @@ export default function CustomGame() {
             chess: new Chess(payload.board),
             prevFrom: payload.move.from,
             prevTo: payload.move.to,
-            moves: payload.history,
+            moves: payload.history || [],
             gameover: {
                 winner: payload.winner,
                 gameOverType: payload.gameOverType,
@@ -143,7 +143,7 @@ export default function CustomGame() {
             timer1: payload.timer1,
             timer2: payload.timer2,
             opponentPubkey: payload.player2Pubkey,
-            
+            moves: payload.history || []
         }));
         setplayer1Pubkey(payload.player1Pubkey)
         setGameStarted(payload.gameStarted)

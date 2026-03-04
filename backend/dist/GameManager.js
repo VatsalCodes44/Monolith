@@ -67,7 +67,8 @@ export class GameManager {
                             timer1: game.timer1,
                             timer2: game.timer2,
                             skr: Number(game.skr),
-                            gameStarted: game.started
+                            gameStarted: game.started,
+                            history: game.board.history({ verbose: true })
                         }
                     }));
                     return;
@@ -138,6 +139,7 @@ export class GameManager {
                                 network,
                                 sol,
                                 opponentPubkey: game.player2Pubkey,
+                                history: game.board.history({ verbose: true })
                             }
                         };
                         game.player1.send(JSON.stringify(response));
@@ -155,6 +157,7 @@ export class GameManager {
                                 network,
                                 sol,
                                 opponentPubkey: game.player1Pubkey,
+                                history: game.board.history({ verbose: true })
                             }
                         };
                         game.player2.send(JSON.stringify(response));
@@ -238,7 +241,8 @@ export class GameManager {
                                         timer2: gameExists.timer2,
                                         gameId,
                                         opponentPubkey: gameExists.player2Pubkey,
-                                        gameStarted: true
+                                        gameStarted: true,
+                                        history: gameExists.board.history({ verbose: true })
                                     }
                                 }));
                                 return;
@@ -255,7 +259,8 @@ export class GameManager {
                                         timer2: gameExists.timer2,
                                         gameId,
                                         opponentPubkey: gameExists.player1Pubkey,
-                                        gameStarted: true
+                                        gameStarted: true,
+                                        history: gameExists.board.history({ verbose: true })
                                     }
                                 }));
                                 return;
@@ -274,6 +279,7 @@ export class GameManager {
                                         timer2: gameExists.timer2,
                                         gameId,
                                         opponentPubkey: gameExists.player2Pubkey,
+                                        history: gameExists.board.history({ verbose: true })
                                     }
                                 }));
                                 gameExists.startGame();
@@ -293,6 +299,7 @@ export class GameManager {
                                             timer2: gameExists.timer2,
                                             gameId,
                                             opponentPubkey: gameExists.player1Pubkey,
+                                            history: gameExists.board.history({ verbose: true })
                                         }
                                     }));
                                     gameExists.startGame();
@@ -322,7 +329,8 @@ export class GameManager {
                                     timer2: newGame.timer2,
                                     gameId,
                                     opponentPubkey: newGame.player2Pubkey,
-                                    gameStarted: false
+                                    gameStarted: false,
+                                    history: newGame.board.history({ verbose: true })
                                 }
                             }));
                         }
@@ -342,7 +350,8 @@ export class GameManager {
                                         timer2: newGame.timer2,
                                         gameId,
                                         opponentPubkey: newGame.player2Pubkey,
-                                        gameStarted: false
+                                        gameStarted: false,
+                                        history: newGame.board.history({ verbose: true })
                                     }
                                 }));
                             }
@@ -384,6 +393,7 @@ export class GameManager {
                                 gameId,
                                 skr: game.skr,
                                 opponentPubkey: game.player2Pubkey,
+                                history: game.board.history({ verbose: true })
                             }
                         };
                         game.player1.send(JSON.stringify(response));
@@ -400,6 +410,7 @@ export class GameManager {
                                 gameId,
                                 skr: game.skr,
                                 opponentPubkey: game.player1Pubkey,
+                                history: game.board.history({ verbose: true })
                             }
                         };
                         game.player2.send(JSON.stringify(response));
