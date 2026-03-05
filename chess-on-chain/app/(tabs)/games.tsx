@@ -238,10 +238,10 @@ export default function Games() {
                                         <Text style={[
                                             styles.winnerText,
                                             {
-                                                color: item.winner == "w" && item.player1PublicKey == publicKey ? "#3DE3B4" : "#f54444"
+                                                color: (item.winner == "w" && item.player1PublicKey == publicKey) || (item.winner == "b" && item.player2PublicKey == publicKey) ? "#3DE3B4" : "#f54444"
                                             }
                                         ]}>
-                                            {item.winner == "w" && item.player1PublicKey == publicKey ? "VICTORY" : "DEFEAT"}
+                                            {(item.winner == "w" && item.player1PublicKey == publicKey) || (item.winner == "b" && item.player2PublicKey == publicKey) ? "VICTORY" : "DEFEAT"}
                                         </Text>
                                         )}
                                     </View>

@@ -10,7 +10,6 @@ import {
 import React, { useEffect, useRef, useState } from "react"
 import { Chess, Color, Move, PieceSymbol, Square } from "chess.js"
 import { LinearGradient } from "expo-linear-gradient"
-import { Audio } from "expo-av"
 import { Piece } from "@/src/components/Piece"
 import { GAME_STATE } from "@/src/config/game"
 import { getBestMove } from "@/src/utils/minimax"

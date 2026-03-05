@@ -23,8 +23,8 @@ import { Account } from "@solana-mobile/mobile-wallet-adapter-protocol";
 import { PUBLIC_KEY, SEEKER_MINT } from "@/src/config/config";
 
 const APP_IDENTITY = {
-  name: "chess-native",
-  uri: "https://solscan.io",
+  name: "Chess On Chain",
+  uri: "https://raw.githubusercontent.com/VatsalCodes44/Monolith/refs/heads/main/chess-on-chain/assets/images/icon.png",
   icon: "favicon.ico",
 };
 

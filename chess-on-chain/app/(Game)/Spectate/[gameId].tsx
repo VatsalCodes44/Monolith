@@ -222,7 +222,10 @@ export default function CustomGame() {
 
 
     const playMoveSound = useCallback(async () => {
-        if (!moveSoundRef.current) return;
+        if (!moveSoundRef.current) {
+            await new Promise(r => setTimeout(r, 600));
+            if(!moveSoundRef.current) return;
+        };
 
         try {
             await moveSoundRef.current.stopAsync();
@@ -234,7 +237,10 @@ export default function CustomGame() {
     }, []);
 
     const playCheckSound = useCallback(async () => {
-        if (!checkSoundRef.current) return;
+        if (!checkSoundRef.current) {
+            await new Promise(r => setTimeout(r, 600));
+            if (!checkSoundRef.current) return;
+        };
 
         try {
             await checkSoundRef.current.stopAsync();
@@ -246,7 +252,10 @@ export default function CustomGame() {
     }, []);
 
     const playIllegalMoveSound = useCallback(async () => {
-        if (!illegalSoundRef.current) return;
+        if (!illegalSoundRef.current) {
+            await new Promise(r => setTimeout(r, 600));
+            if (!illegalSoundRef.current) return;
+        };
 
         try {
             await illegalSoundRef.current.stopAsync();
@@ -258,7 +267,10 @@ export default function CustomGame() {
     }, []);
 
     const playLowOnTimeSound = useCallback(async () => {
-        if (!lowOnTimeSoundRef.current) return;
+        if (!lowOnTimeSoundRef.current) {
+            await new Promise(r => setTimeout(r, 600));
+            if (!lowOnTimeSoundRef.current) return;
+        };
 
         try {
             await lowOnTimeSoundRef.current.stopAsync();
@@ -269,12 +281,13 @@ export default function CustomGame() {
         }
     }, []);
 
+
     useEffect(() => {
         const loadSounds = async () => {
             await Audio.setAudioModeAsync({
             playsInSilentModeIOS: true,
             staysActiveInBackground: false,
-            playThroughEarpieceAndroid: true,
+            playThroughEarpieceAndroid: false,
             });
 
             const moveSound = new Audio.Sound();

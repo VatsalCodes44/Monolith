@@ -84,6 +84,19 @@ export class CustomGame extends Game {
                                     skr: {
                                         increment: totalStake
                                     },
+                                    skrUsed: {
+                                        increment: this.skr
+                                    }
+                                }
+                            })
+                            await tx.player.update({
+                                where: {
+                                    publicKey: this.player1Pubkey,
+                                },
+                                data: {
+                                    skrUsed: {
+                                        increment: this.skr
+                                    }
                                 }
                             })
                         }

@@ -13,6 +13,7 @@ import { jwtStore } from "@/src/stores/jwt";
 import { GET_BALANCE_TYPE_TS } from "@/src/config/serverInputs";
 import { gameBalance } from "@/src/stores/gameBalance";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { useFocusEffect } from "expo-router";
 
 const CYBER = {
   bg: "#02010A",
@@ -90,9 +91,9 @@ export default function LeaderboardProfile() {
     }
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(() => {
     fetchData()
-  }, [publicKey, jwt])
+  })
 
   const totalGames = profile.wins + profile.losses + profile.draws;
   const winPct  = totalGames > 0 ? Math.round((profile.wins   / totalGames) * 100) : 0;

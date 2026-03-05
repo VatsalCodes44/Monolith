@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { GradientButton } from './GradientButton'
 import { Wallet } from '@/src/hooks/useWallet'
-import axios from 'axios'
+import axios, { AxiosResponse } from 'axios'
 import { REST_URL } from '@/src/config/config'
 export function WalletConnect({
     wallet,
@@ -34,11 +34,20 @@ export function WalletConnect({
 
                         const signature = await wallet.signMessage(nonce, pubKey);
 
-                        const verifyRes = await axios.post(`${REST_URL}/verifyLogin`, {
-                            publicKey: pubKey,
-                            signature,
-                            nonce,
-                        });
+                        let verifyRes: AxiosResponse<any, any, {}> | null = null;
+                        for (let i = 0; i < 3; i++) {
+                            try {
+                                verifyRes = await axios.post(`${REST_URL}/verifyLogin`, {
+                                    publicKey: pubKey,
+                                    signature,
+                                    nonce,
+                                });
+                                if (verifyRes?.status === 200) break;
+                            } catch (e) {
+                                if (i < 2) await new Promise(r => setTimeout(r, 500));
+                            }
+                        }
+                        if (!verifyRes) throw new Error("verifyLogin failed after 3 attempts");
                         setJwtLogin(false);
                         setJwt(verifyRes.data.token);
                         setJwtLogin(true);

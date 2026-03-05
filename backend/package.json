@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "android": "expo run:android",
-    "ios": "expo run:ios"
+    "build": "npx tsc -b",
+    "start": "node dist/index.js",
+    "db:generate": "npx prisma generate",
+    "db:migrate": "npx prisma migrate dev --name init"
   },
   "keywords": [],
   "author": "",
@@ -21,8 +22,8 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/ws": "^8.18.1",
     "bs58": "^6.0.0",
+    "chess.js": "^1.4.0",
     "dotenv": "^17.3.1",
-    "expo": "~54.0.33",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.18.0",
