@@ -130,3 +130,24 @@ export const SEPCTATE_GAME = z.object({
         gameId: z.string(),
     })
 })
+
+export interface PlayerProfile {
+  wallet: string
+  rank: number
+  rating: number
+  peak: number
+  games: number
+  wins: number
+  draws: number
+  losses: number
+  solWon: string
+  solLost: string
+  skrUsed: string
+}
+
+export interface LeaderboardPlayer {
+  rank: number
+  wallet: string
+  rating: number
+  wins: number
+}

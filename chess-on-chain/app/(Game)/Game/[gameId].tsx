@@ -210,7 +210,6 @@ export default function Game() {
     const connect = useCallback(() => {
         if (socket.current?.readyState === WebSocket.CONNECTING ||
             socket.current?.readyState === WebSocket.OPEN) {
-            console.log("Already connecting/connected, skipping");
             return;
         }
         if (!jwt || !sol) {
@@ -220,16 +219,13 @@ export default function Game() {
         const ws = new WebSocket(WS_URL)
 
         ws.onopen = () => {
-            console.log("gameIdRef.current:", gameIdRef.current)
             if (!jwt || !sol) {
-                console.log("here1")
                 ws.close();
                 return;
             }
             socket.current = ws
             setConnected(true)
             if (gameIdRef.current) {
-                console.log("here2")
                 const payload: Re_JOIN_GAME_TYPE_TS = {
                     type: RE_JOIN_GAME,
                     payload: {
@@ -242,7 +238,6 @@ export default function Game() {
                 ws.send(JSON.stringify(payload))
             } 
             else {
-                console.log("here3")
                 const payload: INIT_GAME_TYPE_TS = {
                     type: INIT_GAME,
                     payload: {
@@ -258,11 +253,9 @@ export default function Game() {
 
         ws.onclose = () => {
             if (gameOverRef.current || !isMountedRef.current) {
-                console.log("here4")
                 return;
             };
             if (reconnectTimeoutRef.current) return;
-            console.log("WebSocket closed")
             socket.current = null
             setConnected(false)
             reconnectTimeoutRef.current = setTimeout(() => {

@@ -12,8 +12,6 @@ export function useFetchBalance(
     const setLamports = gameBalance(s => s.setLamports)
     const setSkr = gameBalance(s => s.setSkr)
     return useCallback(async () => {
-        console.log("🔥 fetchBalance called");
-        console.log(publicKey, "2222222222222222", jwt)
         if (!publicKey || !jwt) return;
         try {
             const payload: GET_BALANCE_TYPE_TS = {
@@ -23,10 +21,8 @@ export function useFetchBalance(
                 headers: { Authorization: `Bearer ${jwt}` },
             });
             const data = res.data;
-            console.log("RAW DATA:", data.lamports, "-----------", data.skr);
             setLamports(Number(data.lamports));
             setSkr(Number(data.skr));
-            console.log("STORE STATE:", gameBalance.getState().lamports);
         } catch (e) {
             console.log(e);
         }

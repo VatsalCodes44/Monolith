@@ -47,7 +47,6 @@ export class Game {
 
         if (customGame) return;
 
-        console.log(gameId)
 
         this.player1?.send(JSON.stringify({
             type: INIT_GAME,
@@ -141,7 +140,6 @@ export class Game {
             timer2: this.timer2,
             history: this.board.history({ verbose: true })
         };
-        console.log(payload)
 
         // check if the game is over
         if (this.board.isGameOver()) {
@@ -274,7 +272,6 @@ export class Game {
                         })
 
                         if (result.count == 0) {
-                            console.log("Game already settled or not in progress");
                             return;
                         }
 
@@ -303,6 +300,27 @@ export class Game {
                                     ...(this.network === "MAINNET" ? { mainnetSolWon: { increment: payout } } : { devnetSolWon: { increment: payout } }),
                                 }
                             })
+
+                            if (player.peakDevnetRating < player.devnetRating){
+                                await tx.player.update({
+                                    where: {
+                                        publicKey: this.player1Pubkey
+                                    },
+                                    data: {
+                                        peakDevnetRating: player.devnetRating
+                                    }
+                                })
+                            }
+                            if (player.peakMainnetRating < player.mainnetRating){
+                                await tx.player.update({
+                                    where: {
+                                        publicKey: this.player1Pubkey
+                                    },
+                                    data: {
+                                        peakMainnetRating: player.mainnetRating
+                                    }
+                                })
+                            }
 
                             
 

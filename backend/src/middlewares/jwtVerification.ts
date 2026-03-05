@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 export async function jwtVerification(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
 
-    console.log(authHeader)
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.status(401).json({ error: "Missing token" });
@@ -14,8 +13,6 @@ export async function jwtVerification(req: Request, res: Response, next: NextFun
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET!);
-        console.log("----------------------------------------");
-        console.log(decoded);
         (req as any).user = decoded;
         next();
     } catch {

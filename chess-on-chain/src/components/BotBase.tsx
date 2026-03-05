@@ -141,7 +141,7 @@ export function BotBase({
 
                 <View style={{ justifyContent: "center", alignItems: "center" }}>
                     <View style={{ height: 60, marginVertical: 4, width: "100%" }}>
-                        <MoveHistory gameState={gameState} />
+                        <MoveHistory moves={gameState.moves} />
                     </View>
                     <BotBoard
                         spectator={spectator}

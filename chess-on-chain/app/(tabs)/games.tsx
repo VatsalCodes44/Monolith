@@ -57,8 +57,6 @@ export default function Games() {
         jwt: string | null,
         isDevnet: boolean
     ) => {
-        console.log("🔥 fetchBalance called");
-        console.log(publicKey, "2222222222222222", jwt)
         if (!publicKey || !jwt) return;
         try {
             const payload: GET_BALANCE_TYPE_TS = {
@@ -68,10 +66,8 @@ export default function Games() {
                 headers: { Authorization: `Bearer ${jwt}` },
             });
             const data = res.data;
-            console.log("RAW DATA:", data.lamports, "-----------", data.skr);
             setLamports(Number(data.lamports));
             setSkr(Number(data.skr));
-            console.log("STORE STATE:", gameBalance.getState().lamports);
         } catch (e) {
             console.log(e);
         }
@@ -83,7 +79,6 @@ export default function Games() {
         const res = await axios.post(`${REST_URL}/getGames`, {}, {
             headers: { Authorization: `Bearer ${jwt}` },
         })
-        console.log(res.data)
         setGames(res.data.games)
         setIsRefreshing(false);
     }, [jwt, publicKey])

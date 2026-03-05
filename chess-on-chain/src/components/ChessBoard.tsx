@@ -64,12 +64,6 @@ export function ChessBoard(
   }, [gameState.from]);
 
   const onPress = (piece: Piece, rowIdx: number, colIdx: number) => {
-     console.log("onPress:", {
-        isGameOver: gameState.gameover.isGameOver,
-        gameStarted,
-        gameId,
-        jwt: !!jwt
-    })
     if (spectator) return;
     if (gameState.gameover.isGameOver || !gameStarted || !gameId || !jwt) return;
     if (gameState.chess.turn() != gameState.color) return;

@@ -4,19 +4,19 @@ import { Move } from 'chess.js'
 import { Piece } from './Piece'   // 👈 using your real pieces
 import { GAME_STATE } from '../config/game'
 
-export function MoveHistory({ gameState }: { gameState: GAME_STATE }) {
+export function MoveHistory({ moves }: { moves: Move[] }) {
   const flatListRef = useRef<FlatList>(null)
 
   useEffect(() => {
-    if (gameState.moves.length > 0) {
+    if (moves.length > 0) {
       flatListRef.current?.scrollToEnd({ animated: true })
     }
-  }, [gameState.moves])
+  }, [moves])
 
   return (
     <View>
       <FlatList
-        data={gameState.moves}
+        data={moves}
         ref={flatListRef}
         horizontal
         showsHorizontalScrollIndicator={false}

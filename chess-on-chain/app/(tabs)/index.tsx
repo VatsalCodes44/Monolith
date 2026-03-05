@@ -67,8 +67,6 @@ export default function Index() {
         jwt: string | null,
         isDevnet: boolean
     ) => {
-        console.log("🔥 fetchBalance called");
-        console.log(publicKey, "2222222222222222", jwt)
         if (!publicKey || !jwt) return;
         try {
             const payload: GET_BALANCE_TYPE_TS = {
@@ -78,10 +76,8 @@ export default function Index() {
                 headers: { Authorization: `Bearer ${jwt}` },
             });
             const data = res.data;
-            console.log("RAW DATA:", data.lamports, "-----------", data.skr);
             setLamports(Number(data.lamports));
             setSkr(Number(data.skr));
-            console.log("STORE STATE:", gameBalance.getState().lamports);
         } catch (e) {
             console.log(e);
         }
@@ -194,7 +190,6 @@ export default function Index() {
                                 {/* CTA Button */}
                                 <GradientButton
                                 onPress={async () => {
-                                    console.log("hello")
                                     if (!wallet.publicKey || !jwt) return;
                                     setSol(option.amount)
                                     router.push({
@@ -394,5 +389,4 @@ const styles = StyleSheet.create({
         fontSize: 12,
         letterSpacing: 1,
     },
-
 })

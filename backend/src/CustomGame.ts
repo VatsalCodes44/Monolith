@@ -58,6 +58,19 @@ export class CustomGame extends Game {
                                     skr: {
                                         increment: totalStake
                                     },
+                                    skrUsed: {
+                                        increment: this.skr
+                                    }
+                                }
+                            })
+                            await tx.player.update({
+                                where: {
+                                    publicKey: this.player2Pubkey,
+                                },
+                                data: {
+                                    skrUsed: {
+                                        increment: this.skr
+                                    }
                                 }
                             })
                         }
@@ -70,7 +83,7 @@ export class CustomGame extends Game {
                                 data: {
                                     skr: {
                                         increment: totalStake
-                                    }
+                                    },
                                 }
                             })
                         }
@@ -149,7 +162,6 @@ export class CustomGame extends Game {
     // and the timer starts from that moment, to avoid this we will call the start game when 
     // the second player joins the game.
     public startGame() {
-        console.log("startGame — started:", this.started, "p1:", !!this.player1, "p2:", !!this.player2)
         if (this.started) return;
         if (this.player1 == null || this.player2 == null) return;
         this.started = true;

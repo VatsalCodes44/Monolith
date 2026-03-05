@@ -43,7 +43,6 @@ export function WalletConnect({
                         setJwt(verifyRes.data.token);
                         setJwtLogin(true);
                         await fetchBalance(pubKey, verifyRes.data.token, wallet.isDevnet);
-                        console.log("----------------------------------")
                         console.log(verifyRes.data.token)
                     }
                     else {

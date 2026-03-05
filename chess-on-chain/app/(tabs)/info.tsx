@@ -84,7 +84,6 @@ export default function App() {
 
         try {
 
-            console.log("Signature:", signature);
 
             await axios.post(
                 `${REST_URL}/deposit`,
@@ -128,7 +127,6 @@ export default function App() {
                 }
             );
             const data = res.data;
-            console.log(data)
             await fetchBalance(wallet.publicKey, jwt, isDevnet);
         }
         catch (e) {

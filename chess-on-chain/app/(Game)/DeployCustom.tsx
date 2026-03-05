@@ -45,8 +45,6 @@ export default function DeployCustom() {
         jwt: string | null,
         isDevnet: boolean
     ) => {
-        console.log("🔥 fetchBalance called");
-        console.log(publicKey, "2222222222222222", jwt)
         if (!publicKey || !jwt) return;
         try {
             const payload: GET_BALANCE_TYPE_TS = {
@@ -56,12 +54,9 @@ export default function DeployCustom() {
                 headers: { Authorization: `Bearer ${jwt}` },
             });
             const data = res.data;
-            console.log("RAW DATA:", data.lamports, "-----------", data.skr);
             setLamports(Number(data.lamports));
             setSkr(Number(data.skr));
-            console.log("STORE STATE:", gameBalance.getState().lamports);
-        } catch (e) {
-            console.log(e);
+        } catch {
         }
     }, []);
 
@@ -90,6 +85,7 @@ export default function DeployCustom() {
         if (res.status == 200) {
             setGameId(res.data.payload.gameId);
             setCustomState("DEPLOYED");
+            fetchBalance(publicKey, jwt, isDevnet)
         }
         else {
             setCustomState("ERROR IN DEPLOYING");

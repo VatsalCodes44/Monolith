@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import { Message } from '@/app/(Game)/Game'
-
+import { Message } from '../config/game';
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated"
 export function LastMessage({ lastMessage, color, width }: { lastMessage: Message, color: "w" | "b", width: number }) {
     const [visible, setVisible] = useState(true);
 
@@ -16,7 +16,10 @@ export function LastMessage({ lastMessage, color, width }: { lastMessage: Messag
         }
     }, [lastMessage])
     return (
-        <View style={{
+        <Animated.View 
+        entering={FadeInUp.duration(200).delay(50).springify()}
+        exiting={FadeInDown.duration(200).delay(50).springify()}
+        style={{
             justifyContent: color == lastMessage.from ? "flex-end" : "flex-start",
             borderRadius: 100,
             flexDirection: "row",
@@ -39,7 +42,7 @@ export function LastMessage({ lastMessage, color, width }: { lastMessage: Messag
                 }}>
                 {lastMessage.message}
             </Text>
-        </View>
+        </Animated.View>
     )
 }
 

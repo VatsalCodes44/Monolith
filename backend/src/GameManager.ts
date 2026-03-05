@@ -52,7 +52,6 @@ export class GameManager {
         socket.on("message", async (data) => {
             try {
                 const message = JSON.parse(data.toString());
-                console.log(message)
 
                 // only custom games can be spectated
                 if (message.type == SPECTATE) {
@@ -124,15 +123,6 @@ export class GameManager {
                     }
                     const { payload } = result.data;
                     const { gameId, network, sol, jwt } = payload;
-
-                    // -------------------------------------
-                    const key = this.getGameKey(network, sol);
-                    console.log("KEY:", key);
-                    console.log("ALL KEYS IN MAP:", [...this.games.keys()])
-                    console.log("GAMES IN THIS KEY:", [...(this.games.get(key)?.keys() ?? [])])
-                    const abc = this.games.get(key)?.get(gameId);
-                    console.log("GAME FOUND:", abc)
-                    // -------------------------------------
                     
                     let publicKey: string;
                     try {
@@ -218,7 +208,6 @@ export class GameManager {
                 }
 
                 if (message.type === JOIN_CUSTOM_GAME) {
-                    console.log(JOIN_CUSTOM_GAME)
                     const result = JOIN_CUSTOM_GAME_TYPE.safeParse(message);
                     if (!result.success) {
                         return;
@@ -254,7 +243,6 @@ export class GameManager {
 
                     if ( gameExists ) {
                         if (gameExists.started) {
-                            console.log("h")
                             if (fetchGame.player1PublicKey == publicKey) {
                                 gameExists.player1 = socket;
                                 socket.send(JSON.stringify({

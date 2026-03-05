@@ -104,7 +104,6 @@ export function useWallet(): Wallet {
 
   const sendSOL = useCallback(
     async (amountSOL: number) => {
-      console.log("Before transact");
       if (!publicKey) throw new Error("Wallet not connected");
 
       setSending(true);
@@ -178,22 +177,32 @@ export function useWallet(): Wallet {
           ASSOCIATED_TOKEN_PROGRAM_ID
         );
 
-        const createRecipientATA = createAssociatedTokenAccountInstruction(
-          feePayer, // payer
-          recipientATA, // associated token account address
-          toPublicKey, // owner
-          new PublicKey(seekerMint), // mint
-          TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
-        );
+        const recipientAccount = await connection.getAccountInfo(recipientATA);
 
-        const transferInstruction = createTransferInstruction(
-          feePayerATA, // source
-          recipientATA, // destination
-          new PublicKey(publicKey), // owner
-          BigInt(Math.round(amountSKR * 1_000_000)), // amount
-          [], // multiSigners
-          TOKEN_PROGRAM_ID // programId
+        const instructions = [];
+
+        if (!recipientAccount) {
+          instructions.push(
+            createAssociatedTokenAccountInstruction(
+              feePayer,
+              recipientATA,
+              toPublicKey,
+              new PublicKey(seekerMint),
+              TOKEN_PROGRAM_ID,
+              ASSOCIATED_TOKEN_PROGRAM_ID
+            )
+          );
+        }
+
+        instructions.push(
+          createTransferInstruction(
+            feePayerATA,
+            recipientATA,
+            new PublicKey(publicKey),
+            BigInt(Math.round(amountSKR * 1_000_000)),
+            [],
+            TOKEN_PROGRAM_ID
+          )
         );
 
         const transferBlockhash = await connection.getLatestBlockhash();
@@ -202,7 +211,7 @@ export function useWallet(): Wallet {
           feePayer: feePayer,
           blockhash: transferBlockhash.blockhash,
           lastValidBlockHeight: transferBlockhash.lastValidBlockHeight
-        }).add(createRecipientATA).add(transferInstruction);
+        }).add(...instructions);
 
         // Step 3: Send to Phantom for signing + submission
         const txSignature = await transact(

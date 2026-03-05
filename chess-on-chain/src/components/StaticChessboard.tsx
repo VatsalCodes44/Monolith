@@ -3,6 +3,7 @@ import React from 'react'
 import { Chess, Color, PieceSymbol, Square } from 'chess.js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Piece } from './Piece';
+import Animated, { ZoomIn, ZoomOut } from 'react-native-reanimated';
 
 type Piece = ({
   square: Square;
@@ -24,7 +25,10 @@ export function StaticChessBoard(
   
 
   return (
-    <View>
+    <Animated.View
+    entering={ZoomIn.duration(200).delay(50).springify()} 
+    exiting={ZoomOut.duration(200).delay(50).springify()} 
+    >
       <View style={{ position: 'relative' }}>
         <View style={{
           width: boardSize,
@@ -76,7 +80,7 @@ export function StaticChessBoard(
           </LinearGradient>
         </View>
       </View>
-    </View>
+    </Animated.View>
   )
 }
 

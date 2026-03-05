@@ -11,8 +11,8 @@ import { login, deposit, verifyLogin, INIT_CUSTOM_GAME_TYPE, withdraw } from "./
 import { jwtVerification } from "./middlewares/jwtVerification.js";
 import { CUSTOM_CREATED, INSUFFICIENT_FUNDS } from "./Messages.js";
 import bs58 from "bs58";
-import { Transaction, SystemProgram, Keypair, PublicKey, Connection, clusterApiUrl, sendAndConfirmTransaction } from "@solana/web3.js";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, createTransferInstruction, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { Transaction, SystemProgram, Keypair, PublicKey, Connection, clusterApiUrl, sendAndConfirmTransaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createTransferInstruction, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 const app = express();
 const PORT = 8080;
 const server = http.createServer(app);
@@ -23,6 +23,20 @@ const loginHandler = new Map();
 const connection = new Connection((process.env.MAINNET_RPC_URL || clusterApiUrl("mainnet-beta")), "confirmed");
 const keyPair = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY));
 const SEEKER_MINT = new PublicKey("SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3");
+const leaderBoard = [
+    { rank: 1, wallet: "9x71BBUgeimK2dNma2bZM4ooPhNqnNFiuNzDCB7VtoEr", rating: 1620, wins: 210 },
+    { rank: 2, wallet: "FjV88UW4FSqcDFw9XcuHD7VJW6M9Gq3b7KaruXyc7bvi", rating: 1580, wins: 198 },
+    { rank: 3, wallet: "HaLdUZkgSWGRXiW93cQVDJuQKGKUYELxc58uytEkRygs", rating: 1500, wins: 176 },
+    { rank: 4, wallet: "HaLdUZkgSWGRXiW93cQVDJuQKGKUYELxc58uytEkRygs", rating: 1450, wins: 160 },
+];
+setInterval(() => {
+    for (const key of loginHandler.keys()) {
+        const obj = loginHandler.get(key);
+        if (obj && Date.now() - obj.createdAt >= 30000) {
+            loginHandler.delete(key);
+        }
+    }
+}, 10000);
 app.use(express.json());
 const wss = new WebSocketServer({ server }, () => {
 });
@@ -273,11 +287,7 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
             try {
                 const feePayerATA = getAssociatedTokenAddressSync(SEEKER_MINT, keyPair.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
                 const recipientATA = getAssociatedTokenAddressSync(SEEKER_MINT, new PublicKey(userPublicKey), false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-                const createRecipientATA = createAssociatedTokenAccountInstruction(keyPair.publicKey, // payer
-                recipientATA, // associated token account address
-                new PublicKey(userPublicKey), // owner
-                SEEKER_MINT, // mint
-                TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+                const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(connection, keyPair, SEEKER_MINT, new PublicKey(userPublicKey));
                 const transferInstruction = createTransferInstruction(feePayerATA, recipientATA, keyPair.publicKey, amount, // amount
                 [], // multiSigners
                 TOKEN_PROGRAM_ID // programId
@@ -287,7 +297,7 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
                     feePayer: keyPair.publicKey,
                     blockhash: transferBlockhash.blockhash,
                     lastValidBlockHeight: transferBlockhash.lastValidBlockHeight
-                }).add(createRecipientATA).add(transferInstruction);
+                }).add(transferInstruction);
                 signature = await sendAndConfirmTransaction(connection, transferTransaction, [keyPair]);
             }
             catch (e) {
@@ -303,7 +313,7 @@ app.post("/withdraw", jwtVerification, async (req, res) => {
                         }
                     }
                 });
-                res.status(400).send("Insufficient Funds");
+                res.status(400).send("failed");
                 return;
             }
             if (signature == "")
@@ -347,7 +357,10 @@ app.post("/login", async (req, res) => {
         return;
     }
     const nonce = `${Math.floor(Math.random() * 10000000000)}`;
-    loginHandler.set(publicKey, nonce);
+    loginHandler.set(publicKey, {
+        nonce,
+        createdAt: Date.now(),
+    });
     res.status(200).json({ nonce: `${message}${nonce}` });
 });
 app.post("/verifyLogin", async (req, res) => {
@@ -357,7 +370,7 @@ app.post("/verifyLogin", async (req, res) => {
     }
     const { publicKey, signature, nonce } = parsed.data;
     const storedNonce = loginHandler.get(publicKey);
-    if (!storedNonce || `${message}${storedNonce}` !== nonce) {
+    if (!storedNonce || `${message}${storedNonce.nonce}` !== nonce) {
         return res.status(400).json({ error: "Invalid nonce" });
     }
     try {
@@ -461,6 +474,64 @@ app.post("/deployCustom", jwtVerification, async (req, res) => {
         }
     });
     return;
+});
+app.post("/stats", jwtVerification, async (req, res) => {
+    const userPublicKey = req.user.publicKey;
+    const user = await prisma.player.findUnique({
+        where: {
+            publicKey: userPublicKey
+        }
+    });
+    if (!user) {
+        res.status(404).send("user not found");
+        return;
+    }
+    let devnetRank = await prisma.player.count({
+        where: {
+            devnetRating: {
+                gt: user.devnetRating
+            }
+        }
+    });
+    let mainnetRank = await prisma.player.count({
+        where: {
+            mainnetRating: {
+                gt: user.mainnetRating
+            }
+        }
+    });
+    const mainnetProfile = {
+        wallet: user.publicKey,
+        rank: mainnetRank == 0 ? 10000 : mainnetRank,
+        rating: user.mainnetRating,
+        peak: user.peakMainnetRating,
+        games: user.mainnetDraw + user.mainnetLoss + user.mainnetWins,
+        wins: user.mainnetWins,
+        draws: user.mainnetDraw,
+        losses: user.mainnetLoss,
+        solWon: (Number(user.mainnetSolWon) / LAMPORTS_PER_SOL).toFixed(2).toString(),
+        solLost: (Number(user.mainnetSolLost) / LAMPORTS_PER_SOL).toFixed(2).toString(),
+        skrUsed: (Number(user.skrUsed) / 1_000_000).toFixed(2).toString(),
+    };
+    const devnetProfile = {
+        wallet: user.publicKey,
+        rank: devnetRank == 0 ? 10000 : devnetRank,
+        rating: user.devnetRating,
+        peak: user.peakDevnetRating,
+        games: user.devnetDraw + user.devnetLoss + user.devnetWins,
+        wins: user.devnetWins,
+        draws: user.devnetDraw,
+        losses: user.devnetLoss,
+        solWon: (Number(user.devnetSolWon) / LAMPORTS_PER_SOL).toFixed(2),
+        solLost: (Number(user.devnetSolLost) / LAMPORTS_PER_SOL).toFixed(2),
+        skrUsed: (Number(user.skrUsed) / 1_000_000).toFixed(2),
+    };
+    res.send({
+        mainnetProfile,
+        devnetProfile,
+        mainnetLeaderBoard: leaderBoard,
+        devnetLeaderBoard: leaderBoard,
+    });
 });
 server.listen(PORT, "0.0.0.0", () => {
     console.log(`HTTP + WS Server started on port ${PORT}`);

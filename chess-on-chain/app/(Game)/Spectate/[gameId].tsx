@@ -156,7 +156,6 @@ export default function CustomGame() {
 
         if (socket.current?.readyState === WebSocket.CONNECTING ||
             socket.current?.readyState === WebSocket.OPEN) {
-            console.log("Already connecting/connected, skipping");
             return;
         }
         if (!jwt) {
@@ -183,11 +182,9 @@ export default function CustomGame() {
 
         ws.onclose = () => {
             if (gameOverRef.current || !isMountedRef.current) {
-                console.log("here4")
                 return;
             };
             if (reconnectTimeoutRef.current) return;
-            console.log("WebSocket closed")
             socket.current = null
             setConnected(false)
             reconnectTimeoutRef.current = setTimeout(() => {
@@ -358,7 +355,6 @@ export default function CustomGame() {
         jwt &&
         skr > 0 &&
         connected;
-        console.log(isReady)
 
     return (
         <View style={{ flex: 1 }}>

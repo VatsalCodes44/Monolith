@@ -14,6 +14,7 @@ import { Audio } from "expo-av"
 import { Piece } from "@/src/components/Piece"
 import { GAME_STATE } from "@/src/config/game"
 import { getBestMove } from "@/src/utils/minimax"
+import Animated, { ZoomIn, ZoomOut } from "react-native-reanimated"
 
 type PieceType = {
     square: Square
@@ -244,7 +245,10 @@ export function BotBoard({
     }
 
     return (
-        <View>
+        <Animated.View
+        entering={ZoomIn.duration(200).delay(50).springify()} 
+        exiting={ZoomOut.duration(200).delay(50).springify()} 
+        >
             <View style={{ position: "relative" }}>
                 <View style={{
                     width: boardSize,
@@ -356,7 +360,7 @@ export function BotBoard({
                     </View>
                 )}
             </View>
-        </View>
+        </Animated.View>
     )
 }
 

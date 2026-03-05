@@ -247,12 +247,45 @@ export class Game {
                         const feeFromWinnerGain = (winnerGain * 5) / 100;
                         const payout = winnerGain - feeFromWinnerGain;
                         if (winner == "w") {
-                            await tx.player.update({
+                            const player = await tx.player.update({
                                 where: {
                                     publicKey: this.player1Pubkey
                                 },
                                 data: {
-                                    ...(this.network === "MAINNET" ? { mainnetLamports: { increment: payout } } : { devnetLamports: { increment: payout } })
+                                    ...(this.network === "MAINNET" ? { mainnetLamports: { increment: payout } } : { devnetLamports: { increment: payout } }),
+                                    ...(this.network === "MAINNET" ? { mainnetRating: { increment: 20 } } : { devnetRating: { increment: 20 } }),
+                                    ...(this.network === "MAINNET" ? { mainnetWins: { increment: 1 } } : { devnetWins: { increment: 1 } }),
+                                    ...(this.network === "MAINNET" ? { mainnetSolWon: { increment: payout } } : { devnetSolWon: { increment: payout } }),
+                                }
+                            });
+                            if (player.peakDevnetRating < player.devnetRating) {
+                                await tx.player.update({
+                                    where: {
+                                        publicKey: this.player1Pubkey
+                                    },
+                                    data: {
+                                        peakDevnetRating: player.devnetRating
+                                    }
+                                });
+                            }
+                            if (player.peakMainnetRating < player.mainnetRating) {
+                                await tx.player.update({
+                                    where: {
+                                        publicKey: this.player1Pubkey
+                                    },
+                                    data: {
+                                        peakMainnetRating: player.mainnetRating
+                                    }
+                                });
+                            }
+                            await tx.player.update({
+                                where: {
+                                    publicKey: this.player2Pubkey
+                                },
+                                data: {
+                                    ...(this.network === "MAINNET" ? { mainnetRating: { decrement: 20 } } : { devnetRating: { decrement: 20 } }),
+                                    ...(this.network === "MAINNET" ? { mainnetLoss: { increment: 1 } } : { devnetLoss: { increment: 1 } }),
+                                    ...(this.network === "MAINNET" ? { mainnetSolLost: { increment: payout } } : { devnetSolLost: { increment: payout } }),
                                 }
                             });
                         }
@@ -262,7 +295,20 @@ export class Game {
                                     publicKey: this.player2Pubkey
                                 },
                                 data: {
-                                    ...(this.network === "MAINNET" ? { mainnetLamports: { increment: payout } } : { devnetLamports: { increment: payout } })
+                                    ...(this.network === "MAINNET" ? { mainnetLamports: { increment: payout } } : { devnetLamports: { increment: payout } }),
+                                    ...(this.network === "MAINNET" ? { mainnetRating: { increment: 20 } } : { devnetRating: { increment: 20 } }),
+                                    ...(this.network === "MAINNET" ? { mainnetLoss: { increment: 1 } } : { devnetLoss: { increment: 1 } }),
+                                    ...(this.network === "MAINNET" ? { mainnetSolLost: { increment: payout } } : { devnetSolLost: { increment: payout } }),
+                                }
+                            });
+                            await tx.player.update({
+                                where: {
+                                    publicKey: this.player1Pubkey
+                                },
+                                data: {
+                                    ...(this.network === "MAINNET" ? { mainnetRating: { decrement: 20 } } : { devnetRating: { decrement: 20 } }),
+                                    ...(this.network === "MAINNET" ? { mainnetLoss: { increment: 1 } } : { devnetLoss: { increment: 1 } }),
+                                    ...(this.network === "MAINNET" ? { mainnetSolLost: { increment: payout } } : { devnetSolLost: { increment: payout } }),
                                 }
                             });
                         }
@@ -306,7 +352,9 @@ export class Game {
                                 publicKey: this.player1Pubkey
                             },
                             data: {
-                                ...(this.network === "MAINNET" ? { mainnetLamports: { increment: refund } } : { devnetLamports: { increment: refund } })
+                                ...(this.network === "MAINNET" ? { mainnetLamports: { increment: refund } } : { devnetLamports: { increment: refund } }),
+                                ...(this.network === "MAINNET" ? { mainnetDraw: { increment: 1 } } : { devnetDraw: { increment: 1 } }),
+                                ...(this.network === "MAINNET" ? { mainnetSolLost: { increment: gameFees } } : { devnetSolLost: { increment: gameFees } }),
                             }
                         });
                         await tx.player.update({

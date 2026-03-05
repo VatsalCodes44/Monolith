@@ -46,6 +46,19 @@ export class CustomGame extends Game {
                                 data: {
                                     skr: {
                                         increment: totalStake
+                                    },
+                                    skrUsed: {
+                                        increment: this.skr
+                                    }
+                                }
+                            });
+                            await tx.player.update({
+                                where: {
+                                    publicKey: this.player2Pubkey,
+                                },
+                                data: {
+                                    skrUsed: {
+                                        increment: this.skr
                                     }
                                 }
                             });
@@ -58,7 +71,7 @@ export class CustomGame extends Game {
                                 data: {
                                     skr: {
                                         increment: totalStake
-                                    }
+                                    },
                                 }
                             });
                         }

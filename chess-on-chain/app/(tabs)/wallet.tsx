@@ -85,16 +85,13 @@ export default function Wallet() {
         const parsedAmount = parseFloat(amount);
 
         if (!parsedAmount || isNaN(parsedAmount) || parsedAmount <= 0) {
-        console.log("Invalid amount");
         return;
         }
 
         try {
-            console.log("Calling sendSOL...");
             const signature = await wallet.sendSOL(parsedAmount);
             if (!signature) return;
 
-            console.log("Signature:", signature);
 
             await axios.post(
                 `${REST_URL}/deposit`,
@@ -139,7 +136,6 @@ export default function Wallet() {
                 }
             );
             const data = res.data;
-            console.log(data)
             await fetchBalance(wallet.publicKey, jwt, isDevnet);
         }
         catch (e) {
@@ -157,7 +153,6 @@ export default function Wallet() {
         const parsedAmount = parseFloat(amount);
 
         if (!parsedAmount || isNaN(parsedAmount) || parsedAmount <= 0) {
-            console.log("Invalid amount");
             return;
         }
 
@@ -186,10 +181,7 @@ export default function Wallet() {
     }
 
     const handleDepositWithdraw = async () => {
-        console.log(asset)
-        console.log(mode)
         if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-            console.log("Invalid amount");
             return;
         }
         if (mode == "DEPOSIT") {

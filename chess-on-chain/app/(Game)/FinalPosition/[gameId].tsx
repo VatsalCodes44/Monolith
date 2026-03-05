@@ -14,7 +14,6 @@ export default function SpectateGame() {
     const game = games.find(g => g.id == gameId)
     const publicKey = useWalletStore(s => s.publicKey);
     const color = game && publicKey && game.player1PublicKey == publicKey ? "w" : "b";
-    console.log(game)
     if (!game || !publicKey) {
         return <Redirect href={"/games"} />
     }

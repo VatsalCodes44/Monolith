@@ -280,7 +280,6 @@ export default function CustomGame() {
 
         if (socket.current?.readyState === WebSocket.CONNECTING ||
             socket.current?.readyState === WebSocket.OPEN) {
-            console.log("Already connecting/connected, skipping");
             return;
         }
         if (!jwt) {
@@ -297,7 +296,6 @@ export default function CustomGame() {
             socket.current = ws
             setConnected(true)
             if (isRejoin && gameIdRef.current) {
-                console.log("here2")
                 const payload: Re_JOIN_CUSTOM_GAME_TYPE_TS = {
                     type: RE_JOIN_CUSTOM_GAME,
                     payload: {
@@ -307,9 +305,7 @@ export default function CustomGame() {
                 }
                 ws.send(JSON.stringify(payload))
             } else {
-                console.log("here3")
                 if (!gameIdRef.current) {
-                    console.log("here5")
                     isMountedRef.current = false
                     ws.close();
                     router.replace("/")
@@ -329,11 +325,9 @@ export default function CustomGame() {
 
         ws.onclose = () => {
             if (gameOverRef.current || !isMountedRef.current) {
-                console.log("here4")
                 return;
             };
             if (reconnectTimeoutRef.current) return;
-            console.log("WebSocket closed")
             socket.current = null
             setConnected(false)
             reconnectTimeoutRef.current = setTimeout(() => {
@@ -412,7 +406,6 @@ export default function CustomGame() {
         jwt &&
         skr > 0 &&
         connected;
-        console.log(isReady)
 
     return (
         <View style={{ flex: 1 }}>

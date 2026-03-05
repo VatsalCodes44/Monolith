@@ -10,7 +10,6 @@ export const useWalletStore = create<Wallet>((set) => ({
     isDevnet: true,
     publicKey: null,
     setIsDevnet: (isDevnet) => {
-        console.trace("setIsDevnet called with:", isDevnet)
         set({isDevnet})
     },
     setPublicKey: (publicKey) => set({publicKey})
