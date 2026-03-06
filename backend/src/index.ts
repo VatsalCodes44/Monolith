@@ -13,7 +13,7 @@ import { CUSTOM_CREATED, INSUFFICIENT_FUNDS } from "./Messages.js";
 import bs58 from "bs58";
 import { Transaction, SystemProgram, Keypair, PublicKey, Connection, clusterApiUrl, sendAndConfirmTransaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, createTransferInstruction, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token"
-
+import cors from "cors"
 const app = express();
 const PORT = 8080;
 const server = http.createServer(app);
@@ -49,7 +49,6 @@ setInterval(() => {
 app.use(express.json());
 app.use(express.static('public')); 
 
-
 const wss = new WebSocketServer({ server }, () => {
 });
 
@@ -61,6 +60,7 @@ wss.on('connection', function connection(socket) {
         gameManager.removeUser(socket);
     })
 });
+
 
 app.get("/", (req, res) => {
     res.json({ message: "Hello World" });
@@ -640,6 +640,15 @@ app.post("/stats", jwtVerification, async (req,res) => {
         devnetLeaderBoard: leaderBoard,
     })
 })
+
+app.use(cors())
+
+app.get('/.well-known/wallets.json', (req, res) => {
+    res.json({
+        label: "Chess On Chain",
+        icon: "https://api.playchessonchain.fun/favicon.ico"
+    });
+});
 
 server.listen(PORT, "0.0.0.0", () => {
     console.log(`HTTP + WS Server started on port ${PORT}`);
