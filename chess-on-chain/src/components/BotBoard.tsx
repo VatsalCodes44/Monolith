@@ -14,6 +14,7 @@ import { Piece } from "@/src/components/Piece"
 import { GAME_STATE } from "@/src/config/game"
 import { getBestMove } from "@/src/utils/minimax"
 import Animated, { ZoomIn, ZoomOut } from "react-native-reanimated"
+import { pushNotification } from "../utils/notifications"
 
 type PieceType = {
     square: Square
@@ -229,6 +230,24 @@ export function BotBoard({
 
         if (newChess.isCheckmate()){
             setShowGameOver(true);
+            if (newChess.turn() == "b") {
+                pushNotification(
+                    "🤖 BOT",
+                    "LOSER TRYNA CHALLANGE ME, hahaha...",
+                    {
+                        type: "bot"
+                    }
+                )
+            }
+            else {
+                pushNotification(
+                    "🤖 BOT",
+                    "I will make sure next time you lose.",
+                    {
+                        type: "bot"
+                    }
+                )
+            }
         }
         else if (newChess.isGameOver()){
             setShowGameOver(true);

@@ -47,6 +47,8 @@ setInterval(() => {
 }, 10000)
 
 app.use(express.json());
+app.use(express.static('public')); 
+
 
 const wss = new WebSocketServer({ server }, () => {
 });

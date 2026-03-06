@@ -5,6 +5,7 @@ import { GradientButton } from './GradientButton'
 import { Wallet } from '@/src/hooks/useWallet'
 import axios, { AxiosResponse } from 'axios'
 import { REST_URL } from '@/src/config/config'
+import { pushNotification } from '../utils/notifications'
 export function WalletConnect({
     wallet,
     setJwt,
@@ -52,7 +53,13 @@ export function WalletConnect({
                         setJwt(verifyRes.data.token);
                         setJwtLogin(true);
                         await fetchBalance(pubKey, verifyRes.data.token, wallet.isDevnet);
-                        console.log(verifyRes.data.token)
+                        await pushNotification(
+                            "Wallet connected successfully",
+                            `publickey: ${pubKey}`,
+                            {
+                                type: "login"
+                            }
+                        )
                     }
                     else {
                         wallet.disconnect();

@@ -24,6 +24,7 @@ import GradientCard2 from '@/src/components/GradientCard2';
 import { GradientButton } from '@/src/components/GradientButton';
 import { Ionicons } from '@expo/vector-icons';
 import { GET_BALANCE_TYPE_TS } from '@/src/config/serverInputs';
+import { pushNotification } from '@/src/utils/notifications';
 
 export default function Wallet() {
     const displayFont = "Orbitron_900Black"
@@ -108,6 +109,13 @@ export default function Wallet() {
             );
 
             await fetchBalance(wallet.publicKey, jwt, isDevnet);
+            await pushNotification(
+                "Transfer Successful",
+                `${isDevnet ? "DEVNET": "MAINNET"}: +${amount} SOL`,
+                {
+                    type: "Transaction"
+                }
+            )
         } catch (e) {
             console.log(e);
         }
@@ -137,6 +145,13 @@ export default function Wallet() {
             );
             const data = res.data;
             await fetchBalance(wallet.publicKey, jwt, isDevnet);
+            await pushNotification(
+                "Transfer Successful",
+                `MAINNET: +${amount} SKR`,
+                {
+                    type: "Transaction"
+                }
+            )
         }
         catch (e) {
             console.log(e)
@@ -169,9 +184,16 @@ export default function Wallet() {
                         Authorization: `Bearer ${jwt}`,
                     },
                 }
-        );
+            );
 
-        await fetchBalance(wallet.publicKey, jwt, isDevnet);
+            await fetchBalance(wallet.publicKey, jwt, isDevnet);
+            await pushNotification(
+                "Withdraw Successful",
+                `MAINNET: +${amount} ${asset}`,
+                {
+                    type: "Transaction"
+                }
+            )
         } catch (e) {
             console.log(e);
         }
