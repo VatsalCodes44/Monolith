@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess on Chain — Monolith Hackathon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0a0f1c;
+  --cyan: #00ffcc;
+  --magenta: #ff00aa;
+  --purple: #8b5cf6;
+  --purple2: #a855f7;
+  --green: #00ff88;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --glow-cyan: 0 0 20px rgba(0,255,204,0.5), 0 0 40px rgba(0,255,204,0.2);
+  --glow-magenta: 0 0 20px rgba(255,0,170,0.5), 0 0 40px rgba(255,0,170,0.2);
+  --font-display: 'Orbitron', monospace;
+  --font-body: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --title-size: clamp(2rem, 6vw, 5rem);
+  --h2-size: clamp(1.4rem, 4vw, 3rem);
+  --h3-size: clamp(1rem, 2.5vw, 1.6rem);
+  --body-size: clamp(0.75rem, 1.4vw, 1.05rem);
+  --small-size: clamp(0.65rem, 1vw, 0.85rem);
+  --slide-padding: clamp(1.5rem, 5vw, 5rem);
+  --content-gap: clamp(0.6rem, 1.5vw, 1.5rem);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow-x: hidden; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+.slide {
+  width: 100vw; height: 100vh; height: 100dvh;
+  overflow: hidden; scroll-snap-align: start;
+  display: flex; flex-direction: column; position: relative;
+  background: var(--navy); font-family: var(--font-body); color: var(--text);
+}
+
+#particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+.grid-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background-image: linear-gradient(rgba(0,255,204,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,204,0.04) 1px, transparent 1px);
+  background-size: 60px 60px; animation: gridShift 20s linear infinite;
+}
+@keyframes gridShift { from { background-position: 0 0; } to { background-position: 60px 60px; } }
+
+.scanlines {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+}
+
+.gradient-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background: radial-gradient(ellipse at 15% 85%, rgba(139,92,246,0.2) 0%, transparent 50%), radial-gradient(ellipse at 85% 15%, rgba(0,255,204,0.12) 0%, transparent 50%), radial-gradient(ellipse at 50% 50%, rgba(255,0,170,0.06) 0%, transparent 70%), var(--navy);
+}
+
+.progress-bar {
+  position: fixed; top: 0; left: 0; height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--magenta));
+  box-shadow: var(--glow-cyan); z-index: 1000; transition: width 0.4s ease; width: 0%;
+}
+
+.nav-dots {
+  position: fixed; right: clamp(0.8rem, 2vw, 1.5rem); top: 50%;
+  transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.5rem; z-index: 1000;
+}
+.nav-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2);
+  cursor: pointer; transition: all 0.3s; border: 1px solid rgba(0,255,204,0.3);
+}
+.nav-dot.active { background: var(--cyan); box-shadow: var(--glow-cyan); transform: scale(1.4); }
+.nav-dot:hover { background: rgba(0,255,204,0.6); }
+
+.slide-num {
+  position: absolute; bottom: clamp(1rem, 2vh, 1.5rem); right: clamp(1rem, 2vw, 2rem);
+  font-family: var(--font-mono); font-size: var(--small-size); color: rgba(0,255,204,0.4); z-index: 10; letter-spacing: 0.1em;
+}
+
+/* === ANIMATIONS === */
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
+.reveal-scale { opacity: 0; transform: scale(0.85); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
+.slide.visible .reveal, .slide.visible .reveal-scale { opacity: 1; transform: none; }
+.slide.visible .reveal:nth-child(1) { transition-delay: 0.05s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: 0.15s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: 0.25s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: 0.35s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: 0.45s; }
+.slide.visible .reveal:nth-child(6) { transition-delay: 0.55s; }
+[data-delay="1"] { transition-delay: 0.1s !important; }
+[data-delay="2"] { transition-delay: 0.2s !important; }
+[data-delay="3"] { transition-delay: 0.3s !important; }
+[data-delay="4"] { transition-delay: 0.4s !important; }
+[data-delay="5"] { transition-delay: 0.5s !important; }
+[data-delay="6"] { transition-delay: 0.6s !important; }
+[data-delay="7"] { transition-delay: 0.7s !important; }
+
+/* === TYPOGRAPHY === */
+.display { font-family: var(--font-display); font-weight: 900; line-height: 1.05; letter-spacing: -0.02em; }
+.mono { font-family: var(--font-mono); }
+.cyan { color: var(--cyan); }
+.magenta { color: var(--magenta); }
+.purple { color: var(--purple2); }
+.green { color: var(--green); }
+.dim { color: var(--text-dim); }
+.glow-cyan { text-shadow: 0 0 20px rgba(0,255,204,0.8), 0 0 40px rgba(0,255,204,0.4); }
+
+.accent-bar {
+  height: 3px; width: clamp(40px, 6vw, 80px); border-radius: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--magenta)); box-shadow: var(--glow-cyan);
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 0.4em;
+  padding: 0.3em 0.8em; border-radius: 4px;
+  font-family: var(--font-mono); font-size: var(--small-size);
+  font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+}
+.badge-cyan { background: rgba(0,255,204,0.12); border: 1px solid rgba(0,255,204,0.4); color: var(--cyan); }
+.badge-purple { background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.5); color: var(--purple2); }
+.badge-magenta { background: rgba(255,0,170,0.12); border: 1px solid rgba(255,0,170,0.4); color: var(--magenta); }
+
+/* === PHONE FRAME (shared) === */
+.phone-frame {
+  border-radius: 24px; overflow: hidden;
+  border: 2px solid rgba(139,92,246,0.5);
+  box-shadow: 0 0 30px rgba(139,92,246,0.3), 0 0 60px rgba(0,255,204,0.1);
+}
+.phone-frame img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+
+/* === SPLIT LAYOUT (shared) === */
+.split { display: flex; flex-direction: row; height: 100%; }
+.split.rev { flex-direction: row-reverse; }
+.split .left {
+  flex: 1; position: relative; z-index: 5; padding: var(--slide-padding);
+  display: flex; flex-direction: column; justify-content: center; gap: var(--content-gap);
+}
+.split .right {
+  flex: 0 0 clamp(220px, 36%, 400px); position: relative; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+
+.feature-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.3rem, 0.8vh, 0.7rem); }
+.feature-list li { display: flex; align-items: center; gap: 0.7em; font-size: var(--body-size); }
+.feature-list li::before { content: '▸'; color: var(--cyan); font-size: 0.8em; }
+
+/* === SLIDE 1 — TITLE === */
+#s1 { justify-content: center; align-items: center; text-align: center; }
+#s1 .content { position: relative; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: var(--content-gap); padding: var(--slide-padding); }
+#s1 .chess-icon { font-size: clamp(3rem, 8vw, 6rem); margin-bottom: 0.3em; filter: drop-shadow(0 0 20px rgba(0,255,204,0.6)); animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+#s1 h1 { font-size: var(--title-size); }
+#s1 .subtitle { font-size: var(--h3-size); color: var(--text-dim); font-weight: 300; max-width: 600px; }
+#s1 .tagline { font-family: var(--font-mono); font-size: clamp(1rem, 2.5vw, 1.8rem); letter-spacing: 0.3em; color: var(--cyan); text-transform: uppercase; }
+#s1 .badges { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; margin-top: 0.5rem; }
+#s1 .corner-tl, #s1 .corner-tr { position: absolute; z-index: 5; top: clamp(0.8rem, 2vh, 1.5rem); font-family: var(--font-mono); font-size: var(--small-size); color: rgba(0,255,204,0.4); }
+#s1 .corner-tl { left: var(--slide-padding); }
+#s1 .corner-tr { right: var(--slide-padding); }
+
+/* === SLIDE 2 — PROBLEM === */
+#s2 .content { position: relative; z-index: 5; padding: var(--slide-padding); display: flex; flex-direction: column; justify-content: center; height: 100%; gap: var(--content-gap); }
+.problems { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.6rem, 1.5vw, 1.2rem); margin-top: 0.5rem; }
+.problem-card { padding: clamp(0.8rem, 2vw, 1.4rem); border-radius: 8px; background: rgba(255,0,170,0.06); border: 1px solid rgba(255,0,170,0.2); display: flex; flex-direction: column; gap: 0.5em; }
+.problem-card .icon { font-size: clamp(1.2rem, 2.5vw, 1.8rem); }
+.problem-card .label { font-family: var(--font-mono); font-size: var(--small-size); color: var(--magenta); text-transform: uppercase; letter-spacing: 0.08em; }
+.problem-card p { font-size: var(--body-size); color: var(--text-dim); line-height: 1.4; }
+
+/* === SLIDE 3 — SOLUTION === */
+#s3 .content { position: relative; z-index: 5; padding: var(--slide-padding); display: flex; flex-direction: column; justify-content: center; height: 100%; gap: var(--content-gap); }
+.solution-steps { display: flex; flex-direction: column; gap: clamp(0.5rem, 1.2vw, 1rem); margin-top: 0.5rem; }
+.step { display: flex; align-items: center; gap: clamp(0.8rem, 2vw, 1.5rem); padding: clamp(0.7rem, 1.5vw, 1.1rem) clamp(1rem, 2vw, 1.5rem); border-radius: 8px; background: linear-gradient(90deg, rgba(0,255,204,0.06), rgba(0,255,204,0.02)); border-left: 3px solid var(--cyan); box-shadow: -4px 0 20px rgba(0,255,204,0.1); }
+.step-num { font-family: var(--font-mono); font-size: clamp(1.2rem, 2.5vw, 2rem); color: var(--cyan); font-weight: 700; min-width: 2em; text-align: center; }
+.step-text { font-size: var(--body-size); line-height: 1.4; }
+.step-text strong { color: var(--cyan); font-weight: 600; }
+
+/* === SLIDE 4 — GAMEPLAY === */
+.stake-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.3rem; }
+.stake-pill { padding: 0.35em 0.9em; border-radius: 20px; font-family: var(--font-mono); font-size: var(--small-size); font-weight: 700; background: rgba(0,255,204,0.1); border: 1px solid rgba(0,255,204,0.4); color: var(--cyan); }
+
+/* === SLIDE 5 — CUSTOM ARENAS === */
+.perk-list { display: flex; flex-direction: column; gap: clamp(0.4rem, 1vh, 0.8rem); }
+.perk { display: flex; align-items: flex-start; gap: 0.8em; padding: clamp(0.5rem, 1vw, 0.8rem) clamp(0.8rem, 1.5vw, 1.2rem); background: rgba(0,255,204,0.04); border-radius: 6px; border: 1px solid rgba(0,255,204,0.12); }
+.perk-icon { font-size: clamp(1rem, 2vw, 1.4rem); flex-shrink: 0; }
+.perk-text { font-size: var(--body-size); line-height: 1.4; }
+.perk-text strong { color: var(--cyan); }
+
+/* === SLIDE 7 — WALLET === */
+.wallet-features { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.4rem, 1vw, 0.8rem); }
+.wallet-feat { padding: clamp(0.6rem, 1.2vw, 1rem); border-radius: 8px; text-align: center; background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2); }
+.wallet-feat .wi { font-size: clamp(1.2rem, 2vw, 1.6rem); display: block; margin-bottom: 0.3em; }
+.wallet-feat span:not(.wi) { font-size: var(--small-size); color: var(--text-dim); }
+
+/* === SLIDE 8 — RANKINGS === */
+.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(0.4rem, 1vw, 0.8rem); }
+.stat-card { padding: clamp(0.6rem, 1.2vw, 1rem); border-radius: 8px; text-align: center; background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.25); }
+.stat-val { font-family: var(--font-mono); font-size: clamp(1rem, 2vw, 1.4rem); color: var(--purple2); font-weight: 700; }
+.stat-lbl { font-size: var(--small-size); color: var(--text-dim); margin-top: 0.2em; }
+
+/* === SLIDE 9 — SOLANA === */
+#s9 .content { position: relative; z-index: 5; padding: var(--slide-padding); display: flex; flex-direction: column; justify-content: center; height: 100%; gap: var(--content-gap); max-width: 900px; margin: auto; }
+.solana-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.6rem, 1.5vw, 1.2rem); margin-top: 0.5rem; }
+.sol-card { padding: clamp(0.8rem, 2vw, 1.4rem); border-radius: 10px; background: linear-gradient(135deg, rgba(0,255,204,0.06), rgba(139,92,246,0.04)); border: 1px solid rgba(0,255,204,0.2); transition: border-color 0.3s, box-shadow 0.3s; }
+.sol-card:hover { border-color: rgba(0,255,204,0.5); box-shadow: var(--glow-cyan); }
+.sol-card .metric { font-family: var(--font-mono); font-size: clamp(1.2rem, 2.5vw, 2rem); color: var(--cyan); font-weight: 700; }
+.sol-card .desc { font-size: var(--body-size); color: var(--text-dim); margin-top: 0.3em; line-height: 1.4; }
+
+/* === SLIDE 10 — VISION === */
+#s10 { justify-content: center; align-items: center; text-align: center; }
+#s10 .content { position: relative; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: var(--content-gap); padding: var(--slide-padding); max-width: 900px; }
+.vision-items { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; margin: 0.5rem 0; }
+.vision-item { padding: 0.4em 1em; border-radius: 4px; font-size: var(--body-size); font-family: var(--font-mono); background: rgba(255,0,170,0.08); border: 1px solid rgba(255,0,170,0.25); color: var(--text-dim); }
+.final-quote { font-family: var(--font-display); font-size: clamp(0.75rem, 1.8vw, 1.2rem); color: var(--text); line-height: 1.6; padding: clamp(1rem, 2.5vw, 1.8rem) clamp(1.5rem, 3vw, 2.5rem); border-radius: 8px; max-width: 700px; background: rgba(0,255,204,0.04); border: 1px solid rgba(0,255,204,0.25); box-shadow: var(--glow-cyan); position: relative; }
+.final-quote::before { content: '"'; font-size: 4em; color: rgba(0,255,204,0.1); position: absolute; top: -0.2em; left: 0.2em; font-family: Georgia, serif; line-height: 1; }
+.cta-row { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin-top: 0.5rem; }
+.btn { padding: 0.65em 1.8em; border-radius: 6px; font-family: var(--font-mono); font-size: var(--body-size); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; text-decoration: none; border: none; transition: all 0.3s; }
+.btn-primary { background: linear-gradient(90deg, var(--cyan), var(--purple)); color: var(--navy); box-shadow: var(--glow-cyan); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(0,255,204,0.6); }
+.btn-outline { background: transparent; color: var(--cyan); border: 1px solid rgba(0,255,204,0.4); }
+.btn-outline:hover { background: rgba(0,255,204,0.08); }
+
+/* === SOLFLARE HIGHLIGHT === */
+.solflare-badge {
+  display: inline-flex; align-items: center; gap: 0.5em;
+  padding: 0.4em 1em; border-radius: 6px;
+  background: linear-gradient(135deg, rgba(255,140,0,0.12), rgba(255,90,0,0.08));
+  border: 1px solid rgba(255,140,0,0.4);
+  color: #ff8c00; font-family: var(--font-mono);
+  font-size: var(--small-size); font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  box-shadow: 0 0 12px rgba(255,140,0,0.15);
+}
+.solflare-card {
+  padding: clamp(0.8rem, 1.8vw, 1.2rem); border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255,140,0,0.06), rgba(255,90,0,0.03));
+  border: 1px solid rgba(255,140,0,0.25);
+  display: flex; gap: 1em; align-items: flex-start;
+}
+.solflare-card .sf-icon { font-size: clamp(1.5rem, 3vw, 2.2rem); flex-shrink: 0; }
+.solflare-card .sf-body { display: flex; flex-direction: column; gap: 0.3em; }
+.solflare-card .sf-title { font-family: var(--font-mono); font-size: var(--body-size); color: #ff8c00; font-weight: 700; letter-spacing: 0.05em; }
+.solflare-card .sf-desc { font-size: var(--body-size); color: var(--text-dim); line-height: 1.4; }
+.solflare-card .sf-sub { font-size: var(--small-size); color: rgba(255,140,0,0.6); font-family: var(--font-mono); }
+
+@media (max-width: 700px) {
+  .split, .split.rev { flex-direction: column; }
+  .split .right { flex: 0 0 auto; }
+  .solana-grid, .problems, .stat-grid, .wallet-features { grid-template-columns: 1fr; }
+}
+@media (max-height: 700px) {
+  :root { --slide-padding: clamp(0.8rem, 3vw, 2rem); --content-gap: clamp(0.3rem, 1vw, 0.7rem); }
+}
+@media (max-height: 600px) { .nav-dots { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+<div class="progress-bar" id="progressBar"></div>
+<nav class="nav-dots" id="navDots"></nav>
+
+<!-- ===== SLIDE 1 — TITLE ===== -->
+<section class="slide" id="s1">
+  <div class="gradient-bg"></div>
+  <div class="grid-bg"></div>
+  <div class="scanlines"></div>
+  <span class="corner-tl reveal mono" data-delay="1">MONOLITH_HACKATHON</span>
+  <span class="corner-tr reveal mono" data-delay="1">SEEKER_PHONE</span>
+  <div class="content">
+    <div class="chess-icon reveal" data-delay="1">
+      <img src="./assets/icon.png" alt="Chess on Chain" style="height:100px;width:100px;" onerror="this.style.display='none';this.parentElement.textContent='♟'">
+    </div>
+    <div class="accent-bar reveal" data-delay="2"></div>
+    <h1 class="display glow-cyan cyan reveal" data-delay="2">CHESS<br><span style="color:var(--text)">ON CHAIN</span></h1>
+    <p class="subtitle reveal" data-delay="3">Real-time competitive chess powered by Solana</p>
+    <div class="tagline reveal" data-delay="4">PLAY · STAKE · WIN</div>
+    <div class="badges reveal" data-delay="5">
+      <span class="badge badge-cyan">⬡ Solana</span>
+      <span class="badge badge-purple">📱 Seeker Phone</span>
+      <span class="badge badge-magenta">🏆 Monolith Hackathon</span>
+    </div>
+  </div>
+  <span class="slide-num mono">01 / 9</span>
+</section>
+
+<!-- ===== SLIDE 2 — PROBLEM ===== -->
+<section class="slide" id="s2">
+  <div class="gradient-bg" style="background: radial-gradient(ellipse at 80% 20%, rgba(255,0,170,0.15) 0%, transparent 50%), radial-gradient(ellipse at 20% 80%, rgba(139,92,246,0.1) 0%, transparent 50%), var(--navy);"></div>
+  <div class="grid-bg"></div><div class="scanlines"></div>
+  <div class="content" style="position:relative;z-index:5;padding:var(--slide-padding);display:flex;flex-direction:column;justify-content:center;height:100%;gap:var(--content-gap);">
+    <div class="reveal"><span class="badge badge-magenta">⚠ THE PROBLEM</span></div>
+    <div class="accent-bar reveal" style="background:linear-gradient(90deg,var(--magenta),var(--purple));"></div>
+    <h2 class="display reveal">Traditional Chess<br><span class="magenta">Platforms are Broken</span></h2>
+    <div class="problems">
+      <div class="problem-card reveal" data-delay="3"><span class="icon">💸</span><span class="label">No Incentives</span><p>Winning means nothing — no financial reward for skill</p></div>
+      <div class="problem-card reveal" data-delay="4"><span class="icon">🏦</span><span class="label">Centralized Payouts</span><p>Platforms control your funds, charge fees, delay withdrawals</p></div>
+      <div class="problem-card reveal" data-delay="5"><span class="icon">🔒</span><span class="label">No Ownership</span><p>You never truly own your winnings or in-game assets</p></div>
+      <div class="problem-card reveal" data-delay="6"><span class="icon">🌐</span><span class="label">Not Crypto-Native</span><p>Zero integration with wallets, tokens, or Web3 ecosystem</p></div>
+    </div>
+  </div>
+  <span class="slide-num mono">02 / 9</span>
+</section>
+
+<!-- ===== SLIDE 3 — SOLUTION ===== -->
+<section class="slide" id="s3">
+  <div class="gradient-bg" style="background: radial-gradient(ellipse at 20% 50%, rgba(0,255,204,0.12) 0%, transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.1) 0%, transparent 50%), var(--navy);"></div>
+  <div class="grid-bg"></div><div class="scanlines"></div>
+  <div class="content" style="position:relative;z-index:5;padding:var(--slide-padding);display:flex;flex-direction:column;justify-content:center;height:100%;gap:var(--content-gap);">
+    <div class="reveal"><span class="badge badge-cyan">✦ THE SOLUTION</span></div>
+    <div class="accent-bar reveal"></div>
+    <h2 class="display reveal">Chess on Chain<br><span class="cyan">Decentralized. Instant. Yours.</span></h2>
+    <div class="solution-steps">
+      <div class="step reveal" data-delay="3"><span class="step-num">01</span><span class="step-text"><strong>Connect</strong> your Solana wallet — no sign-up, no KYC</span></div>
+      <div class="step reveal" data-delay="4"><span class="step-num">02</span><span class="step-text"><strong>Stake SOL</strong> or SKR tokens — choose your arena tier</span></div>
+      <div class="step reveal" data-delay="5"><span class="step-num">03</span><span class="step-text"><strong>Compete</strong> in real-time chess against opponents globally</span></div>
+      <div class="step reveal" data-delay="6"><span class="step-num">04</span><span class="step-text"><strong>Win</strong> and receive instant, automatic on-chain payouts</span></div>
+    </div>
+  </div>
+  <span class="slide-num mono">03 / 9</span>
+</section>
+
+<!-- ===== SLIDE 4 — GAMEPLAY ===== -->
+<section class="slide" id="s4">
+  <div class="gradient-bg"></div><div class="grid-bg"></div><div class="scanlines"></div>
+  <div class="split">
+    <div class="left">
+      <div class="reveal"><span class="badge badge-purple">♟ GAMEPLAY</span></div>
+      <div class="accent-bar reveal"></div>
+      <h2 class="display reveal">Enter the<br><span class="purple">Arena</span></h2>
+      <p class="reveal dim" style="font-size:var(--body-size);max-width:420px;">Choose your stake, find a match instantly. Real-time chess with on-chain settlement on every move.</p>
+      <div class="stake-pills reveal" data-delay="4">
+        <span class="stake-pill">♟ PAWN — 0.01 SOL</span>
+        <span class="stake-pill">♞ KNIGHT — 0.05 SOL</span>
+        <span class="stake-pill">♛ KING — 0.1 SOL</span>
+      </div>
+      <ul class="feature-list reveal" data-delay="5">
+        <li>Instant matchmaking — seconds to find opponent</li>
+        <li>Real-time move validation on Solana</li>
+        <li>Built-in live chat during matches</li>
+        <li>Native Seeker Phone experience</li>
+      </ul>
+    </div>
+    <div class="right">
+      <div class="phone-frame reveal-scale" data-delay="2" style="width:clamp(180px,28vw,280px);max-height:min(80vh,520px);">
+        <img src="./assets/gamescreen.png" alt="Chess gameplay" onerror="this.parentElement.style.background='linear-gradient(135deg,#1a1040,#0a0f1c)';this.style.display='none';this.parentElement.innerHTML='<div style=\'padding:2rem;text-align:center;font-family:monospace;color:#8b5cf6;font-size:0.8rem;\'>♟ GAMEPLAY SCREENSHOT</div>'">
+      </div>
+    </div>
+  </div>
+  <span class="slide-num mono">04 / 9</span>
+</section>
+
+<!-- ===== SLIDE 5 — CUSTOM ARENAS ===== -->
+<section class="slide" id="s5">
+  <div class="gradient-bg" style="background: radial-gradient(ellipse at 80% 20%, rgba(0,255,204,0.12) 0%, transparent 50%), radial-gradient(ellipse at 20% 80%, rgba(139,92,246,0.1) 0%, transparent 50%), var(--navy);"></div>
+  <div class="grid-bg"></div><div class="scanlines"></div>
+  <div class="split rev">
+    <div class="left">
+      <div class="reveal"><span class="badge badge-cyan">⚡ CUSTOM ARENAS</span></div>
+      <div class="accent-bar reveal"></div>
+      <h2 class="display reveal">Your Duel.<br><span class="cyan">Your Rules.</span></h2>
+      <div class="perk-list">
+        <div class="perk reveal" data-delay="3"><span class="perk-icon">🔐</span><div class="perk-text"><strong>Private Duels</strong> — challenge any wallet address directly</div></div>
+        <div class="perk reveal" data-delay="4"><span class="perk-icon">⬡</span><div class="perk-text"><strong>SKR Token Stakes</strong> — powered by the Seeker ecosystem</div></div>
+        <div class="perk reveal" data-delay="5"><span class="perk-icon">🏆</span><div class="perk-text"><strong>0% Platform Fee</strong> — 100% of stake goes to the winner</div></div>
+        <div class="perk reveal" data-delay="6"><span class="perk-icon">⛓</span><div class="perk-text"><strong>Pure On-Chain Execution</strong> — no intermediary, ever</div></div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="phone-frame reveal-scale" data-delay="2" style="width:clamp(160px,25vw,260px);max-height:min(80vh,520px);border-color:rgba(0,255,204,0.4);box-shadow:0 0 30px rgba(0,255,204,0.2);">
+        <img src="./assets/custom.png" alt="Deploy Arena" onerror="this.parentElement.style.background='linear-gradient(135deg,#0a1a2e,#0a0f1c)';this.style.display='none';this.parentElement.innerHTML='<div style=\'padding:1.5rem;font-family:monospace;color:#00ffcc;font-size:0.7rem;line-height:2;\'>DEPLOY CUSTOM ARENA</div>'">
+      </div>
+    </div>
+  </div>
+  <span class="slide-num mono">05 / 9</span>
+</section>
+
+<!-- ===== SLIDE 6 — SOCIAL ===== -->
+<section class="slide" id="s6">
+  <div class="gradient-bg" style="background: radial-gradient(ellipse at 15% 85%, rgba(255,0,170,0.12) 0%, transparent 50%), radial-gradient(ellipse at 85% 15%, rgba(0,255,204,0.08) 0%, transparent 50%), var(--navy);"></div>
+  <div class="grid-bg"></div><div class="scanlines"></div>
+  <div class="split">
+    <div class="left">
+      <div class="reveal"><span class="badge badge-magenta">🌐 SOCIAL LAYER</span></div>
+      <div class="accent-bar reveal" style="background:linear-gradient(90deg,var(--magenta),var(--purple));"></div>
+      <h2 class="display reveal">More Than<br><span class="magenta">A Game</span></h2>
+      <p class="reveal dim" style="font-size:var(--body-size);max-width:380px;">Chess on Chain is a living ecosystem. Watch, compete, and connect with players worldwide.</p>
+      <ul class="feature-list reveal" data-delay="4">
+        <li>Spectate any live arena in real-time</li>
+        <li>Join open games with a single tap</li>
+        <li>Review final board positions</li>
+        <li>In-game live chat with opponents</li>
+        <li>Browse your full match history</li>
+      </ul>
+    </div>
+    <div class="right">
+      <div class="phone-frame reveal-scale" data-delay="2" style="width:clamp(160px,25vw,260px);max-height:min(80vh,520px);border-color:rgba(255,0,170,0.4);box-shadow:0 0 30px rgba(255,0,170,0.2);">
+        <img src="assets/games.png" alt="Live Arenas" onerror="this.parentElement.style.background='linear-gradient(135deg,#1a0020,#0a0f1c)';this.style.display='none';this.parentElement.innerHTML='<div style=\'padding:1.5rem;font-family:monospace;color:#ff00aa;font-size:0.7rem;line-height:1.8;\'>LIVE ARENAS</div>'">
+      </div>
+    </div>
+  </div>
+  <span class="slide-num mono">06 / 9</span>
+</section>
+
+<!-- ===== SLIDE 7 — WALLET ===== -->
+<section class="slide" id="s7">
+  <div class="gradient-bg" style="background: radial-gradient(ellipse at 80% 20%, rgba(0,255,136,0.12) 0%, transparent 50%), radial-gradient(ellipse at 20% 80%, rgba(0,255,204,0.08) 0%, transparent 50%), var(--navy);"></div>
+  <div class="grid-bg"></div><div class="scanlines"></div>
+  <div class="split rev">
+    <div class="left">
+      <div class="reveal"><span class="badge badge-cyan" style="color:var(--green);border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.1);">💰 TREASURY</span></div>
+      <div class="accent-bar reveal" style="background:linear-gradient(90deg,var(--green),var(--cyan));"></div>
+      <h2 class="display reveal">On-Chain<br><span class="green">Wallet</span></h2>
+      <p class="reveal dim" style="font-size:var(--body-size);max-width:380px;">Deposit and withdraw SOL instantly. No waiting, no custodians — your funds, your keys, your chain.</p>
+      <div class="wallet-features reveal" data-delay="4">
+        <div class="wallet-feat"><span class="wi">⚡</span><span>Instant Deposit</span></div>
+        <div class="wallet-feat"><span class="wi">↩</span><span>Instant Withdraw</span></div>
+        <div class="wallet-feat"><span class="wi">🔗</span><span>Wallet Native</span></div>
+        <div class="wallet-feat"><span class="wi">🔍</span><span>Transparent</span></div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="phone-frame reveal-scale" data-delay="2" style="width:clamp(160px,25vw,260px);max-height:min(80vh,520px);border-color:rgba(0,255,136,0.4);box-shadow:0 0 30px rgba(0,255,136,0.2);">
+        <img src="assets/wallet.png" alt="Treasury" onerror="this.parentElement.style.background='linear-gradient(135deg,#001a10,#0a0f1c)';this.style.display='none';this.parentElement.innerHTML='<div style=\'padding:1.5rem;font-family:monospace;color:#00ff88;font-size:0.65rem;line-height:1.8;\'>TREASURY</div>'">
+      </div>
+    </div>
+  </div>
+  <span class="slide-num mono">07 / 9</span>
+</section>
+
+<!-- ===== SLIDE 8 — RANKINGS ===== -->
+<section class="slide" id="s8">
+  <div class="gradient-bg" style="background: radial-gradient(ellipse at 20% 30%, rgba(168,85,247,0.15) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(255,0,170,0.08) 0%, transparent 50%), var(--navy);"></div>
+  <div class="grid-bg"></div><div class="scanlines"></div>
+  <div class="split">
+    <div class="left">
+      <div class="reveal"><span class="badge badge-purple">📊 RANKINGS</span></div>
+      <div class="accent-bar reveal" style="background:linear-gradient(90deg,var(--purple),var(--magenta));"></div>
+      <h2 class="display reveal">Climb the<br><span class="purple">Leaderboard</span></h2>
+      <p class="reveal dim" style="font-size:var(--body-size);max-width:380px;">Every match counts. Build your rating, climb the global ranks, and prove your dominance on-chain.</p>
+      <div class="stat-grid reveal" data-delay="4">
+        <div class="stat-card"><div class="stat-val">ELO</div><div class="stat-lbl">Rating System</div></div>
+        <div class="stat-card"><div class="stat-val">#1</div><div class="stat-lbl">Global Rank</div></div>
+        <div class="stat-card"><div class="stat-val">Win%</div><div class="stat-lbl">Win Rate Tracked</div></div>
+        <div class="stat-card"><div class="stat-val">∞</div><div class="stat-lbl">Match History</div></div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="phone-frame reveal-scale" data-delay="2" style="width:clamp(160px,25vw,260px);max-height:min(80vh,520px);border-color:rgba(168,85,247,0.5);box-shadow:0 0 30px rgba(168,85,247,0.3);">
+        <img src="assets/profile.png" alt="Player Profile" onerror="this.parentElement.style.background='linear-gradient(135deg,#150a2e,#0a0f1c)';this.style.display='none';this.parentElement.innerHTML='<div style=\'padding:1.5rem;font-family:monospace;color:#a855f7;font-size:0.65rem;line-height:1.8;\'>PLAYER PROFILE</div>'">
+      </div>
+    </div>
+  </div>
+  <span class="slide-num mono">08 / 9</span>
+</section>
+
+
+<!-- ===== SLIDE 10 — VISION ===== -->
+<section class="slide" id="s10">
+  <div class="gradient-bg" style="background: radial-gradient(ellipse at 50% 0%, rgba(0,255,204,0.15) 0%, transparent 50%), radial-gradient(ellipse at 0% 100%, rgba(139,92,246,0.12) 0%, transparent 50%), radial-gradient(ellipse at 100% 100%, rgba(255,0,170,0.1) 0%, transparent 50%), var(--navy);"></div>
+  <div class="grid-bg"></div><div class="scanlines"></div>
+  <div class="content">
+    <div class="reveal"><span class="badge badge-cyan">🚀 VISION</span></div>
+    <div class="accent-bar reveal"></div>
+    <h2 class="display reveal">The Future of<br><span class="cyan">Competitive Gaming</span></h2>
+    <div class="vision-items reveal" data-delay="3">
+      <span class="vision-item">On-Chain Tournaments</span>
+      <span class="vision-item">Global Prize Pools</span>
+      <span class="vision-item">Skill-Based Ranking</span>
+      <span class="vision-item">Web3 Esports</span>
+    </div>
+    <div class="final-quote reveal" data-delay="4">
+      Chess has always been a game of strategy.<br>Now it's also a game of <span class="cyan">ownership</span>.
+    </div>
+    <div class="cta-row reveal" data-delay="5">
+      <a href="#" class="btn btn-primary">Play Now</a>
+      <a href="#" class="btn btn-outline">View on Solana</a>
+    </div>
+    <p class="reveal dim mono" data-delay="6" style="font-size:var(--small-size);letter-spacing:0.1em;">CHESS ON CHAIN · MONOLITH HACKATHON · SEEKER PHONE</p>
+    <div class="solflare-card reveal" data-delay="7">
+        <span class="sf-icon">🔥</span>
+        <div class="sf-body">
+          <span class="sf-title">Built for Seeker · Tested on Solflare</span>
+          <span class="sf-desc">Designed natively for the Seeker Phone. Browser-based testing conducted on Solflare — the most reliable Solana wallet for dApp development.</span>
+          <span class="sf-sub">// TARGET DEVICE: SEEKER PHONE · DEV TESTED: SOLFLARE</span>
+        </div>
+      </div>
+  </div>
+  <span class="slide-num mono">9 / 9</span>
+</section>
+
+<script>
+(function(){
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  function resize(){ W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+  resize(); addEventListener('resize', resize);
+  const pts = [];
+  for(let i=0;i<80;i++) pts.push({
+    x:Math.random()*2000,y:Math.random()*1200,
+    vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,
+    r:Math.random()*1.5+0.3,
+    c:Math.random()>0.6?'#00ffcc':Math.random()>0.5?'#8b5cf6':'#ff00aa',
+    a:Math.random()*0.5+0.1
+  });
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0)p.x=W;if(p.x>W)p.x=0;
+      if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=p.c;ctx.globalAlpha=p.a;ctx.fill();
+    });
+    ctx.globalAlpha=1;
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<120){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.strokeStyle='rgba(0,255,204,'+(0.06*(1-d/120))+')';ctx.lineWidth=0.5;ctx.stroke();}
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+class SlidePresentation {
+  constructor(){
+    this.slides=[...document.querySelectorAll('.slide')];
+    this.total=this.slides.length;
+    this.current=0;
+    this.setupObserver();this.setupNav();this.setupKeyboard();this.setupTouch();
+    this.bar=document.getElementById('progressBar');
+  }
+  setupObserver(){
+    const obs=new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){
+          e.target.classList.add('visible');
+          this.current=this.slides.indexOf(e.target);
+          this.bar.style.width=((this.current/(this.total-1))*100)+'%';
+          this.dots&&this.dots.forEach((d,i)=>d.classList.toggle('active',i===this.current));
+        }
+      });
+    },{threshold:0.5});
+    this.slides.forEach(s=>obs.observe(s));
+  }
+  setupNav(){
+    const nav=document.getElementById('navDots');
+    this.slides.forEach((_,i)=>{const d=document.createElement('div');d.className='nav-dot'+(i===0?' active':'');d.onclick=()=>this.slides[i].scrollIntoView({behavior:'smooth'});nav.appendChild(d);});
+    this.dots=nav.querySelectorAll('.nav-dot');
+  }
+  go(dir){const n=Math.max(0,Math.min(this.total-1,this.current+dir));this.slides[n].scrollIntoView({behavior:'smooth'});}
+  setupKeyboard(){
+    document.addEventListener('keydown',e=>{
+      if(['ArrowDown','ArrowRight',' ','PageDown'].includes(e.key)){e.preventDefault();this.go(1);}
+      if(['ArrowUp','ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();this.go(-1);}
+    });
+  }
+  setupTouch(){
+    let sy=0;
+    document.addEventListener('touchstart',e=>{sy=e.touches[0].clientY;},{passive:true});
+    document.addEventListener('touchend',e=>{const dy=sy-e.changedTouches[0].clientY;if(Math.abs(dy)>50)this.go(dy>0?1:-1);},{passive:true});
+  }
+}
+new SlidePresentation();
+</script>
+</body>
+</html>

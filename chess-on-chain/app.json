@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ChessOnChain",
+    "name": "Chess On Chain",
     "slug": "ChessOnChain",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -45,6 +45,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1ffcb9ac-4caf-4895-b56c-208c213b1143"
+      }
+    },
+    "owner": "vatsalcodes44"
   }
 }

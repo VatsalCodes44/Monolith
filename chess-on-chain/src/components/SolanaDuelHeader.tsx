@@ -22,18 +22,9 @@ export const SolanaDuelHeader: React.FC<Props> = ({
     myColor,
     stake,
 }) => {
-    const isMyTurn = (turnColor === myColor);
 
-    // Assume:
-    // If I am white → I am player1 (RIGHT)
-    // If I am black → I am player2 (LEFT)
-
-    const isPlayer1Me = myColor === "w";
-    const isPlayer2Me = myColor === "b";
-
-    const highlightPlayer1 = isPlayer1Me && isMyTurn;
-    const highlightPlayer2 = isPlayer2Me && isMyTurn;
-
+    const highlightPlayer1 = turnColor === myColor;   
+    const highlightPlayer2 = turnColor !== myColor; 
     const renderAvatar = (highlight: boolean, iconColor: string) => {
         if (highlight) {
             return (

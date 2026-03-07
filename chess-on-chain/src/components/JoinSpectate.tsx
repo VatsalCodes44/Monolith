@@ -48,6 +48,7 @@ export function JoinSpectate() {
                         minWidth={145}
                         text={"JOIN ARENA"}
                         onPress={() => {
+                            if (gameId == "" || gameId.length < 30) return;
                             router.push({
                                 pathname: "/JoinCustom/[gameId]",
                                 params: {

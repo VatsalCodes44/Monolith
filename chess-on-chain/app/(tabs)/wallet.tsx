@@ -189,7 +189,7 @@ export default function Wallet() {
             await fetchBalance(wallet.publicKey, jwt, isDevnet);
             await pushNotification(
                 "Withdraw Successful",
-                `MAINNET: +${amount} ${asset}`,
+                `MAINNET: -${amount} ${asset}`,
                 {
                     type: "Transaction"
                 }
