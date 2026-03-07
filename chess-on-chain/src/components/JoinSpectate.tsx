@@ -63,6 +63,7 @@ export function JoinSpectate() {
                         minWidth={145}
                         text={"SPECTATE"}
                         onPress={() => {
+                            if (gameId == "" || gameId.length < 30) return;
                             router.push({
                                 pathname: "/Spectate/[gameId]",
                                 params: {

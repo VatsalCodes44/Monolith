@@ -190,6 +190,48 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
 .perk-text { font-size: var(--body-size); line-height: 1.4; }
 .perk-text strong { color: var(--cyan); }
 
+/* === SLIDE 6 — FEATURES === */
+#s6 .content {
+  position: relative;
+  z-index: 5;
+  padding: var(--slide-padding);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  gap: var(--content-gap);
+  max-width: 900px;
+  margin: auto;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(0.6rem, 1.5vw, 1.2rem);
+  margin-top: 0.5rem;
+}
+
+.feature-card {
+  padding: clamp(0.8rem, 2vw, 1.3rem);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0,255,204,0.06), rgba(139,92,246,0.05));
+  border: 1px solid rgba(0,255,204,0.25);
+  font-size: var(--body-size);
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  transition: all 0.3s;
+}
+
+.feature-card:hover {
+  border-color: rgba(0,255,204,0.6);
+  box-shadow: var(--glow-cyan);
+}
+
+.feature-card span {
+  font-size: clamp(1rem, 2vw, 1.5rem);
+}
+
 /* === SLIDE 7 — WALLET === */
 .wallet-features { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.4rem, 1vw, 0.8rem); }
 .wallet-feat { padding: clamp(0.6rem, 1.2vw, 1rem); border-radius: 8px; text-align: center; background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2); }
@@ -289,7 +331,7 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       <span class="badge badge-magenta">🏆 Monolith Hackathon</span>
     </div>
   </div>
-  <span class="slide-num mono">01 / 9</span>
+  <span class="slide-num mono">01 / 10</span>
 </section>
 
 <!-- ===== SLIDE 2 — PROBLEM ===== -->
@@ -326,7 +368,7 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       </div>
     </div>
   </div>
-  <span class="slide-num mono">02 / 9</span>
+  <span class="slide-num mono">02 / 10</span>
 </section>
 
 <!-- ===== SLIDE 3 — SOLUTION ===== -->
@@ -339,12 +381,12 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
     <h2 class="display reveal">Chess on Chain<br><span class="cyan">Decentralized. Instant. Yours.</span></h2>
     <div class="solution-steps">
       <div class="step reveal" data-delay="3"><span class="step-num">01</span><span class="step-text"><strong>Connect</strong> your Solana wallet — no sign-up, no KYC</span></div>
-      <div class="step reveal" data-delay="4"><span class="step-num">02</span><span class="step-text"><strong>Stake SOL</strong> or SKR tokens — choose your arena tier</span></div>
+      <div class="step reveal" data-delay="4"><span class="step-num">02</span><span class="step-text"><strong>Stake SOL</strong> — choose your arena tier</span></div>
       <div class="step reveal" data-delay="5"><span class="step-num">03</span><span class="step-text"><strong>Compete</strong> in real-time chess against opponents globally</span></div>
-      <div class="step reveal" data-delay="6"><span class="step-num">04</span><span class="step-text"><strong>Win</strong> and receive instant, automatic on-chain payouts</span></div>
+      <div class="step reveal" data-delay="6"><span class="step-num">04</span><span class="step-text"><strong>Win</strong> and receive instant SOL payouts</span></div>
     </div>
   </div>
-  <span class="slide-num mono">03 / 9</span>
+  <span class="slide-num mono">03 / 10</span>
 </section>
 
 <!-- ===== SLIDE 4 — GAMEPLAY ===== -->
@@ -355,7 +397,7 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       <div class="reveal"><span class="badge badge-purple">♟ GAMEPLAY</span></div>
       <div class="accent-bar reveal"></div>
       <h2 class="display reveal">Enter the<br><span class="purple">Arena</span></h2>
-      <p class="reveal dim" style="font-size:var(--body-size);max-width:420px;">Choose your stake, find a match instantly. Real-time chess with on-chain settlement on every move.</p>
+      <p class="reveal dim" style="font-size:var(--body-size);max-width:420px;">Choose your stake, find a match instantly. Real-time chess with secure match validation and instant SOL payouts.</p>
       <div class="stake-pills reveal" data-delay="4">
         <span class="stake-pill">♟ PAWN — 0.01 SOL</span>
         <span class="stake-pill">♞ KNIGHT — 0.05 SOL</span>
@@ -363,7 +405,7 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       </div>
       <ul class="feature-list reveal" data-delay="5">
         <li>Instant matchmaking — seconds to find opponent</li>
-        <li>Real-time move validation on Solana</li>
+        <li>Real-time multiplayer chess</li>
         <li>Built-in live chat during matches</li>
         <li>Native Seeker Phone experience</li>
       </ul>
@@ -374,7 +416,7 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       </div>
     </div>
   </div>
-  <span class="slide-num mono">04 / 9</span>
+  <span class="slide-num mono">04 / 10</span>
 </section>
 
 <!-- ===== SLIDE 5 — CUSTOM ARENAS ===== -->
@@ -390,7 +432,7 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
         <div class="perk reveal" data-delay="3"><span class="perk-icon">🔐</span><div class="perk-text"><strong>Private Duels</strong> — challenge any wallet address directly</div></div>
         <div class="perk reveal" data-delay="4"><span class="perk-icon">⬡</span><div class="perk-text"><strong>SKR Token Stakes</strong> — powered by the Seeker ecosystem</div></div>
         <div class="perk reveal" data-delay="5"><span class="perk-icon">🏆</span><div class="perk-text"><strong>0% Platform Fee</strong> — 100% of stake goes to the winner</div></div>
-        <div class="perk reveal" data-delay="6"><span class="perk-icon">⛓</span><div class="perk-text"><strong>Pure On-Chain Execution</strong> — no intermediary, ever</div></div>
+        <div class="perk reveal" data-delay="6"><span class="perk-icon">⛓</span><div class="perk-text"><strong>Secure backend validation with instant SOL rewards</strong></div></div>
       </div>
     </div>
     <div class="right">
@@ -399,11 +441,70 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       </div>
     </div>
   </div>
-  <span class="slide-num mono">05 / 9</span>
+  <span class="slide-num mono">05 / 10</span>
 </section>
 
-<!-- ===== SLIDE 6 — SOCIAL ===== -->
+<!-- ===== SLIDE 6 — FEATURES ===== -->
 <section class="slide" id="s6">
+  <div class="gradient-bg" style="background: radial-gradient(ellipse at 20% 30%, rgba(0,255,204,0.12) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(139,92,246,0.12) 0%, transparent 50%), var(--navy);"></div>
+  <div class="grid-bg"></div>
+  <div class="scanlines"></div>
+
+  <div class="content">
+    
+    <div class="reveal">
+      <span class="badge badge-cyan">⚙ CORE FEATURES</span>
+    </div>
+
+    <div class="accent-bar reveal"></div>
+
+    <h2 class="display reveal">
+      Powerful <br><span class="cyan">Game Features</span>
+    </h2>
+
+    <div class="feature-grid">
+
+      <div class="feature-card reveal" data-delay="3">
+        <span>♟️</span> Play vs AI Bot
+      </div>
+
+      <div class="feature-card reveal" data-delay="4">
+        <span>🌐</span> Multiplayer Matches
+      </div>
+
+      <div class="feature-card reveal" data-delay="5">
+        <span>🏟️</span> Create Custom Arenas
+      </div>
+
+      <div class="feature-card reveal" data-delay="6">
+        <span>👀</span> Spectate Live Games
+      </div>
+
+      <div class="feature-card reveal" data-delay="3">
+        <span>🔄</span> Automatic Reconnect
+      </div>
+
+      <div class="feature-card reveal" data-delay="4">
+        <span>⚡</span> Devnet / Mainnet Switch
+      </div>
+
+      <div class="feature-card reveal" data-delay="5">
+        <span>💰</span> Instant SOL Deposit & Withdraw
+      </div>
+
+      <div class="feature-card reveal" data-delay="6">
+        <span>📜</span> Match History Tracking
+      </div>
+
+    </div>
+
+  </div>
+
+  <span class="slide-num mono">06 / 10</span>
+</section>
+
+<!-- ===== SLIDE 7 — SOCIAL ===== -->
+<section class="slide" id="s7">
   <div class="gradient-bg" style="background: radial-gradient(ellipse at 15% 85%, rgba(255,0,170,0.12) 0%, transparent 50%), radial-gradient(ellipse at 85% 15%, rgba(0,255,204,0.08) 0%, transparent 50%), var(--navy);"></div>
   <div class="grid-bg"></div><div class="scanlines"></div>
   <div class="split">
@@ -426,18 +527,18 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       </div>
     </div>
   </div>
-  <span class="slide-num mono">06 / 9</span>
+  <span class="slide-num mono">07 / 10</span>
 </section>
 
-<!-- ===== SLIDE 7 — WALLET ===== -->
-<section class="slide" id="s7">
+<!-- ===== SLIDE 8 — WALLET ===== -->
+<section class="slide" id="s8">
   <div class="gradient-bg" style="background: radial-gradient(ellipse at 80% 20%, rgba(0,255,136,0.12) 0%, transparent 50%), radial-gradient(ellipse at 20% 80%, rgba(0,255,204,0.08) 0%, transparent 50%), var(--navy);"></div>
   <div class="grid-bg"></div><div class="scanlines"></div>
   <div class="split rev">
     <div class="left">
       <div class="reveal"><span class="badge badge-cyan" style="color:var(--green);border-color:rgba(0,255,136,0.4);background:rgba(0,255,136,0.1);">💰 TREASURY</span></div>
       <div class="accent-bar reveal" style="background:linear-gradient(90deg,var(--green),var(--cyan));"></div>
-      <h2 class="display reveal">On-Chain<br><span class="green">Wallet</span></h2>
+      <h2 class="display reveal">Integrated <br><span class="green">Treasury</span></h2>
       <p class="reveal dim" style="font-size:var(--body-size);max-width:380px;">Deposit and withdraw SOL instantly. No waiting, no custodians — your funds, your keys, your chain.</p>
       <div class="wallet-features reveal" data-delay="4">
         <div class="wallet-feat"><span class="wi">⚡</span><span>Instant Deposit</span></div>
@@ -452,11 +553,11 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       </div>
     </div>
   </div>
-  <span class="slide-num mono">07 / 9</span>
+  <span class="slide-num mono">08 / 10</span>
 </section>
 
-<!-- ===== SLIDE 8 — RANKINGS ===== -->
-<section class="slide" id="s8">
+<!-- ===== SLIDE 9 — RANKINGS ===== -->
+<section class="slide" id="s9">
   <div class="gradient-bg" style="background: radial-gradient(ellipse at 20% 30%, rgba(168,85,247,0.15) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(255,0,170,0.08) 0%, transparent 50%), var(--navy);"></div>
   <div class="grid-bg"></div><div class="scanlines"></div>
   <div class="split">
@@ -466,7 +567,7 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       <h2 class="display reveal">Climb the<br><span class="purple">Leaderboard</span></h2>
       <p class="reveal dim" style="font-size:var(--body-size);max-width:380px;">Every match counts. Build your rating, climb the global ranks, and prove your dominance on-chain.</p>
       <div class="stat-grid reveal" data-delay="4">
-        <div class="stat-card"><div class="stat-val">Rank</div><div class="stat-lbl">Rating System</div></div>
+        <div class="stat-card"><div class="stat-val">Rank</div><div class="stat-lbl">Global Leaderboard</div></div>
         <div class="stat-card"><div class="stat-val">#1</div><div class="stat-lbl">Global Rank</div></div>
         <div class="stat-card"><div class="stat-val">Win%</div><div class="stat-lbl">Win Rate Tracked</div></div>
         <div class="stat-card"><div class="stat-val">∞</div><div class="stat-lbl">Match History</div></div>
@@ -478,7 +579,7 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
       </div>
     </div>
   </div>
-  <span class="slide-num mono">08 / 9</span>
+  <span class="slide-num mono">09 / 10</span>
 </section>
 
 
@@ -513,7 +614,7 @@ html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
         </div>
       </div>
   </div>
-  <span class="slide-num mono">9 / 9</span>
+  <span class="slide-num mono">10 / 10</span>
 </section>
 
 <script>
