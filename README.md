@@ -55,7 +55,7 @@ Practice and improve your chess skills by playing against the built-in AI bot.
 - no opponent required
 - great for training and testing strategies
 
-![bot](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/bot.jpg)
+![bot](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/bot.jpeg)
   
 ## 🏆 Leaderboards  
 Track performance through:  
@@ -64,7 +64,7 @@ Track performance through:
 - win rate  
 - match history  
 - global rankings  
-![stats2](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/stats2.jpg)
+![stats2](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/stats2.jpeg)
   
 ## 💳 Wallet Integration  
 Players can:  
@@ -73,7 +73,7 @@ Players can:
 - withdraw SOL instantly  
 - connect their Solana wallet  
 
-![wallet](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/wallet.jpg)
+![wallet](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/wallet.jpeg)
   
 ---  
   
