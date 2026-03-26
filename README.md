@@ -1,7 +1,8 @@
 
 
 # ♟ Chess On Chain  
-  
+Play. Stake. Win. — Now live on the DApp Store 🚀  
+
 ![Chess On Chain](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/banner.jpg)  
   
 **Play Chess. Raise the Stakes. Win On-Chain.**  
