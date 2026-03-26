@@ -1,4 +1,5 @@
 
+
 # ♟ Chess On Chain  
   
 ![Chess On Chain](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/banner.jpg)  
@@ -26,7 +27,13 @@ Join matches with different stake tiers:
   
 Winner receives the staked SOL.  
 
-![Chess On Chain](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/home.jpeg)
+<p  align="center">  
+<img  
+src="https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/home.jpeg"  
+alt="Chess On Chain"  
+height="600" 
+/>  
+</p>
   
 ## ⚔ Custom Arenas  
 Create private chess duels using **SKR tokens**.  
@@ -35,17 +42,35 @@ Create private chess duels using **SKR tokens**.
 - adjust stakes  
 - competitive matches  
 
-![Custom](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/custom2.jpg)
+<p  align="center">  
+<img  
+src="https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/custom2.jpg"  
+alt="Chess On Chain"  
+height="600" 
+/>  
+</p>
   
 ## 👀 Spectator Mode  
 Watch live matches and observe gameplay from other players.  
 
-![games](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/games2.jpg)
+<p  align="center">  
+<img  
+src="https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/games2.jpg"  
+alt="Chess On Chain"  
+height="600" 
+/>  
+</p>
   
 ## 💬 Real-Time Chat  
 Communicate with opponents during matches.
   
-![chat](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/games2.jpg)
+<p  align="center">  
+<img  
+src="https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/games2.jpg"  
+alt="Chess On Chain"  
+height="600" 
+/>  
+</p>
 
 ## 🤖 Play Against AI Bot
 
@@ -55,7 +80,13 @@ Practice and improve your chess skills by playing against the built-in AI bot.
 - no opponent required
 - great for training and testing strategies
 
-![bot](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/bot.jpeg)
+<p  align="center">  
+<img  
+src="https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/bot.jpeg"  
+alt="Chess On Chain"  
+height="600" 
+/>  
+</p>
   
 ## 🏆 Leaderboards  
 Track performance through:  
@@ -64,7 +95,14 @@ Track performance through:
 - win rate  
 - match history  
 - global rankings  
-![stats2](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/stats2.jpeg)
+
+<p  align="center">  
+<img  
+src="https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/stats2.jpeg"  
+alt="Chess On Chain"  
+height="600" 
+/>  
+</p>
   
 ## 💳 Wallet Integration  
 Players can:  
@@ -73,7 +111,13 @@ Players can:
 - withdraw SOL instantly  
 - connect their Solana wallet  
 
-![wallet](https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/wallet.jpeg)
+<p  align="center">  
+<img  
+src="https://raw.githubusercontent.com/VatsalCodes44/Chess-on-Chain/refs/heads/main/mobile-app/assets/image/wallet.jpeg"  
+alt="Chess On Chain"  
+height="600" 
+/>  
+</p>
   
 ---  
   
@@ -173,4 +217,3 @@ Future roadmap includes:
 MIT License  
   
 https://github.com/VatsalCodes44/Chess-on-Chain/blob/main/LICENSE
-
